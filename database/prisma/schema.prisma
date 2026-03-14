@@ -95,6 +95,7 @@ model Site {
 
   company        Company         @relation(fields: [companyId], references: [id])
   spatialObjects SpatialObject[]
+  alerts         Alert[]
 
   @@unique([companyId, code])
   @@map("sites")
@@ -367,6 +368,39 @@ model WarehouseTemplate {
 
   @@index([industry])
   @@map("warehouse_templates")
+}
+
+// ============================================================
+// Alerts — 이상 탐지 알림
+// ============================================================
+
+/// 이상 탐지 알림 이벤트
+model Alert {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId     String   @map("site_id") @db.Uuid
+  /// 지표 유형 (inventory_level, picking_error_rate 등)
+  metricType String   @map("metric_type") @db.VarChar(50)
+  /// 심각도 (info, warning, critical)
+  severity   String   @db.VarChar(20)
+  title      String   @db.VarChar(300)
+  message    String   @db.Text
+  /// 이상 건수
+  anomalyCount Int    @default(0) @map("anomaly_count")
+  /// 확인 여부
+  isRead     Boolean  @default(false) @map("is_read")
+  /// 해결 여부
+  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz
+  /// 탐지 통계 데이터
+  metadata   Json?    @db.JsonB
+  detectedAt DateTime @map("detected_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  site Site @relation(fields: [siteId], references: [id])
+
+  @@index([siteId, severity])
+  @@index([siteId, metricType])
+  @@index([detectedAt])
+  @@map("alerts")
 }
 
 /// 공간 계층 구조 (부모-자식 관계)

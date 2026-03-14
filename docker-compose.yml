@@ -33,6 +33,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # ML Service (이상 탐지 엔진)
+  ml-service:
+    build:
+      context: ./packages/ml-service
+      dockerfile: Dockerfile
+    container_name: hanvoxel-ml-service
+    restart: unless-stopped
+    environment:
+      API_GATEWAY_URL: http://api-gateway:3001
+      ML_SERVICE_PORT: "8000"
+      LOG_LEVEL: info
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

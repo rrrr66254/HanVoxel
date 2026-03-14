@@ -3,6 +3,7 @@ import { WarehouseViewer } from './components/warehouse-viewer';
 import { WarehouseWizard } from './components/warehouse-wizard';
 import { RoiCalculator } from './components/roi-calculator';
 import { TrialBanner } from './components/trial-banner';
+import { AlertPanel } from './components/alert-panel';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
@@ -19,6 +20,7 @@ const DEMO_TRIAL = {
 
 function App() {
   const [mode, setMode] = useState<AppMode>('wizard');
+  const [alertOpen, setAlertOpen] = useState(false);
   const [wizardResult, setWizardResult] = useState<{
     form: WizardFormData;
     template: WarehouseTemplate;
@@ -77,6 +79,18 @@ function App() {
       <div className="flex-1">
         <WarehouseViewer objects={objects} />
       </div>
+
+      {/* 알림 벨 버튼 */}
+      <button
+        onClick={() => setAlertOpen(true)}
+        className="fixed top-4 right-4 z-40 flex items-center gap-1 rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-2 text-sm text-gray-300 backdrop-blur transition-colors hover:text-white"
+      >
+        <span>알림</span>
+        <span className="ml-1 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+      </button>
+
+      {/* 알림 패널 */}
+      <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
 
       {/* 하단 네비게이션 */}
       <div className="fixed bottom-4 left-4 flex gap-2">
