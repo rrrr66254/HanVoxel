@@ -200,6 +200,127 @@ model SpatialObject {
   @@map("spatial_objects")
 }
 
+// ============================================================
+// Spatial Presets — 표준 규격 프리셋
+// ============================================================
+
+/// 프리셋 카테고리 (RACK, PALLET, CONTAINER, AISLE, PRODUCT_BOX, LOADED_PALLET)
+model PresetCategory {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @unique @db.VarChar(50)
+  label       String   @db.VarChar(100)
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  presets SpatialPreset[]
+
+  @@map("preset_categories")
+}
+
+/// 공간 프리셋 — warehouse-standards.md 기반 표준 규격
+model SpatialPreset {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+  /// 프리셋 코드 (예: KR_STANDARD, T11, DRY_40FT)
+  code       String @unique @db.VarChar(50)
+  name       String @db.VarChar(200)
+  /// 표준 출처 (예: KS A 1003, ISO 6780, EN 15512)
+  standard   String? @db.VarChar(100)
+  /// 지역 (KR, EU, US, AU, INTL)
+  region     String? @db.VarChar(10)
+
+  // --- 치수 (미터 단위) ---
+  width  Float @default(0)
+  depth  Float @default(0)
+  height Float @default(0)
+
+  // --- 랙/컨테이너 내부 치수 ---
+  innerWidth  Float? @map("inner_width")
+  innerDepth  Float? @map("inner_depth")
+  innerHeight Float? @map("inner_height")
+
+  // --- 하중/용량 ---
+  /// 자중 (kg)
+  weight      Float? @default(0)
+  /// 최대 적재 하중 (kg)
+  maxLoad     Float? @map("max_load")
+  /// 용량 (CBM, 팔레트 수 등)
+  capacity    Float?
+  /// 단수 (랙 레벨 수)
+  levels      Int?
+  /// 단간 높이 (m)
+  levelHeight Float? @map("level_height")
+  /// 단당 하중 (kg)
+  loadPerLevel Float? @map("load_per_level")
+
+  // --- 제품 적재 정보 ---
+  /// 팔레트당 수량 (박스 기준)
+  qtyPerPallet Int?   @map("qty_per_pallet")
+  /// 팔레트당 중량 (kg)
+  kgPerPallet  Float? @map("kg_per_pallet")
+
+  // --- 3D 렌더링 기본값 ---
+  color    String? @db.VarChar(7)
+  opacity  Float   @default(1.0)
+  meshType String? @map("mesh_type") @db.VarChar(50)
+
+  // --- 확장 데이터 ---
+  metadata Json? @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  category           PresetCategory      @relation(fields: [categoryId], references: [id])
+  rackTemplates      WarehouseTemplate[] @relation("RackPreset")
+  palletTemplates    WarehouseTemplate[] @relation("PalletPreset")
+
+  @@index([categoryId])
+  @@index([region])
+  @@map("spatial_presets")
+}
+
+/// 창고 템플릿 — 프리셋 조합으로 구성된 창고 유형
+model WarehouseTemplate {
+  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String @db.VarChar(200)
+  code        String @unique @db.VarChar(50)
+  description String? @db.Text
+  /// 업종 (FOOD_BEVERAGE, AUTO_PARTS, ELECTRONICS 등)
+  industry    String @db.VarChar(50)
+  /// 추천 창고 크기 (m²)
+  areaMin     Float? @map("area_min")
+  areaMax     Float? @map("area_max")
+
+  // --- 사용 프리셋 참조 ---
+  rackPresetId      String  @map("rack_preset_id") @db.Uuid
+  palletPresetId    String  @map("pallet_preset_id") @db.Uuid
+  containerPresetId String? @map("container_preset_id") @db.Uuid
+
+  // --- 레이아웃 기본값 ---
+  /// 랙 배치 방식 (BACK_TO_BACK, SINGLE, DRIVE_IN)
+  rackLayout     String @default("BACK_TO_BACK") @map("rack_layout") @db.VarChar(30)
+  /// 통로 타입 (REACH_TRUCK, COUNTERBALANCE_3T, AGV_FORKLIFT)
+  aisleType      String @default("REACH_TRUCK") @map("aisle_type") @db.VarChar(30)
+  /// 통로 너비 (m)
+  aisleWidth     Float  @default(2.8) @map("aisle_width")
+  /// 주 통로 너비 (m)
+  mainAisleWidth Float  @default(4.0) @map("main_aisle_width")
+
+  // --- 확장 데이터 ---
+  metadata Json? @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rackPreset      SpatialPreset @relation("RackPreset", fields: [rackPresetId], references: [id])
+  palletPreset    SpatialPreset @relation("PalletPreset", fields: [palletPresetId], references: [id])
+
+  @@index([industry])
+  @@map("warehouse_templates")
+}
+
 /// 공간 계층 구조 (부모-자식 관계)
 model SpatialHierarchy {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
