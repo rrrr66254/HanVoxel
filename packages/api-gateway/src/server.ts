@@ -1,0 +1,24 @@
+import express from 'express';
+import cors from 'cors';
+import presetRoutes from './routes/preset.routes';
+
+const app = express();
+const PORT = process.env.PORT ?? 3001;
+
+// 미들웨어
+app.use(cors());
+app.use(express.json());
+
+// API 라우트
+app.use('/api/v1', presetRoutes);
+
+// 헬스 체크
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'api-gateway' });
+});
+
+app.listen(PORT, () => {
+  console.log(`[api-gateway] http://localhost:${PORT} 에서 실행 중`);
+});
+
+export default app;

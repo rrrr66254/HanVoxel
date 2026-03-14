@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { WarehouseScene } from './WarehouseScene';
 import { ObjectInfoPanel } from './ObjectInfoPanel';
+import { PresetCatalog } from '../preset-catalog';
 import type { SpatialObject } from '../../types/spatial';
 
 interface WarehouseViewerProps {
@@ -17,9 +18,11 @@ interface WarehouseViewerProps {
  * - 마우스 드래그로 카메라 회전, 스크롤로 줌
  * - 객체 클릭 시 상세 정보 패널 표시
  * - 호버 시 라벨 툴팁
+ * - 우측 프리셋 카탈로그 패널
  */
 export function WarehouseViewer({ objects }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const selectedObject = objects.find((o) => o.id === selectedId) ?? null;
 
@@ -32,7 +35,6 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
         camera={{ position: [20, 15, 20], fov: 50, near: 0.1, far: 500 }}
         style={{ background: '#111827' }}
         onClick={(e) => {
-          // 빈 영역 클릭 시 선택 해제
           if (e.target === e.currentTarget) {
             setSelectedId(null);
           }
@@ -59,10 +61,34 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
         <span className="ml-1 text-gray-400">공간 객체</span>
       </div>
 
-      {/* 우측 — 선택된 객체 정보 패널 */}
-      <ObjectInfoPanel
-        object={selectedObject}
-        onClose={() => setSelectedId(null)}
+      {/* 우측 상단 — 카탈로그 토글 버튼 */}
+      {!catalogOpen && (
+        <button
+          onClick={() => setCatalogOpen(true)}
+          className="absolute top-4 right-4 flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-2 text-xs text-white backdrop-blur transition-colors hover:border-blue-500 hover:bg-gray-800"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+            <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+            <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+            <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+          표준 규격
+        </button>
+      )}
+
+      {/* 선택된 객체 정보 패널 (카탈로그 닫혀있을 때만) */}
+      {!catalogOpen && (
+        <ObjectInfoPanel
+          object={selectedObject}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
+      {/* 프리셋 카탈로그 패널 */}
+      <PresetCatalog
+        visible={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
       />
     </div>
   );
