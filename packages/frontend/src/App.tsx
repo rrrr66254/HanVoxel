@@ -4,13 +4,14 @@ import { WarehouseWizard } from './components/warehouse-wizard';
 import { RoiCalculator } from './components/roi-calculator';
 import { TrialBanner } from './components/trial-banner';
 import { AlertPanel } from './components/alert-panel';
+import { SlaDashboard } from './components/sla-dashboard';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -38,6 +39,10 @@ function App() {
     setWizardResult({ form, template });
     setMode('viewer');
   };
+
+  if (mode === 'sla') {
+    return <SlaDashboard onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'roi') {
     return <RoiCalculator onBack={() => setMode('wizard')} />;
@@ -105,6 +110,12 @@ function App() {
           className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-xs text-emerald-300 backdrop-blur transition-colors hover:bg-emerald-900/50"
         >
           ROI 계산기
+        </button>
+        <button
+          onClick={() => setMode('sla')}
+          className="rounded-lg border border-blue-700/50 bg-blue-900/30 px-4 py-2 text-xs text-blue-300 backdrop-blur transition-colors hover:bg-blue-900/50"
+        >
+          SLA 모니터링
         </button>
       </div>
     </div>

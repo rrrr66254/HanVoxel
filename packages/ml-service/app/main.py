@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.anomaly import router as anomaly_router
+from app.routers.sla import router as sla_router
 
 app = FastAPI(
     title="HanVoxel ML Service",
@@ -20,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(anomaly_router, prefix="/api/v1")
+app.include_router(sla_router, prefix="/api/v1")
 
 
 @app.get("/")

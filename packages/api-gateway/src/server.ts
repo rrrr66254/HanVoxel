@@ -5,6 +5,7 @@ import spatialObjectRoutes from './routes/spatial-object.routes';
 import warehouseTemplateRoutes from './routes/warehouse-template.routes';
 import planRoutes from './routes/plan.routes';
 import alertRoutes from './routes/alert.routes';
+import slaRoutes from './routes/sla.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -19,6 +20,7 @@ app.use('/api/v1', spatialObjectRoutes);
 app.use('/api/v1', warehouseTemplateRoutes);
 app.use('/api/v1', planRoutes);
 app.use('/api/v1', alertRoutes);
+app.use('/api/v1', slaRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

@@ -7,7 +7,7 @@ Claude Code가 이 프로젝트 작업 시 항상 참고하는 컨텍스트 파�
 모든 3D 오브젝트 치수, 랙/팔레트/컨테이너 규격은 반드시 warehouse-standards.md 기준을 따른다.
 🎯 현재 개발 상태
 현재 Phase: Phase 2 — Intelligence Layer
-현재 Step:  Step 1 (이상 탐지 알림)
+현재 Step:  Step 2 (SLA 모니터링)
 
 Phase 1 완료 항목:
 - Step 1: Docker + PostgreSQL/PostGIS + Prisma 스키마 + 3D 창고 뷰어
@@ -15,6 +15,9 @@ Phase 1 완료 항목:
 - Step 3: 프리셋 카탈로그 (API + UI) + 드래그 배치 + 치수 편집 + DB 저장
 - Step 4: 창고 초기 세팅 마법사 (4단계 온보딩)
 - Step 5: ROI 계산기 + SaaS 과금 인프라 (Starter/Growth/Enterprise)
+
+Phase 2 완료 항목:
+- Step 1: ML 이상 탐지 엔진 (Z-Score/IQR/Isolation Forest/Ensemble) + 알림 시스템
 
 Phase가 진행될 때마다 이 섹션을 업데이트할 것.
 🏗️ 기술 스택

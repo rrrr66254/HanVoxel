@@ -371,6 +371,116 @@ model WarehouseTemplate {
 }
 
 // ============================================================
+// SLA — 서비스 수준 계약 모니터링
+// ============================================================
+
+/// 고객사별 SLA 기준 설정
+model SlaTarget {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  siteId    String @map("site_id") @db.Uuid
+  /// SLA 이름 (예: "2026 Q1 SLA")
+  name      String @db.VarChar(200)
+
+  // --- 목표 지표 ---
+  /// 납기 준수율 목표 (%, 예: 98.5)
+  deliveryOnTimeTarget  Float @default(98.0) @map("delivery_on_time_target")
+  /// 오배송률 한도 (%, 예: 0.5 — 낮을수록 좋음)
+  misshipmentRateLimit  Float @default(0.5) @map("misshipment_rate_limit")
+  /// 피킹 정확도 목표 (%, 예: 99.5)
+  pickingAccuracyTarget Float @default(99.5) @map("picking_accuracy_target")
+  /// 평균 처리 시간 한도 (분, 예: 120)
+  avgProcessingTimeLimit Float @default(120) @map("avg_processing_time_limit")
+
+  // --- 에스컬레이션 설정 ---
+  /// 에스컬레이션 활성화
+  escalationEnabled Boolean @default(true) @map("escalation_enabled")
+  /// 위반 시 알림 수신 이메일 (JSON 배열)
+  escalationEmails  Json?   @map("escalation_emails") @db.JsonB
+  /// 연속 위반 횟수 임계값 (이 횟수 이상 연속 위반 시 에스컬레이션)
+  escalationThreshold Int @default(3) @map("escalation_threshold")
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  metrics    SlaMetric[]
+  violations SlaViolation[]
+
+  @@unique([companyId, siteId])
+  @@index([companyId])
+  @@map("sla_targets")
+}
+
+/// SLA KPI 스냅샷 (일별 기록)
+model SlaMetric {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slaTargetId String   @map("sla_target_id") @db.Uuid
+  /// 측정 날짜
+  recordDate  DateTime @map("record_date") @db.Date
+
+  // --- 실측 KPI ---
+  /// 납기 준수율 (%)
+  deliveryOnTimeRate  Float @map("delivery_on_time_rate")
+  /// 오배송률 (%)
+  misshipmentRate     Float @map("misshipment_rate")
+  /// 피킹 정확도 (%)
+  pickingAccuracy     Float @map("picking_accuracy")
+  /// 평균 처리 시간 (분)
+  avgProcessingTime   Float @map("avg_processing_time")
+
+  // --- 건수 ---
+  /// 총 주문 건수
+  totalOrders         Int   @default(0) @map("total_orders")
+  /// 정시 배송 건수
+  onTimeOrders        Int   @default(0) @map("on_time_orders")
+  /// 오배송 건수
+  misshipmentCount    Int   @default(0) @map("misshipment_count")
+  /// 총 피킹 건수
+  totalPicks          Int   @default(0) @map("total_picks")
+  /// 정확 피킹 건수
+  accuratePicks       Int   @default(0) @map("accurate_picks")
+
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  slaTarget SlaTarget @relation(fields: [slaTargetId], references: [id])
+
+  @@unique([slaTargetId, recordDate])
+  @@index([slaTargetId, recordDate])
+  @@map("sla_metrics")
+}
+
+/// SLA 위반 기록
+model SlaViolation {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slaTargetId String   @map("sla_target_id") @db.Uuid
+  /// 위반 지표 (delivery_on_time, misshipment_rate, picking_accuracy, avg_processing_time)
+  metricName  String   @map("metric_name") @db.VarChar(50)
+  /// 목표값
+  targetValue Float    @map("target_value")
+  /// 실측값
+  actualValue Float    @map("actual_value")
+  /// 위반 날짜
+  violationDate DateTime @map("violation_date") @db.Date
+  /// 심각도 (warning, critical)
+  severity    String   @db.VarChar(20)
+  /// 에스컬레이션 발송 여부
+  escalated   Boolean  @default(false)
+  /// 해결 여부
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  /// 메모
+  note        String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  slaTarget SlaTarget @relation(fields: [slaTargetId], references: [id])
+
+  @@index([slaTargetId, violationDate])
+  @@index([metricName])
+  @@map("sla_violations")
+}
+
+// ============================================================
 // Alerts — 이상 탐지 알림
 // ============================================================
 
