@@ -5,11 +5,21 @@ import { WarehouseScene } from './WarehouseScene';
 import { ObjectInfoPanel } from './ObjectInfoPanel';
 import { DimensionEditor } from './DimensionEditor';
 import { PresetCatalog } from '../preset-catalog';
+import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
+import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
+// 기본 siteId / typeId (DB에 해당 레코드 필요 — 없으면 API 실패 시 로컬 유지)
+const DEFAULT_SITE_ID = '00000000-0000-4000-a000-000000000001';
+const DEFAULT_TYPE_ID = '00000000-0000-4000-a000-000000000002';
+
+// 커스텀 프리셋용 카테고리 ID (RACK 카테고리)
+const CUSTOM_PRESET_CATEGORY_ID = '00000000-0000-4000-a000-000000000010';
+
 interface WarehouseViewerProps {
   objects: SpatialObject[];
+  siteId?: string;
 }
 
 /**
@@ -21,9 +31,9 @@ interface WarehouseViewerProps {
  * - 객체 클릭 시 상세 정보 패널 표시
  * - 호버 시 라벨 툴팁
  * - 우측 프리셋 카탈로그 패널
- * - 프리셋 카드 클릭 → 고스트 메시로 배치 → 치수 편집
+ * - 프리셋 카드 클릭 → 고스트 메시로 배치 → 치수 편집 → DB 저장
  */
-export function WarehouseViewer({ objects }: WarehouseViewerProps) {
+export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
@@ -31,11 +41,14 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const allObjects = [...objects, ...placedObjects];
   const selectedObject = allObjects.find((o) => o.id === selectedId) ?? null;
   const editingObject = allObjects.find((o) => o.id === editingId) ?? null;
   const activeObjects = allObjects.filter((o) => o.isActive);
+
+  const currentSiteId = siteId ?? DEFAULT_SITE_ID;
 
   // 프리셋 카드 클릭 → 배치 모드 진입
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
@@ -45,24 +58,26 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
     setEditingId(null);
   }, []);
 
-  // 고스트 메시 배치 확정
+  // 고스트 메시 배치 확정 → DB 저장 시도
   const handlePlace = useCallback(
-    (position: [number, number, number]) => {
+    async (position: [number, number, number]) => {
       if (!placingPreset) return;
 
-      const newObj: SpatialObject = {
+      const code = `${placingPreset.code}_${Date.now()}`;
+
+      const localObj: SpatialObject = {
         id: crypto.randomUUID(),
-        siteId: 'placed',
-        typeId: 'placed',
+        siteId: currentSiteId,
+        typeId: DEFAULT_TYPE_ID,
         type: {
-          id: 'placed',
+          id: DEFAULT_TYPE_ID,
           name: 'RACK',
           label: placingPreset.name,
           description: null,
           depth: 5,
         },
         name: placingPreset.name,
-        code: placingPreset.code,
+        code,
         status: 'ACTIVE',
         isActive: true,
         positionX: position[0],
@@ -81,47 +96,116 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
         metadata: { presetId: placingPreset.id, presetCode: placingPreset.code },
       };
 
-      setPlacedObjects((prev) => [...prev, newObj]);
+      // 즉시 로컬 배치 (낙관적 업데이트)
+      setPlacedObjects((prev) => [...prev, localObj]);
       setPlacingPreset(null);
-      setEditingId(newObj.id);
+      setEditingId(localObj.id);
+
+      // DB 저장 시도
+      const saved = await createSpatialObject({
+        siteId: currentSiteId,
+        typeId: DEFAULT_TYPE_ID,
+        name: localObj.name,
+        code: localObj.code,
+        positionX: localObj.positionX,
+        positionY: localObj.positionY,
+        positionZ: localObj.positionZ,
+        scaleX: localObj.scaleX,
+        scaleY: localObj.scaleY,
+        scaleZ: localObj.scaleZ,
+        color: localObj.color,
+        opacity: localObj.opacity,
+        meshType: localObj.meshType,
+        metadata: localObj.metadata,
+      });
+
+      if (saved) {
+        // DB ID로 교체
+        setPlacedObjects((prev) =>
+          prev.map((o) =>
+            o.id === localObj.id
+              ? { ...localObj, id: saved.id, siteId: saved.siteId, typeId: saved.typeId }
+              : o,
+          ),
+        );
+        setEditingId(saved.id);
+        console.log('[HanVoxel] DB 저장 완료:', saved.id);
+      } else {
+        console.warn('[HanVoxel] DB 저장 실패 — 로컬 상태로 유지');
+      }
     },
-    [placingPreset],
+    [placingPreset, currentSiteId],
   );
 
-  // 치수 편집 적용
-  const handleUpdateObject = useCallback((updated: SpatialObject) => {
+  // 치수 편집 적용 → DB 업데이트
+  const handleUpdateObject = useCallback(async (updated: SpatialObject) => {
+    setSaving(true);
     setPlacedObjects((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+
+    await updateSpatialObject(updated.id, {
+      name: updated.name,
+      positionX: updated.positionX,
+      positionY: updated.positionY,
+      positionZ: updated.positionZ,
+      rotationX: updated.rotationX,
+      rotationY: updated.rotationY,
+      rotationZ: updated.rotationZ,
+      scaleX: updated.scaleX,
+      scaleY: updated.scaleY,
+      scaleZ: updated.scaleZ,
+      color: updated.color,
+      opacity: updated.opacity,
+      meshType: updated.meshType,
+    });
+
+    setSaving(false);
   }, []);
 
-  // 오브젝트 삭제
+  // 오브젝트 삭제 → DB 소프트 삭제
   const handleDeleteObject = useCallback(
-    (id: string) => {
+    async (id: string) => {
       setPlacedObjects((prev) => prev.filter((o) => o.id !== id));
       if (editingId === id) setEditingId(null);
       if (selectedId === id) setSelectedId(null);
+
+      await deleteSpatialObject(id);
     },
     [editingId, selectedId],
   );
 
-  // 내 프리셋으로 저장 (TODO: API 연동)
-  const handleSavePreset = useCallback((obj: SpatialObject) => {
-    console.log('[HanVoxel] 프리셋 저장 요청:', {
-      name: obj.name,
-      code: obj.code,
+  // 내 프리셋으로 저장 → POST /api/v1/spatial-presets
+  const handleSavePreset = useCallback(async (obj: SpatialObject) => {
+    setSaving(true);
+    const presetCode = `CUSTOM_${obj.code}`;
+    const categoryId = (obj.metadata as Record<string, unknown>)?.presetCategoryId as string | undefined;
+
+    const result = await createSpatialPreset({
+      categoryId: categoryId ?? CUSTOM_PRESET_CATEGORY_ID,
+      code: presetCode,
+      name: `${obj.name} (커스텀)`,
       width: obj.scaleX,
-      height: obj.scaleY,
       depth: obj.scaleZ,
+      height: obj.scaleY,
       color: obj.color,
       opacity: obj.opacity,
+      meshType: obj.meshType,
+      metadata: { sourceObjectId: obj.id },
     });
-    alert(`"${obj.name}" 프리셋이 저장되었습니다. (API 연동 예정)`);
+
+    setSaving(false);
+
+    if (result) {
+      alert(`"${obj.name}" 프리셋이 저장되었습니다.`);
+    } else {
+      alert(`프리셋 저장에 실패했습니다. (API 미연결 시 오프라인 모드)`);
+    }
   }, []);
 
   // 객체 선택 (기존 + 배치된 오브젝트 모두)
   const handleSelect = useCallback((obj: SpatialObject) => {
     setSelectedId(obj.id);
-    // 배치된 오브젝트는 더블클릭 없이 바로 편집 모드
-    if (obj.metadata && 'presetId' in obj.metadata) {
+    // 배치된 오브젝트는 바로 편집 모드
+    if (obj.metadata && typeof obj.metadata === 'object' && 'presetId' in obj.metadata) {
       setEditingId(obj.id);
     }
   }, []);
@@ -157,10 +241,11 @@ export function WarehouseViewer({ objects }: WarehouseViewerProps) {
         />
       </Canvas>
 
-      {/* 좌측 상단 — 객체 수 표시 */}
+      {/* 좌측 상단 — 객체 수 + 저장 상태 */}
       <div className="absolute top-4 left-4 rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-2 text-sm text-white backdrop-blur">
         <span className="font-bold">{activeObjects.length}</span>
         <span className="ml-1 text-gray-400">공간 객체</span>
+        {saving && <span className="ml-2 text-[10px] text-yellow-400">저장 중...</span>}
       </div>
 
       {/* 배치 모드 안내 배너 */}

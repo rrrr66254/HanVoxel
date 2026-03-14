@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import presetRoutes from './routes/preset.routes';
+import spatialObjectRoutes from './routes/spatial-object.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // API 라우트
 app.use('/api/v1', presetRoutes);
+app.use('/api/v1', spatialObjectRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

@@ -26,6 +26,26 @@ export async function listPresets(req: Request, res: Response) {
   }
 }
 
+// POST /api/v1/spatial-presets
+export async function createPreset(req: Request, res: Response) {
+  try {
+    const { categoryId, code, name } = req.body;
+    if (!categoryId || !code || !name) {
+      res.status(400).json(errorResponse('VALIDATION_ERROR', 'categoryId, code, name은 필수입니다'));
+      return;
+    }
+    const preset = await presetService.createPreset(req.body);
+    res.status(201).json(successResponse(preset));
+  } catch (err: unknown) {
+    console.error('프리셋 생성 실패:', err);
+    const message = err instanceof Error && err.message.includes('Unique constraint')
+      ? '이미 존재하는 프리셋 코드입니다'
+      : '프리셋 생성에 실패했습니다';
+    const status = message.includes('이미') ? 409 : 500;
+    res.status(status).json(errorResponse('CREATE_ERROR', message));
+  }
+}
+
 // GET /api/v1/spatial-presets/:code
 export async function getPreset(req: Request, res: Response) {
   try {

@@ -35,3 +35,32 @@ export async function getSpatialPresets(categoryId?: string): Promise<SpatialPre
     : MOCK_PRESETS;
   return fetchApi(`/api/v1/spatial-presets${query}`, fallback);
 }
+
+// 프리셋 생성 (내 프리셋으로 저장)
+export async function createSpatialPreset(data: {
+  categoryId: string;
+  code: string;
+  name: string;
+  width: number;
+  depth: number;
+  height: number;
+  color?: string | null;
+  opacity?: number;
+  meshType?: string | null;
+  metadata?: Record<string, unknown> | null;
+}): Promise<SpatialPreset | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/spatial-presets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json: ApiResponse<SpatialPreset> = await res.json();
+    if (json.success && json.data) return json.data;
+    console.error('[API] 프리셋 생성 실패:', json.error?.message);
+    return null;
+  } catch (err) {
+    console.warn('[API] 프리셋 생성 요청 실패 (오프라인 모드):', err);
+    return null;
+  }
+}
