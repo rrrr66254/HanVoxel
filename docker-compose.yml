@@ -1,0 +1,38 @@
+services:
+  # PostgreSQL 15 + PostGIS
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: hanvoxel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hanvoxel
+      POSTGRES_PASSWORD: hanvoxel_dev_2024
+      POSTGRES_DB: hanvoxel
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hanvoxel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis (세션, 캐시, 실시간 데이터)
+  redis:
+    image: redis:7-alpine
+    container_name: hanvoxel-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,219 @@
+// HanVoxel — Phase 1 Step 1
+// Spatial Digital Twin Factory Platform
+// 핵심 공간 객체 + 조직/인증 테이블
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis, uuidOssp(map: "uuid-ossp")]
+}
+
+// ============================================================
+// Organization / Access — 조직 및 권한
+// ============================================================
+
+/// 회사 (최상위 테넌트)
+model Company {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String   @db.VarChar(200)
+  code      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  sites Site[]
+  users User[]
+
+  @@map("companies")
+}
+
+/// 사이트 (공장/창고 단위)
+model Site {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(200)
+  code      String   @db.VarChar(50)
+  address   String?  @db.Text
+  latitude  Float?
+  longitude Float?
+  timezone  String   @default("Asia/Seoul") @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company        Company         @relation(fields: [companyId], references: [id])
+  spatialObjects SpatialObject[]
+
+  @@unique([companyId, code])
+  @@map("sites")
+}
+
+/// 사용자
+model User {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  name         String    @db.VarChar(100)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  userRoles UserRole[]
+
+  @@map("users")
+}
+
+/// 역할
+model Role {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+/// 권한
+model Permission {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  resource    String   @db.VarChar(100)
+  action      String   @db.VarChar(50)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+/// 역할-권한 매핑
+model RolePermission {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// 사용자-역할 매핑
+model UserRole {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// ============================================================
+// Spatial Core — 공간 객체
+// ============================================================
+
+/// 공간 객체 타입 (SITE, BUILDING, FLOOR, ZONE, AISLE, RACK, BIN 등)
+model SpatialObjectType {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @unique @db.VarChar(50)
+  label       String   @db.VarChar(100)
+  description String?  @db.Text
+  /// 계층 깊이 (SITE=0, BUILDING=1, FLOOR=2, ...)
+  depth       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  spatialObjects SpatialObject[]
+
+  @@map("spatial_object_types")
+}
+
+/// 공간 객체 — 모든 물리적 공간 엔티티의 기본 테이블
+model SpatialObject {
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId   String  @map("site_id") @db.Uuid
+  typeId   String  @map("type_id") @db.Uuid
+  name     String  @db.VarChar(200)
+  code     String  @db.VarChar(100)
+  /// 상태: ACTIVE, INACTIVE, MAINTENANCE
+  status   String  @default("ACTIVE") @db.VarChar(20)
+  isActive Boolean @default(true) @map("is_active")
+
+  // --- 위치 (미터 단위, site 원점 기준) ---
+  positionX Float @default(0) @map("position_x")
+  positionY Float @default(0) @map("position_y")
+  positionZ Float @default(0) @map("position_z")
+
+  // --- 회전 (Euler, 라디안) ---
+  rotationX Float @default(0) @map("rotation_x")
+  rotationY Float @default(0) @map("rotation_y")
+  rotationZ Float @default(0) @map("rotation_z")
+
+  // --- 크기 (미터) ---
+  scaleX Float @default(1) @map("scale_x")
+  scaleY Float @default(1) @map("scale_y")
+  scaleZ Float @default(1) @map("scale_z")
+
+  // --- 3D 렌더링 속성 ---
+  color    String? @db.VarChar(7)
+  opacity  Float   @default(1.0)
+  visible  Boolean @default(true)
+  meshType String? @map("mesh_type") @db.VarChar(50)
+
+  // --- 메타데이터 ---
+  metadata Json? @db.JsonB
+
+  // --- 소프트 삭제 ---
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  site Site              @relation(fields: [siteId], references: [id])
+  type SpatialObjectType @relation(fields: [typeId], references: [id])
+
+  // 계층 관계 (자기 참조)
+  parentLinks SpatialHierarchy[] @relation("ChildObject")
+  childLinks  SpatialHierarchy[] @relation("ParentObject")
+
+  @@unique([siteId, code])
+  @@index([siteId, typeId])
+  @@index([status])
+  @@map("spatial_objects")
+}
+
+/// 공간 계층 구조 (부모-자식 관계)
+model SpatialHierarchy {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  parentId  String   @map("parent_id") @db.Uuid
+  childId   String   @map("child_id") @db.Uuid
+  /// 정렬 순서
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  parent SpatialObject @relation("ParentObject", fields: [parentId], references: [id], onDelete: Cascade)
+  child  SpatialObject @relation("ChildObject", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([parentId])
+  @@index([childId])
+  @@map("spatial_hierarchies")
+}

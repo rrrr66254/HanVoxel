@@ -16,7 +16,7 @@
 
 ```
 현재 Phase: Phase 1 — Foundation
-현재 Step:  Step 1 (시작 전)
+현재 Step:  Step 1 (진행 중) — Docker + PostgreSQL/PostGIS + Prisma 스키마 완료
 ```
 
 > Phase가 진행될 때마다 이 섹션을 업데이트할 것.
