@@ -5,13 +5,14 @@ import { RoiCalculator } from './components/roi-calculator';
 import { TrialBanner } from './components/trial-banner';
 import { AlertPanel } from './components/alert-panel';
 import { SlaDashboard } from './components/sla-dashboard';
+import { QcDashboard } from './components/qc-dashboard';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -39,6 +40,10 @@ function App() {
     setWizardResult({ form, template });
     setMode('viewer');
   };
+
+  if (mode === 'qc') {
+    return <QcDashboard onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'sla') {
     return <SlaDashboard onBack={() => setMode('viewer')} />;
@@ -116,6 +121,12 @@ function App() {
           className="rounded-lg border border-blue-700/50 bg-blue-900/30 px-4 py-2 text-xs text-blue-300 backdrop-blur transition-colors hover:bg-blue-900/50"
         >
           SLA 모니터링
+        </button>
+        <button
+          onClick={() => setMode('qc')}
+          className="rounded-lg border border-orange-700/50 bg-orange-900/30 px-4 py-2 text-xs text-orange-300 backdrop-blur transition-colors hover:bg-orange-900/50"
+        >
+          품질 검수
         </button>
       </div>
     </div>

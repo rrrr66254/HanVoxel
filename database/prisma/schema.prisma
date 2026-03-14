@@ -96,6 +96,7 @@ model Site {
   company        Company         @relation(fields: [companyId], references: [id])
   spatialObjects SpatialObject[]
   alerts         Alert[]
+  inspections    QcInspection[]
 
   @@unique([companyId, code])
   @@map("sites")
@@ -478,6 +479,106 @@ model SlaViolation {
   @@index([slaTargetId, violationDate])
   @@index([metricName])
   @@map("sla_violations")
+}
+
+// ============================================================
+// QC — 품질 검수 관리
+// ============================================================
+
+/// 공급업체
+model Supplier {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String   @db.VarChar(200)
+  code      String   @db.VarChar(50)
+  /// 연락처
+  contact   String?  @db.VarChar(200)
+  /// 이메일
+  email     String?  @db.VarChar(255)
+  /// 현재 등급 (A/B/C/D)
+  grade     String   @default("B") @db.VarChar(5)
+  /// 현재 품질 점수 (0~100)
+  qualityScore Float @default(80) @map("quality_score")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  inspections QcInspection[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("suppliers")
+}
+
+/// 검수 기록
+model QcInspection {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId     String   @map("site_id") @db.Uuid
+  supplierId String?  @map("supplier_id") @db.Uuid
+  /// 검수 유형 (INBOUND: 입고, OUTBOUND: 출고)
+  type       String   @db.VarChar(20)
+  /// 검수 상태 (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+  status     String   @default("PENDING") @db.VarChar(20)
+
+  // --- 수량 ---
+  /// 총 검수 수량
+  totalQty     Int @default(0) @map("total_qty")
+  /// 합격 수량
+  passedQty    Int @default(0) @map("passed_qty")
+  /// 불량 수량
+  defectQty    Int @default(0) @map("defect_qty")
+  /// 불량률 (%)
+  defectRate   Float @default(0) @map("defect_rate")
+
+  /// 참조 번호 (입고전표 번호 등)
+  referenceNo  String? @map("reference_no") @db.VarChar(100)
+  /// 검수자
+  inspectorName String? @map("inspector_name") @db.VarChar(100)
+  /// 검수 완료 시각
+  inspectedAt  DateTime? @map("inspected_at") @db.Timestamptz
+  /// 비고
+  note         String?  @db.Text
+  metadata     Json?    @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  site     Site      @relation(fields: [siteId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  items    QcDefectItem[]
+
+  @@index([siteId, type])
+  @@index([supplierId])
+  @@index([inspectedAt])
+  @@map("qc_inspections")
+}
+
+/// 불량 항목 상세
+model QcDefectItem {
+  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inspectionId String @map("inspection_id") @db.Uuid
+  /// 불량 유형 (DAMAGED: 파손, WRONG_ITEM: 오품, WRONG_QTY: 수량 불일치,
+  ///            EXPIRED: 유통기한 초과, CONTAMINATED: 오염, PACKAGING: 포장 불량, OTHER: 기타)
+  defectType   String @map("defect_type") @db.VarChar(30)
+  /// 불량 수량
+  qty          Int    @default(1)
+  /// 상품명/SKU
+  itemName     String? @map("item_name") @db.VarChar(200)
+  itemSku      String? @map("item_sku") @db.VarChar(100)
+  /// 격리 위치 (spatial_objects의 QUARANTINE_ZONE 참조 ID)
+  quarantineLocationId String? @map("quarantine_location_id") @db.Uuid
+  /// 처리 상태 (QUARANTINED: 격리, RETURNED: 반품, DISPOSED: 폐기, REWORKED: 재작업)
+  disposition  String? @db.VarChar(20)
+  /// 사진/증빙 URL
+  evidenceUrl  String? @map("evidence_url") @db.Text
+  note         String? @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  inspection QcInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+  @@index([defectType])
+  @@index([quarantineLocationId])
+  @@map("qc_defect_items")
 }
 
 // ============================================================
