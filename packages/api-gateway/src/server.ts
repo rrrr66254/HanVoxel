@@ -7,6 +7,7 @@ import planRoutes from './routes/plan.routes';
 import alertRoutes from './routes/alert.routes';
 import slaRoutes from './routes/sla.routes';
 import qcRoutes from './routes/qc.routes';
+import pickingRoutes from './routes/picking.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -23,6 +24,7 @@ app.use('/api/v1', planRoutes);
 app.use('/api/v1', alertRoutes);
 app.use('/api/v1', slaRoutes);
 app.use('/api/v1', qcRoutes);
+app.use('/api/v1', pickingRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

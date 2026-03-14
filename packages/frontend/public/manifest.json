@@ -1,0 +1,18 @@
+{
+  "name": "HanVoxel 피킹",
+  "short_name": "피킹",
+  "description": "HanVoxel 모바일 피킹 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#030712",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

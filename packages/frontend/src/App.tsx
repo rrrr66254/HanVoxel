@@ -6,13 +6,14 @@ import { TrialBanner } from './components/trial-banner';
 import { AlertPanel } from './components/alert-panel';
 import { SlaDashboard } from './components/sla-dashboard';
 import { QcDashboard } from './components/qc-dashboard';
+import { PickingMobile } from './components/picking-mobile';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -40,6 +41,10 @@ function App() {
     setWizardResult({ form, template });
     setMode('viewer');
   };
+
+  if (mode === 'picking') {
+    return <PickingMobile onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'qc') {
     return <QcDashboard onBack={() => setMode('viewer')} />;
@@ -127,6 +132,12 @@ function App() {
           className="rounded-lg border border-orange-700/50 bg-orange-900/30 px-4 py-2 text-xs text-orange-300 backdrop-blur transition-colors hover:bg-orange-900/50"
         >
           품질 검수
+        </button>
+        <button
+          onClick={() => setMode('picking')}
+          className="rounded-lg border border-purple-700/50 bg-purple-900/30 px-4 py-2 text-xs text-purple-300 backdrop-blur transition-colors hover:bg-purple-900/50"
+        >
+          모바일 피킹
         </button>
       </div>
     </div>

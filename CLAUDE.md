@@ -7,7 +7,7 @@ Claude Code가 이 프로젝트 작업 시 항상 참고하는 컨텍스트 파�
 모든 3D 오브젝트 치수, 랙/팔레트/컨테이너 규격은 반드시 warehouse-standards.md 기준을 따른다.
 🎯 현재 개발 상태
 현재 Phase: Phase 2 — Intelligence Layer
-현재 Step:  Step 3 (품질 검수 관리)
+현재 Step:  Step 4 (모바일 피킹 + FIFO/FEFO 정책 엔진)
 
 Phase 1 완료 항목:
 - Step 1: Docker + PostgreSQL/PostGIS + Prisma 스키마 + 3D 창고 뷰어
@@ -19,6 +19,8 @@ Phase 1 완료 항목:
 Phase 2 완료 항목:
 - Step 1: ML 이상 탐지 엔진 (Z-Score/IQR/Isolation Forest/Ensemble) + 알림 시스템
 - Step 2: SLA 모니터링 (KPI 대시보드 + 위반 탐지 + 에스컬레이션 + 리포트)
+- Step 3: 품질 검수 관리 (불량 추적 + 공급업체 스코어카드 + 격리 구역 + QC→SLA 연계)
+- Step 4: 모바일 피킹 앱 (PWA) + FIFO/FEFO/NEAREST 정책 엔진 + 피킹 대시보드
 
 Phase가 진행될 때마다 이 섹션을 업데이트할 것.
 🏗️ 기술 스택

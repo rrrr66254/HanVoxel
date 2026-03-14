@@ -97,6 +97,7 @@ model Site {
   spatialObjects SpatialObject[]
   alerts         Alert[]
   inspections    QcInspection[]
+  pickingOrders  PickingOrder[]
 
   @@unique([companyId, code])
   @@map("sites")
@@ -579,6 +580,104 @@ model QcDefectItem {
   @@index([defectType])
   @@index([quarantineLocationId])
   @@map("qc_defect_items")
+}
+
+// ============================================================
+// Picking — 피킹 작업 관리
+// ============================================================
+
+/// 피킹 주문 (출고 요청 단위)
+model PickingOrder {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  /// 주문 번호
+  orderNo   String   @map("order_no") @db.VarChar(100)
+  /// 상태 (PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED)
+  status    String   @default("PENDING") @db.VarChar(20)
+  /// 출고 정책 (FIFO, FEFO, NEAREST)
+  policy    String   @default("FIFO") @db.VarChar(20)
+  /// 우선순위 (1=최고, 5=최저)
+  priority  Int      @default(3)
+  /// 배정된 작업자
+  assigneeId   String?  @map("assignee_id") @db.Uuid
+  assigneeName String?  @map("assignee_name") @db.VarChar(100)
+  /// 고객명
+  customerName String? @map("customer_name") @db.VarChar(200)
+  /// 배정 시각
+  assignedAt   DateTime? @map("assigned_at") @db.Timestamptz
+  /// 피킹 시작 시각
+  startedAt    DateTime? @map("started_at") @db.Timestamptz
+  /// 피킹 완료 시각
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz
+  /// 총 라인 수
+  totalLines   Int @default(0) @map("total_lines")
+  /// 완료 라인 수
+  pickedLines  Int @default(0) @map("picked_lines")
+  /// 오류 라인 수
+  errorLines   Int @default(0) @map("error_lines")
+  note         String?  @db.Text
+  metadata     Json?    @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  site  Site          @relation(fields: [siteId], references: [id])
+  lines PickingLine[]
+
+  @@unique([siteId, orderNo])
+  @@index([siteId, status])
+  @@index([assigneeId])
+  @@map("picking_orders")
+}
+
+/// 피킹 라인 (주문 내 개별 아이템)
+model PickingLine {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  pickingOrderId String   @map("picking_order_id") @db.Uuid
+  /// 라인 번호 (순서)
+  lineNo         Int      @map("line_no")
+  /// 상품 SKU
+  sku            String   @db.VarChar(100)
+  /// 상품명
+  itemName       String   @map("item_name") @db.VarChar(200)
+  /// 요청 수량
+  requestedQty   Int      @map("requested_qty")
+  /// 실제 피킹 수량
+  pickedQty      Int      @default(0) @map("picked_qty")
+  /// 상태 (PENDING, PICKED, SHORT, ERROR, SKIPPED)
+  status         String   @default("PENDING") @db.VarChar(20)
+
+  // --- 위치 정보 (정책 엔진이 결정) ---
+  /// 출발 bin 위치 ID (spatial_objects 참조)
+  binLocationId  String?  @map("bin_location_id") @db.Uuid
+  /// bin 코드 (사람이 읽을 수 있는 형태: A-01-03)
+  binCode        String?  @map("bin_code") @db.VarChar(50)
+  /// zone
+  zone           String?  @db.VarChar(50)
+  /// 바코드
+  barcode        String?  @db.VarChar(100)
+  /// 유통기한
+  expiryDate     DateTime? @map("expiry_date") @db.Date
+  /// 입고일
+  receivedDate   DateTime? @map("received_date") @db.Date
+  /// 피킹 순서 (경로 최적화 결과)
+  pickSequence   Int      @default(0) @map("pick_sequence")
+
+  /// 바코드 스캔 확인 여부
+  scanVerified   Boolean  @default(false) @map("scan_verified")
+  /// 피킹 완료 시각
+  pickedAt       DateTime? @map("picked_at") @db.Timestamptz
+  /// 오류 사유
+  errorReason    String?  @map("error_reason") @db.VarChar(200)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  pickingOrder PickingOrder @relation(fields: [pickingOrderId], references: [id], onDelete: Cascade)
+
+  @@index([pickingOrderId])
+  @@index([sku])
+  @@index([binLocationId])
+  @@map("picking_lines")
 }
 
 // ============================================================
