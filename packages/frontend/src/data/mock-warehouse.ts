@@ -1,5 +1,38 @@
 import type { SpatialObject, SpatialObjectType } from '../types/spatial';
 
+// ============================================================
+// warehouse-standards.md 기반 표준 규격 (미터 단위)
+// ============================================================
+
+const RACK = { w: 2.7, d: 1.1, h: 5.4, levels: 3, levelHeight: 1.5, loadPerLevel: 1000 }; // KR_STANDARD
+const PALLET = { w: 1.1, d: 1.1, h: 0.144, maxLoad: 1000 }; // T11
+const PRODUCT = { w: 0.4, d: 0.3, h: 0.3, qtyPerPallet: 24, kgPerPallet: 300 }; // FOOD_BEVERAGE
+const CONTAINER = { w: 2.438, d: 12.192, h: 2.591 }; // DRY_40FT
+const AISLE = { forklift: 4.0, reach: 2.8, pedestrian: 1.2, emergency: 1.5 }; // 권장 너비
+
+// ============================================================
+// 창고 레이아웃 설계 (식품·음료 물류 창고)
+//
+// 전체 치수: 약 60m × 45m
+//
+//  Y축 = 높이 (위)
+//  X축 = 가로 (오른쪽)
+//  Z축 = 세로 (앞쪽 = 도크 방향)
+//
+//  +Z ← 건물 뒤쪽
+//   |
+//   |  [ 보관 구역 — 랙 6열 ]
+//   |
+//   |  ─── 비상 통로 ───
+//   |
+//   |  [ 입고 스테이징 ]  [ 출고 스테이징 ]
+//   |
+//   |  ─── 도크 영역 (컨테이너 3기) ───
+//   |
+//  Z=0 → 건물 앞쪽 (도크)
+//
+// ============================================================
+
 // 공간 객체 타입 마스터
 const TYPES: Record<string, SpatialObjectType> = {
   BUILDING: { id: 'type-1', name: 'BUILDING', label: '건물', description: null, depth: 1 },
@@ -12,176 +45,308 @@ const TYPES: Record<string, SpatialObjectType> = {
   SAFETY_ZONE: { id: 'type-8', name: 'SAFETY_ZONE', label: '안전구역', description: null, depth: 3 },
 };
 
-// 샘플 창고 — 중견 자동차 부품 창고
-export const MOCK_WAREHOUSE: SpatialObject[] = [
-  // 바닥 (FLOOR)
-  {
-    id: 'floor-1',
+// ============================================================
+// 레이아웃 상수
+// ============================================================
+
+// 보관 구역 시작점
+const STORAGE_ORIGIN_X = 3;
+const STORAGE_ORIGIN_Z = 18; // 도크에서 충분히 떨어진 위치
+
+// 랙 배치: 2열씩 등지게 (back-to-back) 배치, 열 사이 리치트럭 통로
+const RACK_PAIR_DEPTH = RACK.d * 2; // 등지기 쌍 깊이 = 2.2m
+const RACK_AISLE_WIDTH = AISLE.reach; // 랙 간 통로 = 2.8m (리치트럭)
+const RACK_ROW_PITCH = RACK_PAIR_DEPTH + RACK_AISLE_WIDTH; // 5.0m 간격
+
+// 한 열에 랙 몇 개 (가로 방향)
+const RACKS_PER_ROW = 8;
+const RACK_GAP = 0.1; // 랙 간 간격 (가로)
+const ROW_WIDTH = RACKS_PER_ROW * (RACK.w + RACK_GAP); // ~22.4m
+
+// 주 통로 (지게차)
+const MAIN_AISLE_WIDTH = AISLE.forklift; // 4.0m
+
+// 도크 영역
+const DOCK_Z = 1; // Z=1m 부근
+const DOCK_DEPTH = CONTAINER.d + 2; // 컨테이너 길이 + 여유 = ~14.2m
+const CONTAINER_COUNT = 3;
+const CONTAINER_SPACING = 2; // 컨테이너 간 간격
+
+// 스테이징 영역
+const STAGING_Z = DOCK_DEPTH + 1; // 도크 뒤 스테이징
+const STAGING_DEPTH = 5;
+
+// 비상 통로
+const EMERGENCY_Z = STAGING_Z + STAGING_DEPTH + 0.5;
+
+// 전체 건물 치수
+const BUILDING_W = ROW_WIDTH + MAIN_AISLE_WIDTH + 6; // ~32m (양쪽 여유)
+const BUILDING_D = 45;
+const BUILDING_H = 8; // 천장 높이
+
+// ============================================================
+// 헬퍼 함수
+// ============================================================
+
+function obj(
+  id: string,
+  type: SpatialObjectType,
+  name: string,
+  code: string,
+  pos: [number, number, number],
+  scale: [number, number, number],
+  overrides?: Partial<SpatialObject>,
+): SpatialObject {
+  return {
+    id,
     siteId: 'site-1',
-    typeId: TYPES.FLOOR.id,
-    type: TYPES.FLOOR,
-    name: '1층 바닥',
-    code: 'F1',
+    typeId: type.id,
+    type,
+    name,
+    code,
     status: 'ACTIVE',
     isActive: true,
-    positionX: 20, positionY: -0.05, positionZ: 15,
-    rotationX: -Math.PI / 2, rotationY: 0, rotationZ: 0,
-    scaleX: 50, scaleY: 40, scaleZ: 1,
-    color: '#1e293b',
-    opacity: 0.6,
-    visible: true,
-    meshType: 'plane',
-    metadata: null,
-  },
-
-  // 구역 A — 입고 구역
-  {
-    id: 'zone-a',
-    siteId: 'site-1',
-    typeId: TYPES.ZONE.id,
-    type: TYPES.ZONE,
-    name: '입고 구역 A',
-    code: 'ZONE-A',
-    status: 'ACTIVE',
-    isActive: true,
-    positionX: 5, positionY: 2, positionZ: 5,
-    rotationX: 0, rotationY: 0, rotationZ: 0,
-    scaleX: 12, scaleY: 4, scaleZ: 10,
-    color: '#3b82f6',
-    opacity: 0.08,
-    visible: true,
-    meshType: 'box',
-    metadata: { purpose: '입고 대기 구역' },
-  },
-
-  // 구역 B — 출고 구역
-  {
-    id: 'zone-b',
-    siteId: 'site-1',
-    typeId: TYPES.ZONE.id,
-    type: TYPES.ZONE,
-    name: '출고 구역 B',
-    code: 'ZONE-B',
-    status: 'ACTIVE',
-    isActive: true,
-    positionX: 35, positionY: 2, positionZ: 5,
-    rotationX: 0, rotationY: 0, rotationZ: 0,
-    scaleX: 12, scaleY: 4, scaleZ: 10,
-    color: '#10b981',
-    opacity: 0.08,
-    visible: true,
-    meshType: 'box',
-    metadata: { purpose: '출고 준비 구역' },
-  },
-
-  // 안전 구역
-  {
-    id: 'safety-1',
-    siteId: 'site-1',
-    typeId: TYPES.SAFETY_ZONE.id,
-    type: TYPES.SAFETY_ZONE,
-    name: '비상 통로',
-    code: 'SAFE-1',
-    status: 'ACTIVE',
-    isActive: true,
-    positionX: 20, positionY: 0.5, positionZ: 30,
-    rotationX: 0, rotationY: 0, rotationZ: 0,
-    scaleX: 40, scaleY: 1, scaleZ: 2,
-    color: '#f43f5e',
-    opacity: 0.15,
-    visible: true,
-    meshType: 'box',
-    metadata: null,
-  },
-
-  // 랙 A열 (5개)
-  ...createRackRow('A', 5, 3, { startX: 3, z: 15, spacing: 3 }),
-
-  // 랙 B열 (5개)
-  ...createRackRow('B', 5, 4, { startX: 3, z: 22, spacing: 3 }),
-
-  // 랙 C열 (4개)
-  ...createRackRow('C', 4, 3, { startX: 25, z: 15, spacing: 3 }),
-
-  // 랙 D열 (4개)
-  ...createRackRow('D', 4, 4, { startX: 25, z: 22, spacing: 3 }),
-
-  // 작업대
-  {
-    id: 'ws-1',
-    siteId: 'site-1',
-    typeId: TYPES.WORKSTATION.id,
-    type: TYPES.WORKSTATION,
-    name: '피킹 작업대 1',
-    code: 'WS-1',
-    status: 'ACTIVE',
-    isActive: true,
-    positionX: 20, positionY: 0.5, positionZ: 5,
-    rotationX: 0, rotationY: 0, rotationZ: 0,
-    scaleX: 2, scaleY: 1, scaleZ: 1.5,
-    color: '#8b5cf6',
-    opacity: 1,
-    visible: true,
-    meshType: 'box',
-    metadata: { operator: '김물류' },
-  },
-  {
-    id: 'ws-2',
-    siteId: 'site-1',
-    typeId: TYPES.WORKSTATION.id,
-    type: TYPES.WORKSTATION,
-    name: '검수 작업대',
-    code: 'WS-2',
-    status: 'MAINTENANCE',
-    isActive: true,
-    positionX: 20, positionY: 0.5, positionZ: 8,
-    rotationX: 0, rotationY: 0, rotationZ: 0,
-    scaleX: 2, scaleY: 1, scaleZ: 1.5,
+    positionX: pos[0],
+    positionY: pos[1],
+    positionZ: pos[2],
+    rotationX: 0,
+    rotationY: 0,
+    rotationZ: 0,
+    scaleX: scale[0],
+    scaleY: scale[1],
+    scaleZ: scale[2],
     color: null,
     opacity: 1,
     visible: true,
     meshType: 'box',
-    metadata: { note: '장비 점검 중' },
-  },
-];
+    metadata: null,
+    ...overrides,
+  };
+}
 
-// 랙 행 생성 헬퍼
-function createRackRow(
-  rowLabel: string,
+// KR_STANDARD 랙 행 생성 (back-to-back 쌍)
+function createRackPairRow(
+  labelFront: string,
+  labelBack: string,
+  pairIndex: number,
   count: number,
-  levels: number,
-  config: { startX: number; z: number; spacing: number },
 ): SpatialObject[] {
   const racks: SpatialObject[] = [];
-  const rackWidth = 2;
-  const rackDepth = 1;
-  const rackHeight = levels * 1.2;
+  const centerZ = STORAGE_ORIGIN_Z + pairIndex * RACK_ROW_PITCH;
+  const frontZ = centerZ - RACK.d / 2 - 0.05;
+  const backZ = centerZ + RACK.d / 2 + 0.05;
 
   for (let i = 0; i < count; i++) {
-    const x = config.startX + i * (rackWidth + config.spacing);
-    racks.push({
-      id: `rack-${rowLabel}-${i + 1}`,
-      siteId: 'site-1',
-      typeId: TYPES.RACK.id,
-      type: TYPES.RACK,
-      name: `랙 ${rowLabel}-${String(i + 1).padStart(2, '0')}`,
-      code: `RACK-${rowLabel}${String(i + 1).padStart(2, '0')}`,
-      status: 'ACTIVE',
-      isActive: true,
-      positionX: x,
-      positionY: rackHeight / 2,
-      positionZ: config.z,
-      rotationX: 0, rotationY: 0, rotationZ: 0,
-      scaleX: rackWidth,
-      scaleY: rackHeight,
-      scaleZ: rackDepth,
-      color: '#f59e0b',
-      opacity: 0.9,
-      visible: true,
-      meshType: 'box',
-      metadata: { levels, capacity: levels * 4 },
-    });
+    const x = STORAGE_ORIGIN_X + i * (RACK.w + RACK_GAP);
+    // 앞쪽 랙
+    racks.push(obj(
+      `rack-${labelFront}-${i + 1}`,
+      TYPES.RACK,
+      `랙 ${labelFront}-${String(i + 1).padStart(2, '0')}`,
+      `RACK-${labelFront}${String(i + 1).padStart(2, '0')}`,
+      [x + RACK.w / 2, RACK.h / 2, frontZ],
+      [RACK.w, RACK.h, RACK.d],
+      {
+        color: '#f59e0b',
+        opacity: 0.9,
+        metadata: {
+          standard: 'KR_STANDARD',
+          levels: RACK.levels,
+          levelHeight: RACK.levelHeight,
+          loadPerLevel: RACK.loadPerLevel,
+          pallet: 'T11',
+          product: 'FOOD_BEVERAGE',
+          palletPerLevel: 2, // T11(1.1m) × 2 = 2.2m ≈ RACK.w(2.7m)에 2개
+          capacityPallets: RACK.levels * 2,
+        },
+      },
+    ));
+    // 뒤쪽 랙
+    racks.push(obj(
+      `rack-${labelBack}-${i + 1}`,
+      TYPES.RACK,
+      `랙 ${labelBack}-${String(i + 1).padStart(2, '0')}`,
+      `RACK-${labelBack}${String(i + 1).padStart(2, '0')}`,
+      [x + RACK.w / 2, RACK.h / 2, backZ],
+      [RACK.w, RACK.h, RACK.d],
+      {
+        color: '#f59e0b',
+        opacity: 0.9,
+        metadata: {
+          standard: 'KR_STANDARD',
+          levels: RACK.levels,
+          levelHeight: RACK.levelHeight,
+          loadPerLevel: RACK.loadPerLevel,
+          pallet: 'T11',
+          product: 'FOOD_BEVERAGE',
+          palletPerLevel: 2,
+          capacityPallets: RACK.levels * 2,
+        },
+      },
+    ));
   }
-
   return racks;
 }
+
+// 통로 생성
+function createAisle(
+  id: string,
+  name: string,
+  code: string,
+  pos: [number, number, number],
+  scale: [number, number, number],
+): SpatialObject {
+  return obj(id, TYPES.AISLE, name, code, pos, scale, {
+    color: '#475569',
+    opacity: 0.15,
+    meshType: 'box',
+    metadata: { standard: 'REACH_TRUCK', width: AISLE.reach },
+  });
+}
+
+// DRY_40FT 컨테이너 생성
+function createContainer(index: number, x: number): SpatialObject {
+  return obj(
+    `container-${index}`,
+    TYPES.ZONE,
+    `컨테이너 도크 ${index}`,
+    `DOCK-${index}`,
+    [x, CONTAINER.h / 2, DOCK_Z + CONTAINER.d / 2],
+    [CONTAINER.w, CONTAINER.h, CONTAINER.d],
+    {
+      color: '#1d4ed8',
+      opacity: 0.35,
+      metadata: {
+        type: 'DRY_40FT',
+        innerWidth: 2.352,
+        innerDepth: 12.032,
+        innerHeight: 2.393,
+        cbm: 67.6,
+        maxLoad: 26750,
+        palletCapacity: '20 × T11',
+      },
+    },
+  );
+}
+
+// ============================================================
+// 창고 데이터 조립
+// ============================================================
+
+export const MOCK_WAREHOUSE: SpatialObject[] = [
+  // --- 바닥 ---
+  obj('floor-1', TYPES.FLOOR, '1층 바닥', 'F1',
+    [BUILDING_W / 2, -0.05, BUILDING_D / 2],
+    [BUILDING_W + 4, BUILDING_D + 4, 1],
+    { color: '#1e293b', opacity: 0.6, meshType: 'plane', rotationX: -Math.PI / 2 },
+  ),
+
+  // --- 도크 영역 (DRY_40FT × 3기) ---
+  ...Array.from({ length: CONTAINER_COUNT }, (_, i) => {
+    const totalW = CONTAINER_COUNT * CONTAINER.w + (CONTAINER_COUNT - 1) * CONTAINER_SPACING;
+    const startX = (BUILDING_W - totalW) / 2 + CONTAINER.w / 2;
+    const x = startX + i * (CONTAINER.w + CONTAINER_SPACING);
+    return createContainer(i + 1, x);
+  }),
+
+  // 도크 구역 (전체 영역 표시)
+  obj('zone-dock', TYPES.ZONE, '컨테이너 도크 구역', 'ZONE-DOCK',
+    [BUILDING_W / 2, 1.5, DOCK_Z + DOCK_DEPTH / 2],
+    [BUILDING_W - 4, 3, DOCK_DEPTH],
+    { color: '#1d4ed8', opacity: 0.05, metadata: { purpose: '컨테이너 하역 구역', containerType: 'DRY_40FT' } },
+  ),
+
+  // --- 입고 스테이징 구역 ---
+  obj('zone-inbound', TYPES.ZONE, '입고 스테이징', 'ZONE-IN',
+    [BUILDING_W / 4, RACK.h / 3, STAGING_Z + STAGING_DEPTH / 2],
+    [BUILDING_W / 2 - 3, RACK.h / 1.5, STAGING_DEPTH],
+    {
+      color: '#3b82f6',
+      opacity: 0.06,
+      metadata: {
+        purpose: '입고 대기 구역',
+        palletType: 'T11',
+        capacity: '약 40 팔레트',
+      },
+    },
+  ),
+
+  // --- 출고 스테이징 구역 ---
+  obj('zone-outbound', TYPES.ZONE, '출고 스테이징', 'ZONE-OUT',
+    [BUILDING_W * 3 / 4, RACK.h / 3, STAGING_Z + STAGING_DEPTH / 2],
+    [BUILDING_W / 2 - 3, RACK.h / 1.5, STAGING_DEPTH],
+    {
+      color: '#10b981',
+      opacity: 0.06,
+      metadata: {
+        purpose: '출고 준비 구역',
+        palletType: 'T11',
+        capacity: '약 40 팔레트',
+      },
+    },
+  ),
+
+  // --- 비상 통로 (소방법 기준 1.5m) ---
+  obj('emergency-aisle', TYPES.SAFETY_ZONE, '비상 통로', 'SAFE-MAIN',
+    [BUILDING_W / 2, 0.3, EMERGENCY_Z],
+    [BUILDING_W - 2, 0.6, AISLE.emergency],
+    { color: '#f43f5e', opacity: 0.15, metadata: { standard: '산업안전보건기준 규칙 제35조', width: AISLE.emergency } },
+  ),
+
+  // --- 보관 구역 (KR_STANDARD 랙 6열 = 3쌍 back-to-back) ---
+  // 쌍 1: A-B열
+  ...createRackPairRow('A', 'B', 0, RACKS_PER_ROW),
+  // 쌍 2: C-D열
+  ...createRackPairRow('C', 'D', 1, RACKS_PER_ROW),
+  // 쌍 3: E-F열
+  ...createRackPairRow('E', 'F', 2, RACKS_PER_ROW),
+
+  // --- 리치트럭 통로 (랙 쌍 사이) ---
+  createAisle('aisle-1', '작업 통로 1', 'AISLE-01',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.05, STORAGE_ORIGIN_Z - RACK.d - AISLE.reach / 2],
+    [ROW_WIDTH, 0.1, AISLE.reach],
+  ),
+  createAisle('aisle-2', '작업 통로 2', 'AISLE-02',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.05, STORAGE_ORIGIN_Z + RACK_ROW_PITCH - RACK.d - AISLE.reach / 2],
+    [ROW_WIDTH, 0.1, AISLE.reach],
+  ),
+  createAisle('aisle-3', '작업 통로 3', 'AISLE-03',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.05, STORAGE_ORIGIN_Z + 2 * RACK_ROW_PITCH - RACK.d - AISLE.reach / 2],
+    [ROW_WIDTH, 0.1, AISLE.reach],
+  ),
+  createAisle('aisle-4', '작업 통로 4', 'AISLE-04',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.05, STORAGE_ORIGIN_Z + 2 * RACK_ROW_PITCH + RACK.d / 2 + AISLE.reach / 2 + 0.05],
+    [ROW_WIDTH, 0.1, AISLE.reach],
+  ),
+
+  // --- 주 통로 (지게차, 보관구역 옆) ---
+  obj('main-aisle', TYPES.AISLE, '주 통로 (지게차)', 'AISLE-MAIN',
+    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.05, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [MAIN_AISLE_WIDTH, 0.1, RACK_ROW_PITCH * 3 + AISLE.reach],
+    { color: '#64748b', opacity: 0.12, metadata: { standard: 'COUNTERBALANCE_3T', width: AISLE.forklift } },
+  ),
+
+  // --- 작업대 ---
+  obj('ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
+    [BUILDING_W / 2 - 3, 0.45, STAGING_Z + 1],
+    [2, 0.9, 1.5],
+    { color: '#8b5cf6', metadata: { operator: '김물류', task: '피킹' } },
+  ),
+  obj('ws-inspect', TYPES.WORKSTATION, '검수 작업대', 'WS-QC',
+    [BUILDING_W / 2 + 3, 0.45, STAGING_Z + 1],
+    [2, 0.9, 1.5],
+    { color: '#8b5cf6', metadata: { operator: '이검수', task: '품질검수' } },
+  ),
+  obj('ws-packing', TYPES.WORKSTATION, '포장 작업대', 'WS-PACK',
+    [BUILDING_W / 2, 0.45, STAGING_Z + 3.5],
+    [3, 0.9, 1.5],
+    { color: '#8b5cf6', status: 'MAINTENANCE', metadata: { note: '장비 점검 중' } },
+  ),
+
+  // --- 보관 구역 영역 표시 ---
+  obj('zone-storage', TYPES.ZONE, '보관 구역', 'ZONE-STORAGE',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, RACK.h / 2, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [ROW_WIDTH + 2, RACK.h + 0.5, RACK_ROW_PITCH * 3 + AISLE.reach],
+    { color: '#f59e0b', opacity: 0.03, metadata: { rackStandard: 'KR_STANDARD', totalRacks: 48, totalPallets: 48 * 6 } },
+  ),
+];
