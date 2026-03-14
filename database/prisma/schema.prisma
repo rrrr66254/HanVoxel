@@ -32,12 +32,19 @@ model Company {
   stripeCustomerId String? @map("stripe_customer_id") @db.VarChar(100)
   /// Stripe 구독 ID
   stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(100)
+  /// 구독 상태 (trialing, active, past_due, canceled, unpaid)
+  subscriptionStatus String @default("trialing") @map("subscription_status") @db.VarChar(30)
+  /// 결제 주기 (monthly, yearly)
+  billingInterval String @default("monthly") @map("billing_interval") @db.VarChar(10)
+  /// 현재 결제 기간 종료일
+  currentPeriodEnd DateTime? @map("current_period_end") @db.Timestamptz
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  sites Site[]
-  users User[]
+  sites    Site[]
+  users    User[]
+  payments PaymentHistory[]
 
   @@map("companies")
 }
@@ -77,6 +84,39 @@ model Plan {
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("plans")
+}
+
+/// 결제 내역
+model PaymentHistory {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  /// Stripe Invoice ID
+  stripeInvoiceId String? @unique @map("stripe_invoice_id") @db.VarChar(100)
+  /// Stripe Payment Intent ID
+  stripePaymentIntentId String? @map("stripe_payment_intent_id") @db.VarChar(100)
+  /// 결제 금액 (원)
+  amount         Int
+  /// 통화 (krw)
+  currency       String   @default("krw") @db.VarChar(10)
+  /// 상태 (paid, failed, refunded, pending)
+  status         String   @db.VarChar(20)
+  /// 플랜 코드
+  planCode       String   @map("plan_code") @db.VarChar(20)
+  /// 결제 주기
+  billingInterval String  @map("billing_interval") @db.VarChar(10)
+  /// 결제 기간 시작
+  periodStart    DateTime @map("period_start") @db.Timestamptz
+  /// 결제 기간 종료
+  periodEnd      DateTime @map("period_end") @db.Timestamptz
+  /// 설명
+  description    String?  @db.Text
+
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company        Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@map("payment_history")
 }
 
 /// 사이트 (공장/창고 단위)

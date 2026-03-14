@@ -7,13 +7,15 @@ import { AlertPanel } from './components/alert-panel';
 import { SlaDashboard } from './components/sla-dashboard';
 import { QcDashboard } from './components/qc-dashboard';
 import { PickingMobile } from './components/picking-mobile';
+import { UpgradeModal } from './components/upgrade-modal';
+import { SubscriptionDashboard } from './components/subscription-dashboard';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -24,6 +26,7 @@ const DEMO_TRIAL = {
 function App() {
   const [mode, setMode] = useState<AppMode>('wizard');
   const [alertOpen, setAlertOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [wizardResult, setWizardResult] = useState<{
     form: WizardFormData;
     template: WarehouseTemplate;
@@ -41,6 +44,17 @@ function App() {
     setWizardResult({ form, template });
     setMode('viewer');
   };
+
+  const openUpgrade = () => setUpgradeOpen(true);
+
+  if (mode === 'subscription') {
+    return (
+      <SubscriptionDashboard
+        onBack={() => setMode('viewer')}
+        onUpgrade={openUpgrade}
+      />
+    );
+  }
 
   if (mode === 'picking') {
     return <PickingMobile onBack={() => setMode('viewer')} />;
@@ -87,7 +101,7 @@ function App() {
       <TrialBanner
         planType={DEMO_TRIAL.planType}
         trialEndsAt={DEMO_TRIAL.trialEndsAt}
-        onUpgrade={() => alert('Stripe 결제 페이지로 이동 예정 (Phase 2)')}
+        onUpgrade={openUpgrade}
       />
 
       {/* 3D 뷰어 */}
@@ -107,8 +121,15 @@ function App() {
       {/* 알림 패널 */}
       <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
 
+      {/* 업그레이드 모달 */}
+      <UpgradeModal
+        isOpen={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        currentPlan={DEMO_TRIAL.planType}
+      />
+
       {/* 하단 네비게이션 */}
-      <div className="fixed bottom-4 left-4 flex gap-2">
+      <div className="fixed bottom-4 left-4 flex flex-wrap gap-2">
         <button
           onClick={() => setMode('wizard')}
           className="rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
@@ -138,6 +159,12 @@ function App() {
           className="rounded-lg border border-purple-700/50 bg-purple-900/30 px-4 py-2 text-xs text-purple-300 backdrop-blur transition-colors hover:bg-purple-900/50"
         >
           모바일 피킹
+        </button>
+        <button
+          onClick={() => setMode('subscription')}
+          className="rounded-lg border border-cyan-700/50 bg-cyan-900/30 px-4 py-2 text-xs text-cyan-300 backdrop-blur transition-colors hover:bg-cyan-900/50"
+        >
+          구독 관리
         </button>
       </div>
     </div>
