@@ -45,6 +45,7 @@ model Company {
   sites    Site[]
   users    User[]
   payments PaymentHistory[]
+  partners Partner[]
 
   @@map("companies")
 }
@@ -769,4 +770,137 @@ model SpatialHierarchy {
   @@index([parentId])
   @@index([childId])
   @@map("spatial_hierarchies")
+}
+
+// ============================================================
+// Phase 3 — Logistics ERP (경량 ERP)
+// ============================================================
+
+/// 거래처 (공급업체 + 고객사)
+model Partner {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  /// 거래처 유형 (SUPPLIER: 공급업체, CUSTOMER: 고객사, BOTH: 양쪽)
+  type        String   @db.VarChar(20)
+  name        String   @db.VarChar(200)
+  code        String   @db.VarChar(50)
+  /// 사업자등록번호
+  bizNo       String?  @map("biz_no") @db.VarChar(20)
+  /// 대표자명
+  ceoName     String?  @map("ceo_name") @db.VarChar(100)
+  /// 업태
+  bizType     String?  @map("biz_type") @db.VarChar(100)
+  /// 종목
+  bizCategory String?  @map("biz_category") @db.VarChar(100)
+  address     String?  @db.Text
+  phone       String?  @db.VarChar(30)
+  email       String?  @db.VarChar(255)
+  /// 담당자명
+  contactName String?  @map("contact_name") @db.VarChar(100)
+  /// 결제 조건 (ex: NET30, COD)
+  paymentTerms String? @map("payment_terms") @db.VarChar(30)
+  /// 메모
+  note        String?  @db.Text
+
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company     Company   @relation(fields: [companyId], references: [id])
+  vouchers    Voucher[]
+
+  @@unique([companyId, code])
+  @@index([companyId, type])
+  @@map("partners")
+}
+
+/// 전표 (매입/매출)
+model Voucher {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  /// 전표 유형 (PURCHASE: 매입, SALES: 매출)
+  type        String   @db.VarChar(20)
+  /// 전표 번호 (자동 생성)
+  voucherNo   String   @unique @map("voucher_no") @db.VarChar(30)
+  /// 거래처 ID
+  partnerId   String   @map("partner_id") @db.Uuid
+  /// 전표 상태 (DRAFT, CONFIRMED, CANCELED)
+  status      String   @default("DRAFT") @db.VarChar(20)
+  /// 전표 일자
+  voucherDate DateTime @map("voucher_date") @db.Date
+  /// 납기일
+  dueDate     DateTime? @map("due_date") @db.Date
+  /// 공급가액 합계 (원)
+  subtotal    Int      @default(0)
+  /// 부가세 합계 (원)
+  taxAmount   Int      @default(0) @map("tax_amount")
+  /// 총액 (공급가 + 부가세)
+  totalAmount Int      @default(0) @map("total_amount")
+  /// 참조 번호 (입고/출고 전표 연계)
+  referenceNo String?  @map("reference_no") @db.VarChar(50)
+  /// 비고
+  note        String?  @db.Text
+  /// 확정 일시
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  partner     Partner       @relation(fields: [partnerId], references: [id])
+  lines       VoucherLine[]
+
+  @@index([siteId, type])
+  @@index([siteId, voucherDate])
+  @@index([partnerId])
+  @@map("vouchers")
+}
+
+/// 전표 항목
+model VoucherLine {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  voucherId   String   @map("voucher_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  sku         String   @db.VarChar(50)
+  itemName    String   @map("item_name") @db.VarChar(200)
+  /// 수량
+  qty         Int
+  /// 단가 (원)
+  unitPrice   Int      @map("unit_price")
+  /// 공급가 = qty × unitPrice
+  amount      Int
+  /// 부가세
+  taxAmount   Int      @default(0) @map("tax_amount")
+  /// 비고
+  note        String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  voucher     Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@index([sku])
+  @@map("voucher_lines")
+}
+
+/// SKU별 원가 정보
+model SkuCost {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  sku         String   @db.VarChar(50)
+  itemName    String   @map("item_name") @db.VarChar(200)
+  /// 원가 계산 방식 (FIFO, MOVING_AVG)
+  costMethod  String   @default("FIFO") @map("cost_method") @db.VarChar(20)
+  /// 현재 재고 수량
+  currentQty  Int      @default(0) @map("current_qty")
+  /// FIFO: 현재 로트별 원가 배열 [{ qty, unitCost }]
+  fifoLayers  Json?    @map("fifo_layers") @db.JsonB
+  /// 이동평균: 현재 평균 단가 (원)
+  avgUnitCost Float    @default(0) @map("avg_unit_cost")
+  /// 최종 매입 단가 (원)
+  lastPurchasePrice Int @default(0) @map("last_purchase_price")
+  /// 표준 판매 단가 (원)
+  sellingPrice Int     @default(0) @map("selling_price")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([siteId, sku])
+  @@index([siteId])
+  @@map("sku_costs")
 }
