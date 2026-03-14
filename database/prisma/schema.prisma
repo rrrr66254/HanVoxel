@@ -22,6 +22,17 @@ model Company {
   name      String   @db.VarChar(200)
   code      String   @unique @db.VarChar(50)
   isActive  Boolean  @default(true) @map("is_active")
+
+  // --- SaaS 과금 ---
+  /// 현재 플랜 (STARTER, GROWTH, ENTERPRISE)
+  planType     String    @default("STARTER") @map("plan_type") @db.VarChar(20)
+  /// 트라이얼 종료일
+  trialEndsAt  DateTime? @map("trial_ends_at") @db.Timestamptz
+  /// Stripe 고객 ID
+  stripeCustomerId String? @map("stripe_customer_id") @db.VarChar(100)
+  /// Stripe 구독 ID
+  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(100)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -29,6 +40,43 @@ model Company {
   users User[]
 
   @@map("companies")
+}
+
+/// SaaS 요금제
+model Plan {
+  id           String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 플랜 코드 (STARTER, GROWTH, ENTERPRISE)
+  code         String  @unique @db.VarChar(20)
+  name         String  @db.VarChar(100)
+  description  String? @db.Text
+  /// 월 가격 (원)
+  priceMonthly Int     @default(0) @map("price_monthly")
+  /// 연 가격 (원)
+  priceYearly  Int     @default(0) @map("price_yearly")
+  /// Stripe Price ID (월)
+  stripePriceMonthly String? @map("stripe_price_monthly") @db.VarChar(100)
+  /// Stripe Price ID (연)
+  stripePriceYearly  String? @map("stripe_price_yearly") @db.VarChar(100)
+
+  // --- 플랜 제한 ---
+  /// 최대 사이트 수
+  maxSites     Int @default(1) @map("max_sites")
+  /// 최대 사용자 수
+  maxUsers     Int @default(3) @map("max_users")
+  /// 최대 공간 객체 수
+  maxObjects   Int @default(500) @map("max_objects")
+  /// 트라이얼 기간 (일)
+  trialDays    Int @default(14) @map("trial_days")
+
+  /// 기능 플래그 (JSON)
+  features     Json? @db.JsonB
+
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("plans")
 }
 
 /// 사이트 (공장/창고 단위)

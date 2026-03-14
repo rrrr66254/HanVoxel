@@ -1,13 +1,21 @@
 import { useState, useMemo } from 'react';
 import { WarehouseViewer } from './components/warehouse-viewer';
 import { WarehouseWizard } from './components/warehouse-wizard';
+import { RoiCalculator } from './components/roi-calculator';
+import { TrialBanner } from './components/trial-banner';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer';
+type AppMode = 'wizard' | 'viewer' | 'roi';
+
+// 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
+const DEMO_TRIAL = {
+  planType: 'STARTER',
+  trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5일 후 만료
+};
 
 function App() {
   const [mode, setMode] = useState<AppMode>('wizard');
@@ -29,31 +37,62 @@ function App() {
     setMode('viewer');
   };
 
+  if (mode === 'roi') {
+    return <RoiCalculator onBack={() => setMode('wizard')} />;
+  }
+
   if (mode === 'wizard') {
     return (
       <div className="relative">
         <WarehouseWizard onComplete={handleWizardComplete} />
-        {/* 데모 모드 바로가기 */}
-        <button
-          onClick={() => setMode('viewer')}
-          className="fixed bottom-4 right-4 rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
-        >
-          데모 모드로 보기
-        </button>
+        {/* 하단 네비게이션 */}
+        <div className="fixed bottom-4 right-4 flex gap-2">
+          <button
+            onClick={() => setMode('roi')}
+            className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-xs text-emerald-300 backdrop-blur transition-colors hover:bg-emerald-900/50"
+          >
+            ROI 계산기
+          </button>
+          <button
+            onClick={() => setMode('viewer')}
+            className="rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
+          >
+            데모 모드로 보기
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen bg-gray-950">
-      <WarehouseViewer objects={objects} />
-      {/* 마법사로 돌아가기 */}
-      <button
-        onClick={() => setMode('wizard')}
-        className="fixed bottom-4 left-4 rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
-      >
-        새 창고 만들기
-      </button>
+    <div className="flex h-screen w-screen flex-col bg-gray-950">
+      {/* 트라이얼 만료 배너 */}
+      <TrialBanner
+        planType={DEMO_TRIAL.planType}
+        trialEndsAt={DEMO_TRIAL.trialEndsAt}
+        onUpgrade={() => alert('Stripe 결제 페이지로 이동 예정 (Phase 2)')}
+      />
+
+      {/* 3D 뷰어 */}
+      <div className="flex-1">
+        <WarehouseViewer objects={objects} />
+      </div>
+
+      {/* 하단 네비게이션 */}
+      <div className="fixed bottom-4 left-4 flex gap-2">
+        <button
+          onClick={() => setMode('wizard')}
+          className="rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
+        >
+          새 창고 만들기
+        </button>
+        <button
+          onClick={() => setMode('roi')}
+          className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-xs text-emerald-300 backdrop-blur transition-colors hover:bg-emerald-900/50"
+        >
+          ROI 계산기
+        </button>
+      </div>
     </div>
   );
 }
