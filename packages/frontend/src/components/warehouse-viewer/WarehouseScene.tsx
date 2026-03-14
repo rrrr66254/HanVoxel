@@ -1,17 +1,21 @@
 import { Grid, Environment } from '@react-three/drei';
 import { SpatialMesh } from './SpatialMesh';
+import { GhostMesh } from './GhostMesh';
 import type { SpatialObject } from '../../types/spatial';
+import type { SpatialPreset } from '../../types/preset';
 
 interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
   onSelect: (object: SpatialObject) => void;
+  placingPreset?: SpatialPreset | null;
+  onPlace?: (position: [number, number, number]) => void;
 }
 
 /**
  * 창고 3D 씬 — 바닥 그리드 + 조명 + 공간 객체 렌더링
  */
-export function WarehouseScene({ objects, selectedId, onSelect }: WarehouseSceneProps) {
+export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, onPlace }: WarehouseSceneProps) {
   return (
     <>
       {/* 조명 */}
@@ -44,6 +48,11 @@ export function WarehouseScene({ objects, selectedId, onSelect }: WarehouseScene
           isSelected={obj.id === selectedId}
         />
       ))}
+
+      {/* 배치 모드 고스트 메시 */}
+      {placingPreset && onPlace && (
+        <GhostMesh preset={placingPreset} onPlace={onPlace} />
+      )}
     </>
   );
 }

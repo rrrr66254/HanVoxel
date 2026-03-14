@@ -2,6 +2,7 @@ import type { SpatialPreset } from '../../types/preset';
 
 interface PresetCardProps {
   preset: SpatialPreset;
+  onSelect?: (preset: SpatialPreset) => void;
 }
 
 // 지역 라벨 매핑
@@ -16,7 +17,7 @@ const REGION_LABEL: Record<string, string> = {
 /**
  * 개별 프리셋 규격 카드
  */
-export function PresetCard({ preset }: PresetCardProps) {
+export function PresetCard({ preset, onSelect }: PresetCardProps) {
   // 치수 포맷 (0인 축은 생략)
   const dims = [preset.width, preset.depth, preset.height]
     .filter((v) => v > 0)
@@ -24,7 +25,10 @@ export function PresetCard({ preset }: PresetCardProps) {
     .join(' × ');
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/80 p-3 transition-colors hover:border-gray-500">
+    <div
+      onClick={() => onSelect?.(preset)}
+      className={`rounded-lg border border-gray-700 bg-gray-800/80 p-3 transition-colors hover:border-gray-500 ${onSelect ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
+    >
       {/* 헤더 */}
       <div className="mb-2 flex items-start justify-between">
         <h4 className="text-sm font-semibold text-white leading-tight">{preset.name}</h4>

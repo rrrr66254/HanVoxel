@@ -6,12 +6,13 @@ import type { PresetCategory, SpatialPreset } from '../../types/preset';
 interface PresetCatalogProps {
   visible: boolean;
   onClose: () => void;
+  onSelectPreset?: (preset: SpatialPreset) => void;
 }
 
 /**
  * 프리셋 카탈로그 패널 — 카테고리 탭 + 프리셋 카드 목록
  */
-export function PresetCatalog({ visible, onClose }: PresetCatalogProps) {
+export function PresetCatalog({ visible, onClose, onSelectPreset }: PresetCatalogProps) {
   const [categories, setCategories] = useState<PresetCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [presets, setPresets] = useState<SpatialPreset[]>([]);
@@ -94,7 +95,7 @@ export function PresetCatalog({ visible, onClose }: PresetCatalogProps) {
         ) : (
           <div className="space-y-2">
             {presets.map((preset) => (
-              <PresetCard key={preset.id} preset={preset} />
+              <PresetCard key={preset.id} preset={preset} onSelect={onSelectPreset} />
             ))}
           </div>
         )}
