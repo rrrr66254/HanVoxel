@@ -6,3 +6,6 @@ scikit-learn==1.6.1
 pandas==2.2.3
 httpx==0.28.1
 python-dotenv==1.1.0
+redis[hiredis]==5.2.1
+asyncpg==0.30.0
+apscheduler==3.10.4
