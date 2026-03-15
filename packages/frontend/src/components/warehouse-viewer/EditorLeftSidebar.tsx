@@ -121,7 +121,7 @@ export function EditorLeftSidebar({
 
       {/* 확장 패널 (280px) */}
       {expanded && (
-        <div className="flex w-72 flex-col border-r border-[#2A2F38] bg-[#1A1D24]">
+        <div className="flex h-full w-72 flex-col overflow-hidden border-r border-[#2A2F38] bg-[#1A1D24]">
           {/* 패널 헤더 */}
           <div className="flex items-center justify-between border-b border-[#2A2F38] px-4 py-3">
             <h3 className="text-sm font-semibold text-white">
@@ -140,8 +140,8 @@ export function EditorLeftSidebar({
           {/* 카탈로그 탭 내용 */}
           {activeTab === 'catalog' && (
             <>
-              {/* 카테고리 탭 — 가로 스크롤 아이콘+라벨 */}
-              <div className="flex gap-1 overflow-x-auto border-b border-[#2A2F38] px-3 py-2">
+              {/* 카테고리 탭 — 고정 + 가로 스크롤 */}
+              <div className="sticky top-0 z-10 flex shrink-0 gap-1 overflow-x-auto border-b border-[#2A2F38] bg-[#1A1D24] px-3 py-2">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
@@ -159,7 +159,7 @@ export function EditorLeftSidebar({
               </div>
 
               {/* 프리셋 카드 목록 */}
-              <div className="flex-1 overflow-y-auto px-3 py-2">
+              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#30363D #161B22' }}>
                 {loading ? (
                   <div className="flex h-20 items-center justify-center text-xs text-gray-600">
                     로딩 중...
@@ -213,7 +213,7 @@ export function EditorLeftSidebar({
               </div>
 
               {/* 기존 구역 목록 */}
-              <div className="flex-1 overflow-y-auto px-3 py-2">
+              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#30363D #161B22' }}>
                 {zones.length === 0 ? (
                   <div className="flex h-20 items-center justify-center text-xs text-gray-600">
                     구역이 없습니다
