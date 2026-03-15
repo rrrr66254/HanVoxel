@@ -8,6 +8,10 @@ interface ResizeHandlesProps {
   onResize: (updated: SpatialObject) => void;
   /** 'floor' = XZ 평면 리사이즈, 'wall' = XY or XZ 리사이즈 */
   mode: 'floor' | 'wall';
+  /** 리사이즈 시작 시 호출 (OrbitControls 비활성화용) */
+  onResizeStart?: () => void;
+  /** 리사이즈 종료 시 호출 (OrbitControls 재활성화용) */
+  onResizeEnd?: () => void;
 }
 
 // 핸들 크기
@@ -25,7 +29,7 @@ type HandleId = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
  * 바닥/벽 리사이즈 핸들 — 윈도우 창 크기 조절 방식
  * 가장자리와 모서리에 드래그 핸들 표시
  */
-export function ResizeHandles({ object, onResize, mode }: ResizeHandlesProps) {
+export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeEnd }: ResizeHandlesProps) {
   const { camera, gl } = useThree();
   const [hoveredHandle, setHoveredHandle] = useState<HandleId | null>(null);
   const activeHandleRef = useRef<HandleId | null>(null);
@@ -182,6 +186,9 @@ export function ResizeHandles({ object, onResize, mode }: ResizeHandlesProps) {
     };
 
     const onUp = () => {
+      if (activeHandleRef.current) {
+        onResizeEnd?.();
+      }
       activeHandleRef.current = null;
       dragStartRef.current = null;
       document.body.style.cursor = 'default';
@@ -204,6 +211,7 @@ export function ResizeHandles({ object, onResize, mode }: ResizeHandlesProps) {
 
     activeHandleRef.current = handleId;
     forceUpdate((v) => v + 1);
+    onResizeStart?.();
 
     // 드래그 평면 설정
     if (isFloor) {

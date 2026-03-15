@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Html } from '@react-three/drei';
 import type { Group } from 'three';
 import type { SpatialObject } from '../../types/spatial';
@@ -23,7 +23,12 @@ interface SpatialMeshProps {
   isSelected?: boolean;
   editLayer?: EditLayerMode;
   onResize?: (object: SpatialObject) => void;
+  onResizeStart?: () => void;
+  onResizeEnd?: () => void;
 }
+
+// raycast 차단용 no-op 함수 — 비활성 레이어 오브젝트의 클릭/호버 이벤트를 완전 차단
+const NOOP_RAYCAST = () => {};
 
 // 타입별 기본 색상
 const TYPE_COLORS: Record<string, string> = {
@@ -48,9 +53,21 @@ const STATUS_COLORS: Record<string, string> = {
  * 개별 공간 객체를 3D 메시로 렌더링하는 컴포넌트
  * 랙/팔레트/컨테이너는 실제 구조체 모델로 렌더링
  */
-export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected, editLayer = 'objects', onResize }: SpatialMeshProps) {
+export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected, editLayer = 'objects', onResize, onResizeStart, onResizeEnd }: SpatialMeshProps) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
+
+  // 호버 디바운스 — 바닥/벽 같은 얇은 오브젝트에서 깜빡임 방지
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const stableHover = useCallback((enter: boolean) => {
+    clearTimeout(hoverTimerRef.current);
+    if (enter) {
+      setHovered(true);
+    } else {
+      // pointerOut 시 약간 지연하여 바로 사라지지 않도록
+      hoverTimerRef.current = setTimeout(() => setHovered(false), 80);
+    }
+  }, []);
 
   if (!object.visible) return null;
 
@@ -104,6 +121,12 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   // 랙 모델 렌더링
   if (isRack) {
+    if (!isInteractable) return (
+      <group position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]} rotation={[object.rotationX, object.rotationY, object.rotationZ]} raycast={NOOP_RAYCAST}>
+        <RackModel width={object.scaleX} height={object.scaleY} depth={object.scaleZ} levels={(meta?.levels as number) ?? 3} levelHeight={(meta?.levelHeight as number) ?? 1.5} levelHeights={meta?.levelHeights as number[] | undefined} />
+      </group>
+    );
+
     const levels = (meta?.levels as number) ?? 3;
     const levelHeight = (meta?.levelHeight as number) ?? 1.5;
     const levelHeights = meta?.levelHeights as number[] | undefined;
@@ -164,6 +187,12 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   // 컨테이너 모델 렌더링
   if (isContainer) {
+    if (!isInteractable) return (
+      <group position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]} rotation={[object.rotationX, object.rotationY, object.rotationZ]} raycast={NOOP_RAYCAST}>
+        <ContainerModel width={object.scaleX} depth={object.scaleZ} height={object.scaleY} isReefer={!!(meta?.type && typeof meta.type === 'string' && meta.type.includes('REEFER'))} containerColor={object.color ?? undefined} />
+      </group>
+    );
+
     return (
       <group
         ref={groupRef}
@@ -336,8 +365,9 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
+        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
       >
         <AisleModel
           width={object.scaleX}
@@ -349,7 +379,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 통로만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
@@ -383,8 +413,9 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
+        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
       >
         <FloorTileModel
           width={object.scaleX}
@@ -395,7 +426,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 바닥만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
@@ -429,8 +460,9 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
+        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
         // @ts-expect-error castShadow on group propagates to children
         castShadow
       >
@@ -444,7 +476,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 벽만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="wall" />
+          <ResizeHandles object={object} onResize={onResize} mode="wall" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, object.scaleY / 2 + 0.3, 0]} style={{ pointerEvents: 'none' }}>
@@ -478,8 +510,9 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
+        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
         // @ts-expect-error castShadow on group propagates to children
         castShadow
       >
@@ -539,12 +572,14 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onContextMenu={handleContextMenu}
         onPointerOver={(e) => {
           e.stopPropagation();
-          if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; }
+          if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; }
         }}
         onPointerOut={() => {
-          setHovered(false);
+          stableHover(false);
+          if (!isInteractable) return;
           document.body.style.cursor = 'default';
         }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
         castShadow={isWorkstation}
         receiveShadow
       >

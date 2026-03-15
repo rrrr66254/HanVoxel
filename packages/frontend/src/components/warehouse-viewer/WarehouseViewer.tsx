@@ -58,6 +58,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   // 우측 패널 모드
   const [rightPanel, setRightPanel] = useState<RightPanelMode>('none');
@@ -496,7 +497,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, handleViewModeChange]);
 
   // OrbitControls 비활성화 조건
-  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving;
+  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isResizing;
 
   // 2D 탑뷰 모드
   if (topViewMode) {
@@ -558,6 +559,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
               onZoneDrawComplete={handleZoneDrawComplete}
               onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
               editLayer={editLayer} onResize={handlePreviewUpdate}
+              onResizeStart={() => setIsResizing(true)}
+              onResizeEnd={() => setIsResizing(false)}
               gridVisible={gridVisible} binOccupancy={binOccupancy}
             />
 

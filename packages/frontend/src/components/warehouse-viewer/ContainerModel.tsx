@@ -11,21 +11,63 @@ interface ContainerModelProps {
   containerColor?: string; // 사용자 지정 색상
 }
 
-// 컨테이너 색상
-const DRY_COLOR = '#1A5276';
-const REEFER_COLOR = '#E8E8E8';
-const FITTING_COLOR = '#7F8C8D';
-const DRY_DOOR_COLOR = '#154360';
-const REEFER_DOOR_COLOR = '#B0B0B0';
+// 컨테이너 색상 (회색 기본)
+const DRY_COLOR = '#808890';
+const REEFER_COLOR = '#D0D0D0';
+const FITTING_COLOR = '#606060';
+const DRY_DOOR_COLOR = '#606870';
+const REEFER_DOOR_COLOR = '#A0A0A0';
 
 // 벽 두께
 const WALL_THICKNESS = 0.05;
 // 골판 리브 수
 const RIB_COUNT = 24;
 
+// HanVoxel 텍스트 캔버스 텍스처 생성
+function createSideTexture(textureWidth: number, textureHeight: number, bgColor: string, isSelected: boolean, isHovered: boolean): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  // 배경색 (컨테이너 본체 색상)
+  ctx.fillStyle = isSelected ? '#2D7DD2' : isHovered ? '#6A7280' : bgColor;
+  ctx.fillRect(0, 0, 512, 256);
+
+  // 골판 텍스처 효과 (세로 줄무늬)
+  const ribSpacing = 512 / 28;
+  for (let i = 0; i < 28; i++) {
+    ctx.fillStyle = i % 2 === 0
+      ? (isSelected ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.06)')
+      : (isSelected ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)');
+    ctx.fillRect(i * ribSpacing, 0, ribSpacing, 256);
+  }
+
+  // HanVoxel 텍스트
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 72px "Arial Black", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // 그림자
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText('HanVoxel', 256, 128);
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 /**
  * ISO 컨테이너 모델 렌더링
- * - 골판 텍스처 효과 (리브 구조체)
+ * - 회색 기본 색상
+ * - 양쪽 측면에 HanVoxel 텍스트
+ * - 골판 텍스처 효과
  * - 모서리 금속 피팅
  * - 후면 문짝 표현
  */
@@ -43,12 +85,22 @@ export function ContainerModel({
 
   const bodyMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: isSelected ? '#2D7DD2' : isHovered ? '#2471A3' : baseColor,
-      metalness: isReefer ? 0.7 : 0.5,
-      roughness: isReefer ? 0.3 : 0.6,
+      color: isSelected ? '#2D7DD2' : isHovered ? '#6A7280' : baseColor,
+      metalness: 0.5,
+      roughness: 0.6,
     }),
-    [isSelected, isHovered, baseColor, isReefer],
+    [isSelected, isHovered, baseColor],
   );
+
+  // 측면 텍스처 머터리얼 (HanVoxel 텍스트 포함)
+  const sideMat = useMemo(() => {
+    const tex = createSideTexture(512, 256, baseColor, isSelected, isHovered);
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      metalness: 0.5,
+      roughness: 0.6,
+    });
+  }, [isSelected, isHovered, baseColor]);
 
   const fittingMat = useMemo(
     () => new THREE.MeshStandardMaterial({
@@ -62,10 +114,10 @@ export function ContainerModel({
   const doorMat = useMemo(
     () => new THREE.MeshStandardMaterial({
       color: isSelected ? '#2563EB' : baseDoorColor,
-      metalness: isReefer ? 0.7 : 0.5,
+      metalness: 0.5,
       roughness: 0.5,
     }),
-    [isSelected, baseDoorColor, isReefer],
+    [isSelected, baseDoorColor],
   );
 
   const halfW = width / 2;
@@ -74,10 +126,6 @@ export function ContainerModel({
 
   // 모서리 피팅 크기
   const fittingSize = 0.12;
-
-  // 골판 리브 생성 (좌우 측면)
-  const ribHeight = height * 0.85;
-  const ribSpacing = depth / (RIB_COUNT + 1);
 
   return (
     <group>
@@ -91,13 +139,13 @@ export function ContainerModel({
         <boxGeometry args={[width, WALL_THICKNESS, depth]} />
       </mesh>
 
-      {/* 좌측 벽 */}
-      <mesh material={bodyMat} position={[-halfW + WALL_THICKNESS / 2, halfH, 0]} castShadow>
+      {/* 좌측 벽 — HanVoxel 텍스처 */}
+      <mesh material={sideMat} position={[-halfW + WALL_THICKNESS / 2, halfH, 0]} castShadow>
         <boxGeometry args={[WALL_THICKNESS, height, depth]} />
       </mesh>
 
-      {/* 우측 벽 */}
-      <mesh material={bodyMat} position={[halfW - WALL_THICKNESS / 2, halfH, 0]} castShadow>
+      {/* 우측 벽 — HanVoxel 텍스처 */}
+      <mesh material={sideMat} position={[halfW - WALL_THICKNESS / 2, halfH, 0]} castShadow>
         <boxGeometry args={[WALL_THICKNESS, height, depth]} />
       </mesh>
 
@@ -130,28 +178,28 @@ export function ContainerModel({
 
       {/* 좌측 골판 리브 (세로 방향) */}
       {Array.from({ length: RIB_COUNT }, (_, i) => {
-        const z = -halfD + ribSpacing * (i + 1);
+        const z = -halfD + (depth / (RIB_COUNT + 1)) * (i + 1);
         return (
           <mesh
             key={`rib-l-${i}`}
             material={bodyMat}
             position={[-halfW - 0.008, halfH, z]}
           >
-            <boxGeometry args={[0.015, ribHeight, 0.02]} />
+            <boxGeometry args={[0.015, height * 0.85, 0.02]} />
           </mesh>
         );
       })}
 
       {/* 우측 골판 리브 */}
       {Array.from({ length: RIB_COUNT }, (_, i) => {
-        const z = -halfD + ribSpacing * (i + 1);
+        const z = -halfD + (depth / (RIB_COUNT + 1)) * (i + 1);
         return (
           <mesh
             key={`rib-r-${i}`}
             material={bodyMat}
             position={[halfW + 0.008, halfH, z]}
           >
-            <boxGeometry args={[0.015, ribHeight, 0.02]} />
+            <boxGeometry args={[0.015, height * 0.85, 0.02]} />
           </mesh>
         );
       })}
