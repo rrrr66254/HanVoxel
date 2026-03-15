@@ -10,6 +10,7 @@ export const MOCK_CATEGORIES: PresetCategory[] = [
   { id: '10000000-0000-0000-0000-000000000006', name: 'PRODUCT_BOX',   label: '제품 박스',   description: '업종별 박스 규격 및 팔레트 적재 기준', sortOrder: 6 },
   { id: '10000000-0000-0000-0000-000000000007', name: 'FLOOR',         label: '바닥',        description: '공장 바닥 타일 및 마감재',            sortOrder: 7 },
   { id: '10000000-0000-0000-0000-000000000008', name: 'WALL',          label: '벽',          description: '공장 벽면 패널 및 마감재',            sortOrder: 8 },
+  { id: '10000000-0000-0000-0000-000000000009', name: 'DOOR',          label: '출입문',      description: '창고 출입문 및 로딩 도크 게이트',      sortOrder: 9 },
 ];
 
 const CAT = Object.fromEntries(MOCK_CATEGORIES.map((c) => [c.name, c.id]));
@@ -79,6 +80,12 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.WALL, 'WALL_CONCRETE',       '콘크리트 벽',        null,'INTL', 5,0.2, 4, { wallStyle:'CONCRETE_WALL',    color:'#9A978F' }),
   p(CAT.WALL, 'WALL_METAL',          '금속 골판 벽',       null,'INTL', 5,0.1, 4, { wallStyle:'METAL_CORRUGATED', color:'#8090A0' }),
   p(CAT.WALL, 'WALL_BRICK',          '벽돌 벽',            null,'INTL', 5,0.2, 4, { wallStyle:'BRICK',            color:'#8B5E3C' }),
+
+  // === 출입문 (width=너비, depth=두께, height=높이) ===
+  p(CAT.DOOR, 'DOOR_ROLLING_SHUTTER', '롤링 셔터 (창고문)',      null,'KR',   4.0,0.15,4.5, { doorStyle:'ROLLING_SHUTTER',  color:'#6B7280' }),
+  p(CAT.DOOR, 'DOOR_SWING_DOUBLE',    '양개 스윙 도어',           null,'INTL', 2.0,0.1, 2.5, { doorStyle:'SWING_DOUBLE',     color:'#2563EB' }),
+  p(CAT.DOOR, 'DOOR_SLIDING',         '슬라이딩 도어',            null,'INTL', 3.0,0.12,3.0, { doorStyle:'SLIDING',          color:'#4B5563' }),
+  p(CAT.DOOR, 'DOOR_DOCK_LEVELER',    '독 레벨러 (로딩 도크)',    null,'INTL', 3.5,0.15,4.0, { doorStyle:'DOCK_LEVELER',     color:'#374151' }),
 ];
 
 // 프리셋 생성 헬퍼

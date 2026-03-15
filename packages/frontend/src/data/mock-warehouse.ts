@@ -272,6 +272,36 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     { metadata: { wallStyle: 'CONCRETE_WALL' } },
   ),
 
+  // --- 출입문 ---
+  // 앞벽 롤링 셔터 (도크 출입구 × 3)
+  obj('door-dock-1', TYPES.WALL, '도크 셔터 1', 'DOOR-DOCK-1',
+    [BUILDING_W / 2 - 8, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'DOCK_LEVELER' } },
+  ),
+  obj('door-dock-2', TYPES.WALL, '도크 셔터 2', 'DOOR-DOCK-2',
+    [BUILDING_W / 2, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'ROLLING_SHUTTER' } },
+  ),
+  obj('door-dock-3', TYPES.WALL, '도크 셔터 3', 'DOOR-DOCK-3',
+    [BUILDING_W / 2 + 8, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'DOCK_LEVELER' } },
+  ),
+  // 좌측 직원 출입문
+  obj('door-staff', TYPES.WALL, '직원 출입문', 'DOOR-STAFF',
+    [0.05, 0, BUILDING_D / 2],
+    [2.0, 2.5, 0.1],
+    { rotationY: Math.PI / 2, metadata: { doorStyle: 'SWING_DOUBLE' } },
+  ),
+  // 뒷벽 비상문
+  obj('door-emergency', TYPES.WALL, '비상 출입문', 'DOOR-EMERGENCY',
+    [BUILDING_W / 2, 0, BUILDING_D - 0.05],
+    [2.0, 2.5, 0.1],
+    { metadata: { doorStyle: 'SWING_DOUBLE' } },
+  ),
+
   // --- 도크 영역 (DRY_40FT × 3기) ---
   ...Array.from({ length: CONTAINER_COUNT }, (_, i) => {
     const totalW = CONTAINER_COUNT * CONTAINER.w + (CONTAINER_COUNT - 1) * CONTAINER_SPACING;

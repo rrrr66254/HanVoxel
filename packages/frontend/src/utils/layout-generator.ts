@@ -98,6 +98,26 @@ export function generateWarehouseLayout(
     { metadata: { wallStyle: 'CONCRETE_WALL' } },
   ));
 
+  // --- 출입문 ---
+  // 앞벽 도크 셔터
+  objects.push(obj(
+    'door-dock-main', TYPES.WALL, '도크 셔터', 'DOOR-DOCK',
+    [W / 2, 0, 0.05], [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'ROLLING_SHUTTER' } },
+  ));
+  // 직원 출입문 (좌측벽)
+  objects.push(obj(
+    'door-staff', TYPES.WALL, '직원 출입문', 'DOOR-STAFF',
+    [0.05, 0, D / 2], [2.0, 2.5, 0.1],
+    { rotationY: Math.PI / 2, metadata: { doorStyle: 'SWING_DOUBLE' } },
+  ));
+  // 비상 출입문 (뒷벽)
+  objects.push(obj(
+    'door-emergency', TYPES.WALL, '비상 출입문', 'DOOR-EMERGENCY',
+    [W / 2, 0, D - 0.05], [2.0, 2.5, 0.1],
+    { metadata: { doorStyle: 'SWING_DOUBLE' } },
+  ));
+
   // --- 도크 영역 ---
   const DOCK_Z = 1;
   const DOCK_DEPTH = hasContainer ? 14.2 : 6;

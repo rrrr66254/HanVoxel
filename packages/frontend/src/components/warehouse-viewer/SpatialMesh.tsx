@@ -8,6 +8,8 @@ import { ContainerModel } from './ContainerModel';
 import { AisleModel } from './AisleModel';
 import { FloorTileModel } from './FloorTileModel';
 import { WallPanelModel } from './WallPanelModel';
+import { DoorModel } from './DoorModel';
+import type { DoorStyle } from './DoorModel';
 
 interface SpatialMeshProps {
   object: SpatialObject;
@@ -318,6 +320,51 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
             }}>
               <span style={{ fontWeight: 700 }}>{object.name}</span>
               <span style={{ color: '#8B949E', marginLeft: 6 }}>벽</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleY}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 출입문(DOOR) 모델 렌더링
+  const isDoor = meta?.doorStyle && typeof meta.doorStyle === 'string';
+  if (isDoor) {
+    const doorStyle = meta.doorStyle as DoorStyle;
+
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
+      >
+        <DoorModel
+          width={object.scaleX}
+          height={object.scaleY}
+          thickness={object.scaleZ}
+          style={doorStyle}
+          isSelected={isSelected}
+          isHovered={hovered}
+        />
+        {hovered && (
+          <Html distanceFactor={15} position={[0, object.scaleY + 0.3, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>출입문</span>
               <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
                 {object.scaleX}m × {object.scaleY}m
               </div>

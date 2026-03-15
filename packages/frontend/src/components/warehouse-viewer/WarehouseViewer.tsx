@@ -28,6 +28,7 @@ function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
   if (extra.aisleType) meta.aisleType = extra.aisleType;
   if (extra.floorStyle) meta.floorStyle = extra.floorStyle;
   if (extra.wallStyle) meta.wallStyle = extra.wallStyle;
+  if (extra.doorStyle) meta.doorStyle = extra.doorStyle;
   return meta;
 }
 
@@ -232,6 +233,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     if (catName.includes('FLOOR') || code.includes('FLOOR')) return { name: 'FLOOR' };
     // 벽
     if (catName.includes('WALL') || code.includes('WALL')) return { name: 'WALL' };
+    // 출입문
+    if (catName.includes('DOOR') || code.includes('DOOR')) return { name: 'WALL' };
     return { name: 'RACK' };
   }, []);
 
@@ -454,6 +457,30 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       wrapper.removeEventListener('pointerup', onUp);
     };
   }, []);
+
+  // === ESC 키로 상세 패널 닫기 ===
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // 배치 모드 취소
+        if (placingPreset) { setPlacingPreset(null); return; }
+        // 이동 모드 취소 (MoveMode에서도 처리하지만 안전장치)
+        if (movingObjectId) { setMovingObjectId(null); setOriginalPosition(null); return; }
+        // Zone 드로잉 취소
+        if (drawingZoneType) { setDrawingZoneType(null); handleViewModeChange('perspective'); return; }
+        // 우측 패널 닫기
+        if (rightPanel !== 'none') {
+          setEditingId(null);
+          setRackDetailId(null);
+          setRightPanel('none');
+          setSelectedId(null);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, handleViewModeChange]);
 
   // OrbitControls 비활성화 조건
   const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving;
