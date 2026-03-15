@@ -554,15 +554,29 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
         </div>
 
-        {/* 우측 패널 — 편집기 또는 랙 상세 */}
-        {rightPanel === 'editor' && editingObject && (
-          <div className="flex min-h-0 w-72 flex-col overflow-hidden border-l border-[#2A2F38] bg-[#1A1D24]">
-            <ObjectEditor object={editingObject} onUpdate={handleUpdateObject} onSavePreset={handleSavePreset} onDelete={handleDeleteObject} onClose={() => { setEditingId(null); setRightPanel('none'); }} />
-          </div>
-        )}
+      </div>
 
-        {rightPanel === 'rackDetail' && rackDetailObject && (
-          <div className="flex min-h-0 w-80 flex-col overflow-hidden border-l border-[#2A2F38] bg-[#1A1D24]">
+      {/* 편집 모달 카드 — 화면 중앙 floating */}
+      {rightPanel === 'editor' && editingObject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={() => { setEditingId(null); setRightPanel('none'); }}>
+          <div
+            className="h-[80vh] w-80 overflow-hidden rounded-xl border border-[#2A2F38] bg-[#1A1D24] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,125,210,0.15)' }}
+          >
+            <ObjectEditor object={editingObject} onUpdate={handleUpdateObject} onSavePreset={handleSavePreset} onDelete={(id) => { handleDeleteObject(id); setEditingId(null); setRightPanel('none'); }} onClose={() => { setEditingId(null); setRightPanel('none'); }} />
+          </div>
+        </div>
+      )}
+
+      {/* 랙 상세 모달 카드 */}
+      {rightPanel === 'rackDetail' && rackDetailObject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={() => { setRackDetailId(null); setRightPanel('none'); }}>
+          <div
+            className="h-[80vh] w-80 overflow-hidden rounded-xl border border-[#2A2F38] bg-[#1A1D24] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,125,210,0.15)' }}
+          >
             <RackDetailPanel
               rack={rackDetailObject}
               occupancy={binOccupancy}
@@ -571,13 +585,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
               onRemoveBinItem={handleRemoveBinItem}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 컨텍스트 메뉴 — Canvas 외부에서 렌더 (클릭 이벤트 버블링 방지) */}
+      {/* 컨텍스트 메뉴 */}
       <ContextMenu
         object={contextState.object} position={contextState.position} onClose={closeMenu}
-        onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); setRightPanel('editor'); }}
+        onEdit={(obj) => {
+          closeMenu();
+          // setTimeout으로 컨텍스트 메뉴 닫힌 후 모달 열기
+          setTimeout(() => { setEditingId(obj.id); setSelectedId(obj.id); setRightPanel('editor'); }, 0);
+        }}
         onDuplicate={handleDuplicate} onRotate90={handleRotate90}
         onMove={handleStartMove}
         onDelete={handleDeleteObject} onResetView={handleResetView}

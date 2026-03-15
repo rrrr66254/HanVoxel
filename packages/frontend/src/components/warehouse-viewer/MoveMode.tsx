@@ -130,6 +130,9 @@ export function MoveModeGhost({
     }).flat();
   }, [racks, movingObject.id]);
 
+  // 마우스 ray와 바닥 교차점의 Y 높이 추적 (층 선택용)
+  const mouseWorldY = useRef(0);
+
   // AABB 충돌 + BIN 스냅 검사
   const checkCollision = useCallback((pos: THREE.Vector3): CollisionResult => {
     const halfW = movingObject.scaleX / 2;
@@ -148,56 +151,71 @@ export function MoveModeGhost({
       || (typeName !== 'RACK' && typeName !== 'AISLE' && typeName !== 'ZONE' && typeName !== 'SAFETY_ZONE')
       || (typeName === 'RACK' && !hasLevels);
 
-    // BIN 스냅 검사
+    // BIN 스냅 검사 — 먼저 가장 가까운 랙을 찾고, 그 랙에서 Y 높이에 맞는 층 선택
     if (isBinCandidate) {
-      let bestBin: CollisionResult['nearBin'] = null;
-      let bestDist = 3.0; // 3m 이내에서 BIN 감지
-
+      // 1단계: 가장 가까운 랙 찾기 (2D 거리)
+      let bestRackDist = 3.0; // 3m 이내에서 BIN 감지
+      let bestRackId: string | null = null;
       for (const bin of rackBins) {
         const dist2D = Math.sqrt((pos.x - bin.worldPos.x) ** 2 + (pos.z - bin.worldPos.z) ** 2);
-        if (dist2D < bestDist) {
-          bestDist = dist2D;
-
-          const objW = movingObject.scaleX;
-          const objD = movingObject.scaleZ;
-          const objH = movingObject.scaleY;
-
-          // BIN 크기 (warehouse-standards.md 기준)
-          // BIN 너비 = 랙 W (1열 기준), BIN 깊이 = 랙 D, BIN 높이 = 층 높이
-          const binW = bin.rackW;
-          const binD = bin.rackD;
-          const binH = bin.height;
-
-          // 5% 여유 적용한 최대 크기
-          const maxW = binW * (1 - BIN_TOLERANCE);
-          const maxD = binD * (1 - BIN_TOLERANCE);
-          const maxH = binH * (1 - BIN_TOLERANCE);
-
-          const fitsW = objW <= maxW;
-          const fitsD = objD <= maxD;
-          const fitsH = objH <= maxH;
-          const occupied = binOccupancy.some((o) => o.rackId === bin.rackId && o.level === bin.level);
-
-          // 상세 사유 생성
-          let reason: string | undefined;
-          if (occupied) reason = 'BIN 점유됨';
-          else if (!fitsH) reason = `높이 초과: ${objH.toFixed(2)}m > ${maxH.toFixed(2)}m`;
-          else if (!fitsW) reason = `너비 초과: ${objW.toFixed(2)}m > ${maxW.toFixed(2)}m`;
-          else if (!fitsD) reason = `깊이 초과: ${objD.toFixed(2)}m > ${maxD.toFixed(2)}m`;
-
-          bestBin = {
-            rackId: bin.rackId,
-            level: bin.level,
-            position: bin.worldPos.clone().add(new THREE.Vector3(0, movingObject.scaleY / 2, 0)),
-            valid: fitsW && fitsD && fitsH && !occupied,
-            reason,
-            detail: { objW, objD, objH, binW: maxW, binD: maxD, binH: maxH },
-          };
+        if (dist2D < bestRackDist) {
+          bestRackDist = dist2D;
+          bestRackId = bin.rackId;
         }
       }
 
-      if (bestBin) {
-        return { collides: false, nearBin: bestBin };
+      // 2단계: 해당 랙의 BIN 중 마우스 Y 높이에 가장 가까운 층 선택
+      if (bestRackId) {
+        const rackLevelBins = rackBins.filter((b) => b.rackId === bestRackId);
+        let bestBin: CollisionResult['nearBin'] = null;
+        let bestYDist = Infinity;
+        const cursorY = mouseWorldY.current;
+
+        for (const bin of rackLevelBins) {
+          // BIN 중앙 Y = bin.worldPos.y + height/2
+          const binCenterY = bin.worldPos.y + bin.height / 2;
+          const yDist = Math.abs(cursorY - binCenterY);
+
+          if (yDist < bestYDist) {
+            bestYDist = yDist;
+
+            const objW = movingObject.scaleX;
+            const objD = movingObject.scaleZ;
+            const objH = movingObject.scaleY;
+
+            const binW = bin.rackW;
+            const binD = bin.rackD;
+            const binH = bin.height;
+
+            const maxW = binW * (1 - BIN_TOLERANCE);
+            const maxD = binD * (1 - BIN_TOLERANCE);
+            const maxH = binH * (1 - BIN_TOLERANCE);
+
+            const fitsW = objW <= maxW;
+            const fitsD = objD <= maxD;
+            const fitsH = objH <= maxH;
+            const occupied = binOccupancy.some((o) => o.rackId === bin.rackId && o.level === bin.level);
+
+            let reason: string | undefined;
+            if (occupied) reason = `${bin.level + 1}층 점유됨`;
+            else if (!fitsH) reason = `높이 초과: ${objH.toFixed(2)}m > ${maxH.toFixed(2)}m`;
+            else if (!fitsW) reason = `너비 초과: ${objW.toFixed(2)}m > ${maxW.toFixed(2)}m`;
+            else if (!fitsD) reason = `깊이 초과: ${objD.toFixed(2)}m > ${maxD.toFixed(2)}m`;
+
+            bestBin = {
+              rackId: bin.rackId,
+              level: bin.level,
+              position: bin.worldPos.clone().add(new THREE.Vector3(0, movingObject.scaleY / 2, 0)),
+              valid: fitsW && fitsD && fitsH && !occupied,
+              reason,
+              detail: { objW, objD, objH, binW: maxW, binD: maxD, binH: maxH },
+            };
+          }
+        }
+
+        if (bestBin) {
+          return { collides: false, nearBin: bestBin };
+        }
       }
     }
 
@@ -221,6 +239,34 @@ export function MoveModeGhost({
     const intersection = new THREE.Vector3();
     const hit = raycaster.current.ray.intersectPlane(floorPlane, intersection);
     if (!hit) return;
+
+    // 마우스 ray의 Y 높이 계산 — 카메라에서 수직면과의 교차점으로 Y 추정
+    // ray 방향의 Y 성분을 이용하여 마우스가 가리키는 높이 계산
+    const ray = raycaster.current.ray;
+    if (ray.direction.y !== 0) {
+      // ray가 각 높이의 수평면과 만나는 점을 기준으로 Y 높이 추정
+      // 카메라에서 바닥(Y=0) 교차점까지의 XZ 거리 대비 실제 교차점까지의 비율로 Y 계산
+      const t = -ray.origin.y / ray.direction.y; // floor 교차 t값
+      if (t > 0) {
+        // 마우스가 가리키는 "의도한 Y 높이"를 화면 Y 위치로부터 역산
+        // 간단한 방법: ray와 랙 근처 Z 평면의 교차점 Y 사용
+        const nearestRack = racks.find((r) => {
+          const dx = intersection.x - r.positionX;
+          const dz = intersection.z - r.positionZ;
+          return Math.sqrt(dx * dx + dz * dz) < 3.0;
+        });
+        if (nearestRack) {
+          // 랙의 Z 위치에 있는 수직 평면과 ray의 교차점
+          const rackPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -nearestRack.positionZ);
+          const rackHit = new THREE.Vector3();
+          if (ray.intersectPlane(rackPlane, rackHit)) {
+            mouseWorldY.current = Math.max(0, rackHit.y);
+          }
+        } else {
+          mouseWorldY.current = 0;
+        }
+      }
+    }
 
     const newPos = new THREE.Vector3(intersection.x, movingObject.positionY, intersection.z);
 
@@ -339,7 +385,7 @@ export function MoveModeGhost({
 
   const statusText = collision.nearBin
     ? (collision.nearBin.valid
-        ? 'BIN에 배치 (클릭)'
+        ? `${collision.nearBin.level + 1}층에 배치 (클릭)`
         : (collision.nearBin.reason ?? '적재 불가'))
     : (collision.collides ? '충돌 -- 배치 불가' : '클릭하여 배치');
 
