@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { Mesh, Vector3 } from 'three';
-import { Plane, Raycaster, Vector2 } from 'three';
+import type { Mesh } from 'three';
+import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { SpatialPreset } from '../../types/preset';
 import type { MeshType } from '../../types/spatial';
 
@@ -12,12 +12,12 @@ interface GhostMeshProps {
 
 // 바닥 평면 (Y=0)
 const floorPlane = new Plane().setFromNormalAndCoplanarPoint(
-  { x: 0, y: 1, z: 0 } as Vector3,
-  { x: 0, y: 0, z: 0 } as Vector3,
+  new Vector3(0, 1, 0),
+  new Vector3(0, 0, 0),
 );
 const raycaster = new Raycaster();
 const pointer = new Vector2();
-const intersection = { x: 0, y: 0, z: 0 } as Vector3;
+const intersection = new Vector3();
 
 /**
  * 배치 모드 고스트 메시 — 마우스를 따라다니며 클릭 시 배치 확정
@@ -35,7 +35,7 @@ export function GhostMesh({ preset, onPlace }: GhostMeshProps) {
     if (!meshRef.current) return;
 
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.ray.intersectPlane(floorPlane, intersection as Vector3);
+    const hit = raycaster.ray.intersectPlane(floorPlane, intersection);
     if (hit) {
       // 1m 그리드 스냅
       meshRef.current.position.x = Math.round(hit.x);
