@@ -5,8 +5,12 @@ import {
   ZoomOut,
   Maximize2,
   Keyboard,
+  Layers,
+  Box,
 } from 'lucide-react';
 import { useState } from 'react';
+
+type EditLayerMode = 'structure' | 'objects';
 
 interface EditorBottomBarProps {
   cursorPos: { x: number; y: number; z: number };
@@ -17,6 +21,8 @@ interface EditorBottomBarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
+  editLayer?: EditLayerMode;
+  onEditLayerChange?: (layer: EditLayerMode) => void;
 }
 
 /**
@@ -32,6 +38,8 @@ export function EditorBottomBar({
   onZoomIn,
   onZoomOut,
   onResetView,
+  editLayer = 'objects',
+  onEditLayerChange,
 }: EditorBottomBarProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -90,8 +98,39 @@ export function EditorBottomBar({
         </span>
       </div>
 
-      {/* 우측 — 단축키 + 줌 */}
+      {/* 우측 — 레이어 스위치 + 단축키 + 줌 */}
       <div className="ml-auto flex items-center gap-1">
+        {/* 편집 레이어 스위치 */}
+        <div className="flex items-center rounded-md border border-[#2A2F38] bg-[#0D1117]">
+          <button
+            onClick={() => onEditLayerChange?.('structure')}
+            className={`flex items-center gap-1 rounded-l-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+              editLayer === 'structure'
+                ? 'bg-amber-600/20 text-amber-400'
+                : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+            }`}
+            title="바닥/벽 편집 모드"
+          >
+            <Layers size={12} />
+            구조물
+          </button>
+          <div className="h-4 w-px bg-[#2A2F38]" />
+          <button
+            onClick={() => onEditLayerChange?.('objects')}
+            className={`flex items-center gap-1 rounded-r-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+              editLayer === 'objects'
+                ? 'bg-blue-600/20 text-blue-400'
+                : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+            }`}
+            title="오브젝트 편집 모드"
+          >
+            <Box size={12} />
+            오브젝트
+          </button>
+        </div>
+
+        <div className="mx-1.5 h-4 w-px bg-[#2A2F38]" />
+
         {/* 단축키 버튼 */}
         <button
           onClick={() => setShowShortcuts((v) => !v)}

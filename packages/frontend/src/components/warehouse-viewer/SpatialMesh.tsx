@@ -11,6 +11,9 @@ import { WallPanelModel } from './WallPanelModel';
 import { DoorModel } from './DoorModel';
 import type { DoorStyle } from './DoorModel';
 import { ProductBoxModel } from './ProductBoxModel';
+import { ResizeHandles } from './ResizeHandles';
+
+type EditLayerMode = 'structure' | 'objects';
 
 interface SpatialMeshProps {
   object: SpatialObject;
@@ -18,6 +21,8 @@ interface SpatialMeshProps {
   onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   isSelected?: boolean;
+  editLayer?: EditLayerMode;
+  onResize?: (object: SpatialObject) => void;
 }
 
 // 타입별 기본 색상
@@ -43,7 +48,7 @@ const STATUS_COLORS: Record<string, string> = {
  * 개별 공간 객체를 3D 메시로 렌더링하는 컴포넌트
  * 랙/팔레트/컨테이너는 실제 구조체 모델로 렌더링
  */
-export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected }: SpatialMeshProps) {
+export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected, editLayer = 'objects', onResize }: SpatialMeshProps) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -51,6 +56,11 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   const typeName = object.type.name;
   const meta = object.metadata as Record<string, unknown> | null;
+
+  // 편집 레이어에 따라 인터랙션 가능 여부 결정
+  const isStructure = typeName === 'FLOOR' || typeName === 'WALL' ||
+    !!(meta?.floorStyle) || !!(meta?.wallStyle);
+  const isInteractable = editLayer === 'structure' ? isStructure : !isStructure;
 
   // 색상 결정
   const baseColor =
@@ -61,17 +71,20 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   const handleClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation();
+    if (!isInteractable) return;
     onSelect?.(object);
   };
 
   const handleDoubleClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation();
+    if (!isInteractable) return;
     onDoubleClick?.(object);
   };
 
   // R3F 이벤트에서 nativeEvent의 clientX/clientY 추출
   const handleContextMenu = (e: { stopPropagation: () => void; nativeEvent?: MouseEvent }) => {
     e.stopPropagation();
+    if (!isInteractable) return;
     const native = e.nativeEvent;
     onContextMenu?.(object, {
       stopPropagation: () => e.stopPropagation(),
@@ -362,7 +375,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
       >
         <FloorTileModel
@@ -370,9 +383,13 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           depth={object.scaleZ}
           style={floorStyle as 'EPOXY_GRAY' | 'EPOXY_GREEN' | 'CONCRETE' | 'ANTI_SLIP' | 'MARKING'}
           isSelected={isSelected}
-          isHovered={hovered}
+          isHovered={hovered && isInteractable}
         />
-        {hovered && (
+        {/* 리사이즈 핸들 — 선택된 바닥만 표시 */}
+        {isSelected && isInteractable && onResize && (
+          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+        )}
+        {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{
               background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
@@ -404,7 +421,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
         // @ts-expect-error castShadow on group propagates to children
         castShadow
@@ -415,9 +432,13 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           thickness={object.scaleZ}
           style={wallStyle as 'SANDWICH_PANEL' | 'CONCRETE_WALL' | 'METAL_CORRUGATED' | 'BRICK'}
           isSelected={isSelected}
-          isHovered={hovered}
+          isHovered={hovered && isInteractable}
         />
-        {hovered && (
+        {/* 리사이즈 핸들 — 선택된 벽만 표시 */}
+        {isSelected && isInteractable && onResize && (
+          <ResizeHandles object={object} onResize={onResize} mode="wall" />
+        )}
+        {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, object.scaleY / 2 + 0.3, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{
               background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
