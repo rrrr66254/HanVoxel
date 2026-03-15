@@ -14,6 +14,7 @@ import { TradeDashboard } from './components/trade-intelligence';
 import { ReorderDashboard } from './components/reorder-dashboard';
 import { ConnectorDashboard } from './components/connector-dashboard';
 import { BenchmarkDashboard } from './components/benchmark-dashboard';
+import { Sidebar, Header } from './components/layout';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
@@ -22,14 +23,14 @@ import './index.css';
 
 type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark';
 
-// 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
+// 데모용 트라이얼 상태
 const DEMO_TRIAL = {
   planType: 'STARTER',
-  trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5일 후 만료
+  trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
 };
 
 function App() {
-  const [mode, setMode] = useState<AppMode>('wizard');
+  const [mode, setMode] = useState<AppMode>('viewer');
   const [alertOpen, setAlertOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [wizardResult, setWizardResult] = useState<{
@@ -51,177 +52,85 @@ function App() {
   };
 
   const openUpgrade = () => setUpgradeOpen(true);
+  const goBack = () => setMode('viewer');
 
-  if (mode === 'benchmark') {
-    return <BenchmarkDashboard onBack={() => setMode('viewer')} />;
-  }
+  // 서브페이지 컨텐츠 렌더링 (사이드바 레이아웃 없이 풀스크린으로)
+  const renderSubPage = () => {
+    switch (mode) {
+      case 'benchmark':
+        return <BenchmarkDashboard onBack={goBack} />;
+      case 'connector':
+        return <ConnectorDashboard onBack={goBack} />;
+      case 'reorder':
+        return <ReorderDashboard onBack={goBack} />;
+      case 'trade':
+        return <TradeDashboard onBack={goBack} />;
+      case 'erp':
+        return <ErpDashboard onBack={goBack} />;
+      case 'subscription':
+        return <SubscriptionDashboard onBack={goBack} onUpgrade={openUpgrade} />;
+      case 'picking':
+        return <PickingMobile onBack={goBack} />;
+      case 'qc':
+        return <QcDashboard onBack={goBack} />;
+      case 'sla':
+        return <SlaDashboard onBack={goBack} />;
+      case 'roi':
+        return <RoiCalculator onBack={() => setMode('wizard')} />;
+      case 'wizard':
+        return <WarehouseWizard onComplete={handleWizardComplete} />;
+      default:
+        return null;
+    }
+  };
 
-  if (mode === 'connector') {
-    return <ConnectorDashboard onBack={() => setMode('viewer')} />;
-  }
-
-  if (mode === 'reorder') {
-    return <ReorderDashboard onBack={() => setMode('viewer')} />;
-  }
-
-  if (mode === 'trade') {
-    return <TradeDashboard onBack={() => setMode('viewer')} />;
-  }
-
-  if (mode === 'erp') {
-    return <ErpDashboard onBack={() => setMode('viewer')} />;
-  }
-
-  if (mode === 'subscription') {
+  // 서브페이지 모드 (풀스크린)
+  const subPage = renderSubPage();
+  if (subPage && mode !== 'viewer') {
     return (
-      <SubscriptionDashboard
-        onBack={() => setMode('viewer')}
-        onUpgrade={openUpgrade}
-      />
+      <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
+        <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={DEMO_TRIAL.planType} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {subPage}
+          </div>
+        </div>
+
+        {/* 공통 모달 */}
+        <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
+        <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={DEMO_TRIAL.planType} />
+      </div>
     );
   }
 
-  if (mode === 'picking') {
-    return <PickingMobile onBack={() => setMode('viewer')} />;
-  }
+  // 메인 3D 뷰어 모드
+  return (
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
+      {/* 사이드바 */}
+      <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={DEMO_TRIAL.planType} />
 
-  if (mode === 'qc') {
-    return <QcDashboard onBack={() => setMode('viewer')} />;
-  }
+      {/* 메인 영역 */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* 헤더 */}
+        <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
 
-  if (mode === 'sla') {
-    return <SlaDashboard onBack={() => setMode('viewer')} />;
-  }
+        {/* 트라이얼 배너 */}
+        <TrialBanner
+          planType={DEMO_TRIAL.planType}
+          trialEndsAt={DEMO_TRIAL.trialEndsAt}
+          onUpgrade={openUpgrade}
+        />
 
-  if (mode === 'roi') {
-    return <RoiCalculator onBack={() => setMode('wizard')} />;
-  }
-
-  if (mode === 'wizard') {
-    return (
-      <div className="relative">
-        <WarehouseWizard onComplete={handleWizardComplete} />
-        {/* 하단 네비게이션 */}
-        <div className="fixed bottom-4 right-4 flex gap-2">
-          <button
-            onClick={() => setMode('roi')}
-            className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-xs text-emerald-300 backdrop-blur transition-colors hover:bg-emerald-900/50"
-          >
-            ROI 계산기
-          </button>
-          <button
-            onClick={() => setMode('viewer')}
-            className="rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
-          >
-            데모 모드로 보기
-          </button>
+        {/* 3D 뷰어 */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <WarehouseViewer objects={objects} />
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="flex h-screen w-screen flex-col bg-gray-950">
-      {/* 트라이얼 만료 배너 */}
-      <TrialBanner
-        planType={DEMO_TRIAL.planType}
-        trialEndsAt={DEMO_TRIAL.trialEndsAt}
-        onUpgrade={openUpgrade}
-      />
-
-      {/* 3D 뷰어 */}
-      <div className="flex-1">
-        <WarehouseViewer objects={objects} />
-      </div>
-
-      {/* 알림 벨 버튼 */}
-      <button
-        onClick={() => setAlertOpen(true)}
-        className="fixed top-4 right-4 z-40 flex items-center gap-1 rounded-lg border border-gray-700 bg-gray-900/90 px-3 py-2 text-sm text-gray-300 backdrop-blur transition-colors hover:text-white"
-      >
-        <span>알림</span>
-        <span className="ml-1 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-      </button>
-
-      {/* 알림 패널 */}
+      {/* 공통 모달 */}
       <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
-
-      {/* 업그레이드 모달 */}
-      <UpgradeModal
-        isOpen={upgradeOpen}
-        onClose={() => setUpgradeOpen(false)}
-        currentPlan={DEMO_TRIAL.planType}
-      />
-
-      {/* 하단 네비게이션 */}
-      <div className="fixed bottom-4 left-4 flex flex-wrap gap-2">
-        <button
-          onClick={() => setMode('wizard')}
-          className="rounded-lg border border-gray-700 bg-gray-900/90 px-4 py-2 text-xs text-gray-400 backdrop-blur transition-colors hover:text-white"
-        >
-          새 창고 만들기
-        </button>
-        <button
-          onClick={() => setMode('roi')}
-          className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-xs text-emerald-300 backdrop-blur transition-colors hover:bg-emerald-900/50"
-        >
-          ROI 계산기
-        </button>
-        <button
-          onClick={() => setMode('sla')}
-          className="rounded-lg border border-blue-700/50 bg-blue-900/30 px-4 py-2 text-xs text-blue-300 backdrop-blur transition-colors hover:bg-blue-900/50"
-        >
-          SLA 모니터링
-        </button>
-        <button
-          onClick={() => setMode('qc')}
-          className="rounded-lg border border-orange-700/50 bg-orange-900/30 px-4 py-2 text-xs text-orange-300 backdrop-blur transition-colors hover:bg-orange-900/50"
-        >
-          품질 검수
-        </button>
-        <button
-          onClick={() => setMode('picking')}
-          className="rounded-lg border border-purple-700/50 bg-purple-900/30 px-4 py-2 text-xs text-purple-300 backdrop-blur transition-colors hover:bg-purple-900/50"
-        >
-          모바일 피킹
-        </button>
-        <button
-          onClick={() => setMode('subscription')}
-          className="rounded-lg border border-cyan-700/50 bg-cyan-900/30 px-4 py-2 text-xs text-cyan-300 backdrop-blur transition-colors hover:bg-cyan-900/50"
-        >
-          구독 관리
-        </button>
-        <button
-          onClick={() => setMode('erp')}
-          className="rounded-lg border border-amber-700/50 bg-amber-900/30 px-4 py-2 text-xs text-amber-300 backdrop-blur transition-colors hover:bg-amber-900/50"
-        >
-          ERP 관리
-        </button>
-        <button
-          onClick={() => setMode('trade')}
-          className="rounded-lg border border-teal-700/50 bg-teal-900/30 px-4 py-2 text-xs text-teal-300 backdrop-blur transition-colors hover:bg-teal-900/50"
-        >
-          무역 인텔리전스
-        </button>
-        <button
-          onClick={() => setMode('reorder')}
-          className="rounded-lg border border-indigo-700/50 bg-indigo-900/30 px-4 py-2 text-xs text-indigo-300 backdrop-blur transition-colors hover:bg-indigo-900/50"
-        >
-          자동 발주
-        </button>
-        <button
-          onClick={() => setMode('connector')}
-          className="rounded-lg border border-rose-700/50 bg-rose-900/30 px-4 py-2 text-xs text-rose-300 backdrop-blur transition-colors hover:bg-rose-900/50"
-        >
-          ERP 커넥터
-        </button>
-        <button
-          onClick={() => setMode('benchmark')}
-          className="rounded-lg border border-pink-700/50 bg-pink-900/30 px-4 py-2 text-xs text-pink-300 backdrop-blur transition-colors hover:bg-pink-900/50"
-        >
-          업계 벤치마크
-        </button>
-      </div>
+      <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={DEMO_TRIAL.planType} />
     </div>
   );
 }

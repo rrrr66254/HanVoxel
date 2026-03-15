@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X, Save, Trash2, Bookmark } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 interface DimensionEditorProps {
@@ -47,33 +48,79 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
     });
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    borderRadius: 6,
+    border: '1px solid #30363D',
+    background: '#0D1117',
+    padding: '6px 8px',
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: '#E6EDF3',
+    outline: 'none',
+    textAlign: 'center',
+    transition: 'border-color 0.15s ease',
+  };
+
   return (
-    <div className="absolute top-4 right-4 w-72 rounded-lg border border-blue-600/50 bg-gray-900/95 text-white shadow-xl backdrop-blur">
+    <div
+      style={{
+        position: 'absolute',
+        top: 70,
+        right: 16,
+        width: 280,
+        background: '#161B22',
+        border: '1px solid #2D7DD2',
+        borderRadius: 12,
+        color: '#E6EDF3',
+        boxShadow: '0 0 20px rgba(45,125,210,0.15), 0 8px 32px rgba(0,0,0,0.5)',
+        zIndex: 20,
+        overflow: 'hidden',
+      }}
+    >
       {/* 헤더 */}
-      <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
+      <div
+        style={{
+          padding: '14px 16px',
+          borderBottom: '1px solid #21262D',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div>
-          <h3 className="text-sm font-bold">치수 편집</h3>
-          <span className="text-[10px] text-gray-500">{object.code}</span>
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>치수 편집</h3>
+          <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-white" aria-label="닫기">
-          ✕
+        <button
+          onClick={onClose}
+          style={{
+            width: 28, height: 28, borderRadius: 6,
+            border: '1px solid #30363D', background: 'transparent',
+            color: '#8B949E', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <X size={14} />
         </button>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* 이름 */}
         <FieldRow label="이름">
           <input
             type="text"
             value={values.name}
             onChange={(e) => setValues((prev) => ({ ...prev, name: e.target.value }))}
-            className="w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-xs text-white outline-none focus:border-blue-500"
+            style={{ ...inputStyle, textAlign: 'left', fontFamily: 'inherit' }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
           />
         </FieldRow>
 
         {/* 크기 (W × H × D) */}
         <FieldRow label="크기 (m)">
-          <div className="flex gap-1">
+          <div style={{ display: 'flex', gap: 6 }}>
             <NumInput label="W" value={values.scaleX} onChange={(v) => handleChange('scaleX', v)} />
             <NumInput label="H" value={values.scaleY} onChange={(v) => handleChange('scaleY', v)} />
             <NumInput label="D" value={values.scaleZ} onChange={(v) => handleChange('scaleZ', v)} />
@@ -82,10 +129,10 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
 
         {/* 위치 */}
         <FieldRow label="위치 (m)">
-          <div className="flex gap-1">
-            <NumInput label="X" value={values.positionX} onChange={(v) => handleChange('positionX', v)} />
-            <NumInput label="Y" value={values.positionY} onChange={(v) => handleChange('positionY', v)} />
-            <NumInput label="Z" value={values.positionZ} onChange={(v) => handleChange('positionZ', v)} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <NumInput label="X" value={values.positionX} onChange={(v) => handleChange('positionX', v)} color="#F85149" />
+            <NumInput label="Y" value={values.positionY} onChange={(v) => handleChange('positionY', v)} color="#3FB950" />
+            <NumInput label="Z" value={values.positionZ} onChange={(v) => handleChange('positionZ', v)} color="#2D7DD2" />
           </div>
         </FieldRow>
 
@@ -96,12 +143,16 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
 
         {/* 색상 + 투명도 */}
         <FieldRow label="색상">
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="color"
               value={values.color}
               onChange={(e) => setValues((prev) => ({ ...prev, color: e.target.value }))}
-              className="h-6 w-8 cursor-pointer rounded border border-gray-600 bg-transparent"
+              style={{
+                width: 32, height: 28, cursor: 'pointer',
+                borderRadius: 6, border: '1px solid #30363D',
+                background: 'transparent', padding: 0,
+              }}
             />
             <NumInput label="투명도" value={values.opacity} onChange={(v) => handleChange('opacity', v)} step="0.1" />
           </div>
@@ -110,32 +161,82 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
         {/* 적용 버튼 */}
         <button
           onClick={handleApply}
-          className="w-full rounded bg-blue-600 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-500"
+          style={{
+            width: '100%',
+            padding: '10px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#2D7DD2',
+            color: '#fff',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#3A8FE0'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#2D7DD2'; }}
         >
+          <Save size={14} />
           적용
         </button>
 
-        {/* 구분선 */}
-        <div className="border-t border-gray-700" />
+        <div style={{ height: 1, background: '#21262D' }} />
 
         {/* 내 프리셋으로 저장 */}
         <button
           onClick={() => onSavePreset(object)}
-          className="flex w-full items-center justify-center gap-1.5 rounded border border-emerald-600/50 bg-emerald-900/30 py-1.5 text-xs font-semibold text-emerald-300 transition-colors hover:bg-emerald-900/50"
+          style={{
+            width: '100%',
+            padding: '9px',
+            borderRadius: 8,
+            border: '1px solid rgba(63, 185, 80, 0.3)',
+            background: 'rgba(63, 185, 80, 0.08)',
+            color: '#3FB950',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(63, 185, 80, 0.15)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(63, 185, 80, 0.08)'; }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 1h6.5L10 2.5V10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.2" />
-            <rect x="4" y="1" width="3" height="3" rx="0.5" stroke="currentColor" strokeWidth="0.8" />
-            <rect x="3.5" y="7" width="4" height="2" rx="0.5" stroke="currentColor" strokeWidth="0.8" />
-          </svg>
+          <Bookmark size={14} />
           내 프리셋으로 저장
         </button>
 
         {/* 삭제 */}
         <button
           onClick={() => onDelete(object.id)}
-          className="w-full rounded border border-red-600/30 py-1.5 text-xs text-red-400 transition-colors hover:border-red-600/50 hover:bg-red-900/20"
+          style={{
+            width: '100%',
+            padding: '9px',
+            borderRadius: 8,
+            border: '1px solid rgba(248, 81, 73, 0.2)',
+            background: 'transparent',
+            color: '#F85149',
+            fontSize: 12,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248, 81, 73, 0.08)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
         >
+          <Trash2 size={14} />
           삭제
         </button>
       </div>
@@ -146,7 +247,17 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-[10px] font-semibold tracking-wide text-gray-500 uppercase">
+      <label
+        style={{
+          display: 'block',
+          marginBottom: 6,
+          fontSize: 10,
+          fontWeight: 600,
+          color: '#484F58',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}
+      >
         {label}
       </label>
       {children}
@@ -159,21 +270,48 @@ function NumInput({
   value,
   onChange,
   step = '0.1',
+  color,
 }: {
   label: string;
   value: number;
   onChange: (v: string) => void;
   step?: string;
+  color?: string;
 }) {
   return (
-    <div className="flex-1">
-      <span className="mb-0.5 block text-center text-[9px] text-gray-600">{label}</span>
+    <div style={{ flex: 1 }}>
+      <span
+        style={{
+          display: 'block',
+          textAlign: 'center',
+          fontSize: 9,
+          fontWeight: 600,
+          color: color ?? '#484F58',
+          marginBottom: 3,
+        }}
+      >
+        {label}
+      </span>
       <input
         type="number"
         step={step}
         value={typeof value === 'number' ? parseFloat(value.toFixed(3)) : value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-gray-600 bg-gray-800 px-1.5 py-1 text-center text-xs font-mono text-white outline-none focus:border-blue-500"
+        style={{
+          width: '100%',
+          borderRadius: 6,
+          border: '1px solid #30363D',
+          background: '#0D1117',
+          padding: '6px 4px',
+          textAlign: 'center',
+          fontSize: 12,
+          fontFamily: 'monospace',
+          color: '#E6EDF3',
+          outline: 'none',
+          transition: 'border-color 0.15s ease',
+        }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
       />
     </div>
   );

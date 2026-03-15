@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 interface ObjectInfoPanelProps {
@@ -6,10 +7,10 @@ interface ObjectInfoPanelProps {
 }
 
 // 상태 배지 색상
-const STATUS_BADGE: Record<string, string> = {
-  ACTIVE: 'bg-green-500',
-  INACTIVE: 'bg-gray-400',
-  MAINTENANCE: 'bg-orange-500',
+const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
+  ACTIVE: { bg: 'rgba(63, 185, 80, 0.15)', color: '#3FB950' },
+  INACTIVE: { bg: 'rgba(139, 148, 158, 0.15)', color: '#8B949E' },
+  MAINTENANCE: { bg: 'rgba(210, 153, 34, 0.15)', color: '#D29922' },
 };
 
 /**
@@ -18,63 +19,142 @@ const STATUS_BADGE: Record<string, string> = {
 export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
   if (!object) return null;
 
+  const badge = STATUS_BADGE[object.status] ?? STATUS_BADGE.ACTIVE;
+
   return (
-    <div className="absolute top-4 right-4 w-72 rounded-lg border border-gray-700 bg-gray-900/95 p-4 text-white shadow-xl backdrop-blur">
+    <div
+      style={{
+        position: 'absolute',
+        top: 70,
+        right: 16,
+        width: 280,
+        background: '#161B22',
+        border: '1px solid #30363D',
+        borderRadius: 12,
+        padding: 0,
+        color: '#E6EDF3',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        zIndex: 20,
+        overflow: 'hidden',
+      }}
+    >
       {/* 헤더 */}
-      <div className="mb-3 flex items-start justify-between">
+      <div
+        style={{
+          padding: '14px 16px',
+          borderBottom: '1px solid #21262D',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
         <div>
-          <h3 className="text-sm font-bold">{object.name}</h3>
-          <span className="text-xs text-gray-400">{object.code}</span>
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{object.name}</h3>
+          <span style={{ fontSize: 11, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white"
-          aria-label="닫기"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            border: '1px solid #30363D',
+            background: 'transparent',
+            color: '#8B949E',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          ✕
+          <X size={14} />
         </button>
       </div>
 
-      {/* 타입 & 상태 */}
-      <div className="mb-3 flex gap-2">
-        <span className="rounded bg-blue-600/30 px-2 py-0.5 text-xs text-blue-300">
+      {/* 타입 & 상태 배지 */}
+      <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+        <span
+          style={{
+            fontSize: 11,
+            padding: '3px 10px',
+            borderRadius: 6,
+            background: 'rgba(45, 125, 210, 0.15)',
+            color: '#2D7DD2',
+            fontWeight: 600,
+          }}
+        >
           {object.type.label}
         </span>
-        <span className={`rounded px-2 py-0.5 text-xs text-white ${STATUS_BADGE[object.status] ?? 'bg-gray-500'}`}>
+        <span
+          style={{
+            fontSize: 11,
+            padding: '3px 10px',
+            borderRadius: 6,
+            background: badge.bg,
+            color: badge.color,
+            fontWeight: 600,
+          }}
+        >
           {object.status}
         </span>
       </div>
 
-      {/* 위치 정보 */}
-      <div className="space-y-2 text-xs">
-        <InfoRow label="위치 (m)" value={`${object.positionX}, ${object.positionY}, ${object.positionZ}`} />
-        <InfoRow label="크기 (m)" value={`${object.scaleX} × ${object.scaleY} × ${object.scaleZ}`} />
-        <InfoRow
-          label="회전 (°)"
-          value={`${toDeg(object.rotationX)}, ${toDeg(object.rotationY)}, ${toDeg(object.rotationZ)}`}
-        />
-        {object.color && <InfoRow label="색상" value={object.color} />}
-        <InfoRow label="투명도" value={`${Math.round(object.opacity * 100)}%`} />
-      </div>
-
-      {/* 메타데이터 */}
-      {object.metadata && Object.keys(object.metadata).length > 0 && (
-        <div className="mt-3 border-t border-gray-700 pt-3">
-          <span className="text-xs font-semibold text-gray-400">메타데이터</span>
-          <pre className="mt-1 max-h-32 overflow-auto rounded bg-gray-800 p-2 text-xs text-gray-300">
-            {JSON.stringify(object.metadata, null, 2)}
-          </pre>
+      {/* 정보 행 */}
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <InfoRow label="위치 (m)" value={`${object.positionX.toFixed(1)}, ${object.positionY.toFixed(1)}, ${object.positionZ.toFixed(1)}`} />
+          <InfoRow label="크기 (m)" value={`${object.scaleX} × ${object.scaleY} × ${object.scaleZ}`} />
+          <InfoRow
+            label="회전 (°)"
+            value={`${toDeg(object.rotationX)}, ${toDeg(object.rotationY)}, ${toDeg(object.rotationZ)}`}
+          />
+          {object.color && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+              <span style={{ color: '#8B949E' }}>색상</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 14, height: 14, borderRadius: 3, background: object.color, border: '1px solid #30363D' }} />
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#E6EDF3' }}>{object.color}</span>
+              </div>
+            </div>
+          )}
+          <InfoRow label="투명도" value={`${Math.round(object.opacity * 100)}%`} />
         </div>
-      )}
+
+        {/* 메타데이터 */}
+        {object.metadata && Object.keys(object.metadata).length > 0 && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #21262D' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              메타데이터
+            </span>
+            <pre
+              style={{
+                marginTop: 6,
+                maxHeight: 120,
+                overflow: 'auto',
+                borderRadius: 8,
+                background: '#0D1117',
+                border: '1px solid #21262D',
+                padding: 10,
+                fontSize: 10,
+                fontFamily: 'monospace',
+                color: '#8B949E',
+                lineHeight: 1.5,
+              }}
+            >
+              {JSON.stringify(object.metadata, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-gray-400">{label}</span>
-      <span className="font-mono">{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+      <span style={{ color: '#8B949E' }}>{label}</span>
+      <span style={{ fontFamily: 'monospace', color: '#E6EDF3' }}>{value}</span>
     </div>
   );
 }

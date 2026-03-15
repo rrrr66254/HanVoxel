@@ -1,3 +1,4 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 @import "tailwindcss";
 
 * {
@@ -12,4 +13,132 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  background: #0D1117;
+  color: #E6EDF3;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #30363D;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #484F58;
+}
+
+/* 다크 테마 디자인 토큰 */
+:root {
+  --bg-primary: #0D1117;
+  --bg-secondary: #161B22;
+  --bg-tertiary: #21262D;
+  --border-default: #30363D;
+  --border-muted: #21262D;
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #484F58;
+  --accent-blue: #2D7DD2;
+  --accent-green: #3FB950;
+  --accent-orange: #D29922;
+  --accent-red: #F85149;
+  --accent-purple: #A371F7;
+  --glow-blue: rgba(45, 125, 210, 0.15);
+  --glow-green: rgba(63, 185, 80, 0.15);
+}
+
+/* 카드 기본 스타일 */
+.hv-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.hv-card:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 20px var(--glow-blue);
+  transform: translateY(-2px);
+}
+
+/* KPI 카드 */
+.hv-kpi-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.hv-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+.hv-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--glow-blue);
+}
+.hv-kpi-card.blue::before { background: var(--accent-blue); }
+.hv-kpi-card.green::before { background: var(--accent-green); }
+.hv-kpi-card.orange::before { background: var(--accent-orange); }
+.hv-kpi-card.red::before { background: var(--accent-red); }
+.hv-kpi-card.purple::before { background: var(--accent-purple); }
+
+/* 버튼 스타일 */
+.hv-btn-primary {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.hv-btn-primary:hover {
+  background: #3A8FE0;
+  box-shadow: 0 0 20px var(--glow-blue);
+}
+
+.hv-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.hv-btn-ghost:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+/* 입력 필드 */
+.hv-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.hv-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--glow-blue);
 }
