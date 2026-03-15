@@ -74,7 +74,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [topViewMode, setTopViewMode] = useState(false);
 
   // 그리드 표시 여부
-  const [gridVisible, setGridVisible] = useState(true);
+  const [gridVisible, setGridVisible] = useState(false);
 
   // 드래그 앤 드롭 상태
   const [isDraggingOver, setIsDraggingOver] = useState(false);
