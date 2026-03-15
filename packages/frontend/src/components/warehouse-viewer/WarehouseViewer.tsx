@@ -83,8 +83,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const objectContextMenuRef = useRef(false);
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  // 더블클릭 감지용
-  const lastClickRef = useRef<{ id: string; time: number } | null>(null);
+  // 싱글클릭 지연 타이머 (더블클릭과 분리용)
+  const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 전체 오브젝트 목록
   const placedIds = new Set(placedObjects.map((o) => o.id));
@@ -149,38 +149,72 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setOriginalPosition(null);
   }, []);
 
-  // === 객체 선택 + 더블클릭 감지 ===
+  // === 싱글 클릭 — 300ms 지연 후 선택 + 편집 패널 열기 ===
   const handleSelect = useCallback((obj: SpatialObject) => {
     if (isMoving) return;
 
-    const now = Date.now();
-    const last = lastClickRef.current;
-
-    // 더블클릭 감지 (300ms 이내 같은 객체)
-    if (last && last.id === obj.id && now - last.time < 300) {
-      // 더블클릭 → 랙이면 상세 패널, 아니면 편집 패널
-      if (obj.type.name === 'RACK') {
-        setRackDetailId(obj.id);
-        setRightPanel('rackDetail');
-        setEditingId(null);
-      } else {
-        setEditingId(obj.id);
-        setRightPanel('editor');
-        setRackDetailId(null);
-      }
-      lastClickRef.current = null;
-      return;
+    // 이전 싱글클릭 타이머 취소 (더블클릭 시 싱글클릭 방지)
+    if (singleClickTimerRef.current) {
+      clearTimeout(singleClickTimerRef.current);
+      singleClickTimerRef.current = null;
     }
 
-    // 싱글 클릭
-    lastClickRef.current = { id: obj.id, time: now };
-    setSelectedId(obj.id);
-
-    // 싱글 클릭 시 편집 패널 열기
-    setEditingId(obj.id);
-    setRightPanel('editor');
-    setRackDetailId(null);
+    // 300ms 후 싱글클릭 처리 (더블클릭이 오면 취소됨)
+    singleClickTimerRef.current = setTimeout(() => {
+      console.log('[HanVoxel] 싱글클릭 →', obj.name, obj.type.name);
+      setSelectedId(obj.id);
+      setEditingId(obj.id);
+      setRightPanel('editor');
+      setRackDetailId(null);
+      singleClickTimerRef.current = null;
+    }, 300);
   }, [isMoving]);
+
+  // === 더블 클릭 — R3F 네이티브 onDoubleClick 이벤트 ===
+  const handleDoubleClick = useCallback((obj: SpatialObject) => {
+    if (isMoving) return;
+
+    // 싱글클릭 타이머 취소
+    if (singleClickTimerRef.current) {
+      clearTimeout(singleClickTimerRef.current);
+      singleClickTimerRef.current = null;
+    }
+
+    const meta = obj.metadata as Record<string, unknown> | null;
+    const isRack = obj.type.name === 'RACK' && meta?.levels;
+
+    console.log('[HanVoxel] 더블클릭 →', obj.name, obj.type.name, isRack ? '→ RackDetailPanel' : '→ ObjectEditor');
+
+    if (isRack) {
+      setRackDetailId(obj.id);
+      setRightPanel('rackDetail');
+      setEditingId(null);
+      setSelectedId(obj.id);
+    } else {
+      setEditingId(obj.id);
+      setRightPanel('editor');
+      setRackDetailId(null);
+      setSelectedId(obj.id);
+    }
+  }, [isMoving]);
+
+  // === 프리셋 카테고리 → 타입 매핑 ===
+  const getTypeFromPreset = useCallback((preset: SpatialPreset): { name: SpatialObject['type']['name']; itemType?: string } => {
+    const catName = preset.category?.name?.toUpperCase() ?? '';
+    const code = preset.code?.toUpperCase() ?? '';
+    // 랙: levels가 있는 프리셋
+    if (preset.levels && preset.levels > 0) return { name: 'RACK' };
+    if (catName.includes('RACK')) return { name: 'RACK' };
+    // 팔레트
+    if (catName.includes('PALLET') || code.includes('PALLET') || code.startsWith('T11') || code.startsWith('T12') || code.startsWith('T08') || code.startsWith('ISO_')) return { name: 'BIN', itemType: 'pallet' };
+    // 제품 박스
+    if (catName.includes('BOX') || catName.includes('PRODUCT') || code.includes('BOX') || code.includes('FOOD') || code.includes('AUTO') || code.includes('PHARMA') || code.includes('CHEMICAL') || code.includes('ELECTRONICS') || code.includes('GENERAL') || code.includes('COLD')) return { name: 'BIN', itemType: 'box' };
+    // 컨테이너
+    if (catName.includes('CONTAINER') || code.includes('FT') || code.includes('REEFER')) return { name: 'RACK' };
+    // 통로
+    if (catName.includes('AISLE') || code.includes('AISLE')) return { name: 'AISLE' };
+    return { name: 'RACK' };
+  }, []);
 
   // === 프리셋 배치 ===
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
@@ -193,16 +227,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const handlePlace = useCallback(async (position: [number, number, number]) => {
     if (!placingPreset) return;
     const code = `${placingPreset.code}_${Date.now()}`;
+    const typeInfo = getTypeFromPreset(placingPreset);
     const localObj: SpatialObject = {
       id: crypto.randomUUID(), siteId: currentSiteId, typeId: DEFAULT_TYPE_ID,
-      type: { id: DEFAULT_TYPE_ID, name: 'RACK', label: placingPreset.name, description: null, depth: 5 },
+      type: { id: DEFAULT_TYPE_ID, name: typeInfo.name, label: placingPreset.name, description: null, depth: 5 },
       name: placingPreset.name, code, status: 'ACTIVE', isActive: true,
       positionX: position[0], positionY: position[1], positionZ: position[2],
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: placingPreset.width || 1, scaleY: placingPreset.height || 1, scaleZ: placingPreset.depth || 1,
       color: null, opacity: placingPreset.opacity, visible: true,
       meshType: (placingPreset.meshType as MeshType) ?? 'box',
-      metadata: { presetId: placingPreset.id, presetCode: placingPreset.code, levels: placingPreset.levels, levelHeight: placingPreset.levelHeight, loadPerLevel: placingPreset.loadPerLevel },
+      metadata: { presetId: placingPreset.id, presetCode: placingPreset.code, levels: placingPreset.levels, levelHeight: placingPreset.levelHeight, loadPerLevel: placingPreset.loadPerLevel, ...(typeInfo.itemType ? { itemType: typeInfo.itemType } : {}) },
     };
     setPlacedObjects((prev) => [...prev, localObj]);
     setPlacingPreset(null);
@@ -326,15 +361,16 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     const worldX = Math.round(nx * 30 + 15); const worldZ = Math.round(nz * 25 + 20);
     const posY = (preset.height || 1) / 2;
     const code = `${preset.code}_${Date.now()}`;
+    const dropTypeInfo = getTypeFromPreset(preset);
     const localObj: SpatialObject = {
       id: crypto.randomUUID(), siteId: currentSiteId, typeId: DEFAULT_TYPE_ID,
-      type: { id: DEFAULT_TYPE_ID, name: 'RACK', label: preset.name, description: null, depth: 5 },
+      type: { id: DEFAULT_TYPE_ID, name: dropTypeInfo.name, label: preset.name, description: null, depth: 5 },
       name: preset.name, code, status: 'ACTIVE', isActive: true,
       positionX: worldX, positionY: posY, positionZ: worldZ,
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: preset.width || 1, scaleY: preset.height || 1, scaleZ: preset.depth || 1,
       color: null, opacity: preset.opacity, visible: true, meshType: (preset.meshType as MeshType) ?? 'box',
-      metadata: { presetId: preset.id, presetCode: preset.code },
+      metadata: { presetId: preset.id, presetCode: preset.code, ...(dropTypeInfo.itemType ? { itemType: dropTypeInfo.itemType } : {}) },
     };
     setPlacedObjects((prev) => [...prev, localObj]); setEditingId(localObj.id); setSelectedId(localObj.id); setRightPanel('editor');
     const saved = await createSpatialObject({ siteId: currentSiteId, typeId: DEFAULT_TYPE_ID, name: localObj.name, code: localObj.code, positionX: localObj.positionX, positionY: localObj.positionY, positionZ: localObj.positionZ, scaleX: localObj.scaleX, scaleY: localObj.scaleY, scaleZ: localObj.scaleZ, color: localObj.color, opacity: localObj.opacity, meshType: localObj.meshType, metadata: localObj.metadata });
@@ -352,6 +388,13 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     const drop = () => { dragCounter = 0; setIsDraggingOver(false); };
     wrapper.addEventListener('dragenter', enter); wrapper.addEventListener('dragleave', leave); wrapper.addEventListener('drop', drop);
     return () => { wrapper.removeEventListener('dragenter', enter); wrapper.removeEventListener('dragleave', leave); wrapper.removeEventListener('drop', drop); };
+  }, []);
+
+  // 싱글클릭 타이머 cleanup
+  useEffect(() => {
+    return () => {
+      if (singleClickTimerRef.current) clearTimeout(singleClickTimerRef.current);
+    };
   }, []);
 
   // OrbitControls 비활성화 조건
@@ -395,7 +438,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} rotateSpeed={0.5} zoomSpeed={1.2} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
             <WarehouseScene
-              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
+              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect} onDoubleClick={handleDoubleClick}
               onContextMenu={(obj, e) => {
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);

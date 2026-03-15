@@ -25,6 +25,7 @@ interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
   onSelect: (object: SpatialObject) => void;
+  onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   placingPreset?: SpatialPreset | null;
   onPlace?: (position: [number, number, number]) => void;
@@ -50,7 +51,7 @@ interface WarehouseSceneProps {
  * - 조명: 천장 PointLight 4개 (형광등 배치, 흰색 1.5)
  */
 export function WarehouseScene({
-  objects, selectedId, onSelect, onContextMenu, placingPreset, onPlace,
+  objects, selectedId, onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
   gridVisible = true,
   binOccupancy = [],
@@ -202,6 +203,7 @@ export function WarehouseScene({
           key={obj.id}
           object={obj}
           onSelect={onSelect}
+          onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
           isSelected={obj.id === selectedId}
         />
