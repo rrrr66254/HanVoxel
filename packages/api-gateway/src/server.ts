@@ -12,6 +12,7 @@ import billingRoutes from './routes/billing.routes';
 import erpRoutes from './routes/erp.routes';
 import tradeRoutes from './routes/trade.routes';
 import reorderRoutes from './routes/reorder.routes';
+import connectorRoutes from './routes/connector.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -33,6 +34,7 @@ app.use('/api/v1', billingRoutes);
 app.use('/api/v1', erpRoutes);
 app.use('/api/v1', tradeRoutes);
 app.use('/api/v1', reorderRoutes);
+app.use('/api/v1', connectorRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

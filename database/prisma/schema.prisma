@@ -46,6 +46,7 @@ model Company {
   users    User[]
   payments PaymentHistory[]
   partners Partner[]
+  erpConnectors ErpConnectorConfig[]
 
   @@map("companies")
 }
@@ -1153,4 +1154,102 @@ model ReorderRecommendation {
   @@index([status])
   @@index([stockoutDate])
   @@map("reorder_recommendations")
+}
+
+// ============================================================
+// Phase 3 Step 4 — 더존/영림원 ERP 커넥터
+// ============================================================
+
+/// ERP 커넥터 설정 (회사별)
+model ErpConnectorConfig {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  /// 커넥터 유형 (DOUZON, YOUNGLIMWON)
+  erpType       String   @map("erp_type") @db.VarChar(20)
+  /// 표시 이름
+  displayName   String   @map("display_name") @db.VarChar(100)
+  /// API 접속 URL
+  baseUrl       String   @map("base_url") @db.VarChar(500)
+  /// 인증 방식 (OAUTH2, API_KEY, BASIC)
+  authType      String   @map("auth_type") @db.VarChar(20)
+  /// 인증 정보 (암호화 저장: clientId, clientSecret, apiKey 등)
+  credentials   Json     @db.JsonB
+  /// 추가 설정 (companyCode, 타임존 등)
+  configJson    Json?    @map("config_json") @db.JsonB
+  /// 연동 활성 여부
+  isActive      Boolean  @default(true) @map("is_active")
+  /// 마지막 연결 확인 시각
+  lastPingAt    DateTime? @map("last_ping_at") @db.Timestamptz
+  /// 마지막 연결 상태 (OK, ERROR, TIMEOUT)
+  lastPingStatus String? @map("last_ping_status") @db.VarChar(20)
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company       Company  @relation(fields: [companyId], references: [id])
+  syncLogs      ErpSyncLog[]
+  fieldMappings ErpFieldMapping[]
+
+  @@unique([companyId, erpType])
+  @@index([companyId])
+  @@map("erp_connector_configs")
+}
+
+/// ERP 동기화 로그
+model ErpSyncLog {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  connectorId   String   @map("connector_id") @db.Uuid
+  /// 동기화 방향 (PUSH: HanVoxel→ERP, PULL: ERP→HanVoxel)
+  direction     String   @db.VarChar(10)
+  /// 동기화 대상 (VOUCHER, PARTNER, INVENTORY, RECEIPT)
+  entityType    String   @map("entity_type") @db.VarChar(20)
+  /// 대상 레코드 ID (HanVoxel 측)
+  entityId      String?  @map("entity_id") @db.Uuid
+  /// ERP 측 전표/레코드 번호
+  erpRefNo      String?  @map("erp_ref_no") @db.VarChar(50)
+  /// 동기화 상태 (SUCCESS, FAILED, RETRYING, SKIPPED)
+  status        String   @db.VarChar(20)
+  /// 오류 메시지
+  errorMessage  String?  @map("error_message") @db.Text
+  /// 재시도 횟수
+  retryCount    Int      @default(0) @map("retry_count")
+  /// 요청 페이로드 (디버깅용)
+  requestPayload Json?   @map("request_payload") @db.JsonB
+  /// 응답 페이로드
+  responsePayload Json?  @map("response_payload") @db.JsonB
+
+  syncedAt      DateTime @default(now()) @map("synced_at") @db.Timestamptz
+
+  connector     ErpConnectorConfig @relation(fields: [connectorId], references: [id])
+
+  @@index([connectorId, status])
+  @@index([connectorId, entityType])
+  @@index([syncedAt])
+  @@map("erp_sync_logs")
+}
+
+/// ERP 필드 매핑 (커스터마이징)
+model ErpFieldMapping {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  connectorId   String   @map("connector_id") @db.Uuid
+  /// 대상 엔티티 (VOUCHER, PARTNER, ITEM)
+  entityType    String   @map("entity_type") @db.VarChar(20)
+  /// HanVoxel 필드명
+  sourceField   String   @map("source_field") @db.VarChar(100)
+  /// ERP 필드명
+  targetField   String   @map("target_field") @db.VarChar(100)
+  /// 변환 규칙 (DIRECT, FORMAT, LOOKUP, CONSTANT)
+  transformType String   @default("DIRECT") @map("transform_type") @db.VarChar(20)
+  /// 변환 파라미터 (포맷 문자열, 룩업 테이블 등)
+  transformParam String? @map("transform_param") @db.VarChar(500)
+  /// 필수 여부
+  isRequired    Boolean  @default(false) @map("is_required")
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  connector     ErpConnectorConfig @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  @@unique([connectorId, entityType, sourceField])
+  @@index([connectorId])
+  @@map("erp_field_mappings")
 }
