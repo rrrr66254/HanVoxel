@@ -56,6 +56,24 @@ export function EditorBottomBar({
       {/* 구분선 */}
       <div className="mx-3 h-4 w-px bg-[#2A2F38]" />
 
+      {/* 마우스 조작 힌트 */}
+      <div className="flex items-center gap-2 text-[10px] text-gray-500">
+        <span>좌드래그: <span className="text-gray-400">이동</span></span>
+        <span className="text-[#2A2F38]">|</span>
+        <span>우드래그: <span className="text-gray-400">회전</span></span>
+        <span className="text-[#2A2F38]">|</span>
+        <span>휠: <span className="text-gray-400">줌</span></span>
+        <span className="text-[#2A2F38]">|</span>
+        <span>클릭: <span className="text-gray-400">선택</span></span>
+        <span className="text-[#2A2F38]">|</span>
+        <span>더블클릭: <span className="text-gray-400">편집</span></span>
+        <span className="text-[#2A2F38]">|</span>
+        <span>우클릭: <span className="text-gray-400">메뉴</span></span>
+      </div>
+
+      {/* 구분선 */}
+      <div className="mx-3 h-4 w-px bg-[#2A2F38]" />
+
       {/* 중앙 — 좌표 */}
       <div className="flex items-center gap-3 font-mono text-[11px]">
         <span className="text-gray-500">
@@ -116,7 +134,16 @@ export function EditorBottomBar({
       {/* 단축키 패널 */}
       {showShortcuts && (
         <div className="absolute bottom-10 right-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24] p-3 shadow-xl">
-          <h4 className="mb-2 text-xs font-semibold text-white">단축키</h4>
+          <h4 className="mb-2 text-xs font-semibold text-white">마우스 조작</h4>
+          <div className="space-y-1 text-[11px]">
+            <ShortcutRow keys="좌클릭 드래그" desc="카메라 패닝" />
+            <ShortcutRow keys="우클릭 드래그" desc="카메라 회전" />
+            <ShortcutRow keys="스크롤 휠" desc="줌 인/아웃" />
+            <ShortcutRow keys="좌클릭" desc="오브젝트 선택" />
+            <ShortcutRow keys="더블클릭" desc="편집 패널 열기" />
+            <ShortcutRow keys="우클릭" desc="컨텍스트 메뉴" />
+          </div>
+          <h4 className="mb-2 mt-3 text-xs font-semibold text-white">키보드</h4>
           <div className="space-y-1 text-[11px]">
             <ShortcutRow keys="W A S D" desc="카메라 이동" />
             <ShortcutRow keys="Q / E" desc="카메라 상/하" />

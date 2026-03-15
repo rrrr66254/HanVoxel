@@ -86,6 +86,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   // 싱글클릭 지연 타이머 (더블클릭과 분리용)
   const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 포인터 이벤트 추적 (클릭 vs 드래그 구분, 5px 임계값)
+  const pointerDownPosRef = useRef<{ x: number; y: number; button: number } | null>(null);
+  const wasDragRef = useRef(false);
+
   // 전체 오브젝트 목록
   const placedIds = new Set(placedObjects.map((o) => o.id));
   const allObjects = [
@@ -151,7 +155,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   // === 싱글 클릭 — 300ms 지연 후 선택 + 편집 패널 열기 ===
   const handleSelect = useCallback((obj: SpatialObject) => {
-    if (isMoving) return;
+    if (isMoving || wasDragRef.current) return;
 
     // 이전 싱글클릭 타이머 취소 (더블클릭 시 싱글클릭 방지)
     if (singleClickTimerRef.current) {
@@ -172,7 +176,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   // === 더블 클릭 — R3F 네이티브 onDoubleClick 이벤트 ===
   const handleDoubleClick = useCallback((obj: SpatialObject) => {
-    if (isMoving) return;
+    if (isMoving || wasDragRef.current) return;
 
     // 싱글클릭 타이머 취소
     if (singleClickTimerRef.current) {
@@ -397,6 +401,42 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     };
   }, []);
 
+  // OrbitControls 마우스 버튼 매핑 (좌클릭=패닝, 우클릭=회전, 휠=줌)
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.mouseButtons = {
+        LEFT: THREE.MOUSE.PAN,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.ROTATE,
+      };
+    }
+  });
+
+  // 포인터 이벤트 추적 — 클릭 vs 드래그 구분 (5px 임계값)
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const onDown = (e: PointerEvent) => {
+      pointerDownPosRef.current = { x: e.clientX, y: e.clientY, button: e.button };
+      wasDragRef.current = false;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pointerDownPosRef.current) return;
+      const dx = e.clientX - pointerDownPosRef.current.x;
+      const dy = e.clientY - pointerDownPosRef.current.y;
+      if (dx * dx + dy * dy > 25) wasDragRef.current = true; // 5px^2 = 25
+    };
+    const onUp = () => { pointerDownPosRef.current = null; };
+    wrapper.addEventListener('pointerdown', onDown);
+    wrapper.addEventListener('pointermove', onMove);
+    wrapper.addEventListener('pointerup', onUp);
+    return () => {
+      wrapper.removeEventListener('pointerdown', onDown);
+      wrapper.removeEventListener('pointermove', onMove);
+      wrapper.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+
   // OrbitControls 비활성화 조건
   const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving;
 
@@ -426,8 +466,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             shadows
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-            onClick={(e) => { if (e.target === e.currentTarget && !isMoving) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (objectContextMenuRef.current || isMoving) return; openMenu(e); }}
+            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving) return; openMenu(e); }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -440,6 +480,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             <WarehouseScene
               objects={activeObjects} selectedId={selectedId} onSelect={handleSelect} onDoubleClick={handleDoubleClick}
               onContextMenu={(obj, e) => {
+                if (wasDragRef.current) return; // 드래그였으면 컨텍스트 메뉴 표시 안 함
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
                 openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
