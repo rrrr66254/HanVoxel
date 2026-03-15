@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { WarehouseViewer } from './components/warehouse-viewer';
 import { WarehouseWizard } from './components/warehouse-wizard';
 import { RoiCalculator } from './components/roi-calculator';
@@ -23,25 +23,38 @@ import './index.css';
 
 type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark';
 
-// 관리자 모드 — 환경변수로 제어 (VITE_ADMIN_MODE=true)
-const ADMIN_MODE = import.meta.env.VITE_ADMIN_MODE === 'true';
-
-// 데모용 트라이얼 상태 (관리자 모드 시 Enterprise)
-const DEMO_TRIAL = {
-  planType: ADMIN_MODE ? 'ENTERPRISE' : 'STARTER',
-  trialEndsAt: ADMIN_MODE
-    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-    : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-};
+// 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
+// localStorage에서 adminMode 확인, 없으면 기본 true
+function getAdminMode(): boolean {
+  const stored = localStorage.getItem('adminMode');
+  if (stored !== null) return stored === 'true';
+  return true; // 기본값: Enterprise
+}
 
 function App() {
   const [mode, setMode] = useState<AppMode>('viewer');
   const [alertOpen, setAlertOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [adminMode, setAdminMode] = useState(getAdminMode);
   const [wizardResult, setWizardResult] = useState<{
     form: WizardFormData;
     template: WarehouseTemplate;
   } | null>(null);
+
+  // 플랜 타입 (관리자 모드 시 항상 ENTERPRISE)
+  const planType = adminMode ? 'ENTERPRISE' : 'STARTER';
+  const trialEndsAt = adminMode
+    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
+
+  // 관리자 모드 토글
+  const toggleAdmin = useCallback(() => {
+    setAdminMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('adminMode', String(next));
+      return next;
+    });
+  }, []);
 
   // 마법사 완료 시 생성된 레이아웃 또는 기존 mock 데이터
   const objects: SpatialObject[] = useMemo(() => {
@@ -59,7 +72,7 @@ function App() {
   const openUpgrade = () => setUpgradeOpen(true);
   const goBack = () => setMode('viewer');
 
-  // 서브페이지 컨텐츠 렌더링 (사이드바 레이아웃 없이 풀스크린으로)
+  // 서브페이지 컨텐츠 렌더링
   const renderSubPage = () => {
     switch (mode) {
       case 'benchmark':
@@ -89,22 +102,21 @@ function App() {
     }
   };
 
-  // 서브페이지 모드 (풀스크린)
+  // 서브페이지 모드
   const subPage = renderSubPage();
   if (subPage && mode !== 'viewer') {
     return (
       <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
-        <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={DEMO_TRIAL.planType} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginLeft: 24 }}>
           <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
           <div style={{ flex: 1, overflow: 'auto' }}>
             {subPage}
           </div>
         </div>
 
-        {/* 공통 모달 */}
         <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
-        <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={DEMO_TRIAL.planType} />
+        <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={planType} />
       </div>
     );
   }
@@ -112,30 +124,26 @@ function App() {
   // 메인 3D 뷰어 모드
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
-      {/* 사이드바 */}
-      <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={DEMO_TRIAL.planType} />
+      <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
 
-      {/* 메인 영역 */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* 헤더 */}
         <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
 
-        {/* 트라이얼 배너 */}
-        <TrialBanner
-          planType={DEMO_TRIAL.planType}
-          trialEndsAt={DEMO_TRIAL.trialEndsAt}
-          onUpgrade={openUpgrade}
-        />
+        {!adminMode && (
+          <TrialBanner
+            planType={planType}
+            trialEndsAt={trialEndsAt}
+            onUpgrade={openUpgrade}
+          />
+        )}
 
-        {/* 3D 뷰어 */}
         <div style={{ flex: 1, position: 'relative' }}>
           <WarehouseViewer objects={objects} />
         </div>
       </div>
 
-      {/* 공통 모달 */}
       <AlertPanel isOpen={alertOpen} onClose={() => setAlertOpen(false)} />
-      <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={DEMO_TRIAL.planType} />
+      <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} currentPlan={planType} />
     </div>
   );
 }
