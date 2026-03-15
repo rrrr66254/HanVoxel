@@ -110,7 +110,16 @@ export function MoveModeGhost({
     const objMax = new THREE.Vector3(pos.x + halfW, pos.y + halfH, pos.z + halfD);
 
     // 바닥 오브젝트 여부 (팔레트/박스) — BIN 이동 가능
-    const isBinCandidate = movingObject.type.name === 'BIN' || ((movingObject.metadata as Record<string, unknown>)?.itemType === 'pallet' || (movingObject.metadata as Record<string, unknown>)?.itemType === 'box');
+    // type.name이 'BIN'이거나, metadata.itemType이 pallet/box이거나,
+    // 랙이 아닌 오브젝트 (levels 메타데이터 없음)는 BIN 후보로 판단
+    const meta = movingObject.metadata as Record<string, unknown> | null;
+    const hasLevels = meta?.levels && (meta.levels as number) > 0;
+    const typeName = movingObject.type.name;
+    const isBinCandidate = typeName === 'BIN'
+      || meta?.itemType === 'pallet'
+      || meta?.itemType === 'box'
+      || (typeName !== 'RACK' && typeName !== 'AISLE' && typeName !== 'ZONE' && typeName !== 'SAFETY_ZONE')
+      || (typeName === 'RACK' && !hasLevels); // 랙 타입이지만 levels 없으면 팔레트/박스일 수 있음
 
     // BIN 스냅 검사
     if (isBinCandidate) {
@@ -143,6 +152,7 @@ export function MoveModeGhost({
       }
 
       if (bestBin) {
+        console.log('[HanVoxel] BIN 스냅 감지:', bestBin.rackId, 'level:', bestBin.level, 'valid:', bestBin.valid, bestBin.reason ?? '');
         return { collides: false, nearBin: bestBin };
       }
     }
@@ -196,7 +206,10 @@ export function MoveModeGhost({
     const handleClick = (e: MouseEvent) => {
       if (e.button !== 0) return;
 
+      console.log('[HanVoxel] 이동 모드 클릭 — 충돌:', collision.collides, 'BIN:', collision.nearBin ? `${collision.nearBin.rackId} L${collision.nearBin.level} valid=${collision.nearBin.valid}` : 'none');
+
       if (collision.nearBin?.valid && onDropToBin) {
+        console.log('[HanVoxel] BIN에 배치 확정 →', collision.nearBin.rackId, 'level:', collision.nearBin.level);
         onDropToBin(movingObject, {
           rackId: collision.nearBin.rackId,
           level: collision.nearBin.level,

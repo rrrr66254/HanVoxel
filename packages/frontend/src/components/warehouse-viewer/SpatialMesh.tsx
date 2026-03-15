@@ -9,6 +9,7 @@ import { ContainerModel } from './ContainerModel';
 interface SpatialMeshProps {
   object: SpatialObject;
   onSelect?: (object: SpatialObject) => void;
+  onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   isSelected?: boolean;
 }
@@ -36,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
  * 개별 공간 객체를 3D 메시로 렌더링하는 컴포넌트
  * 랙/팔레트/컨테이너는 실제 구조체 모델로 렌더링
  */
-export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: SpatialMeshProps) {
+export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected }: SpatialMeshProps) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -55,6 +56,11 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
   const handleClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation();
     onSelect?.(object);
+  };
+
+  const handleDoubleClick = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    onDoubleClick?.(object);
   };
 
   // R3F 이벤트에서 nativeEvent의 clientX/clientY 추출
@@ -86,6 +92,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
         position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
         rotation={[object.rotationX, object.rotationY, object.rotationZ]}
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onPointerOver={(e) => {
           e.stopPropagation();
@@ -140,6 +147,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
         position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
         rotation={[object.rotationX, object.rotationY, object.rotationZ]}
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onPointerOver={(e) => {
           e.stopPropagation();
@@ -208,6 +216,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
       rotation={[object.rotationX, object.rotationY, object.rotationZ]}
       scale={[object.scaleX, object.scaleY, object.scaleZ]}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       onPointerOver={(e) => {
         e.stopPropagation();
