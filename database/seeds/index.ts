@@ -12,12 +12,16 @@ import path from "path";
 import fs from "fs";
 import * as dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { HS_CODE_MASTER_SEEDS, generateInsertSql } from "./hs-code-master";
 
 // .env 로드 (seed 단독 실행 시에도 DATABASE_URL 확보)
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env["DATABASE_URL"] });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function runSqlFile(filePath: string): Promise<void> {
   const absolutePath = path.resolve(__dirname, filePath);
@@ -50,4 +54,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
