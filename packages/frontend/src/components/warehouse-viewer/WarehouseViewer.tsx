@@ -8,6 +8,8 @@ import { ObjectInfoPanel } from './ObjectInfoPanel';
 import { DimensionEditor } from './DimensionEditor';
 import { PresetCatalog } from '../preset-catalog';
 import { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
+import { ZoneListPanel } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
 import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
@@ -49,6 +51,11 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     aisles: true,
     zones: true,
   });
+
+  // Zone 시스템 상태
+  const [zones, setZones] = useState<ZoneConfig[]>([]);
+  const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
+  const [showZoneList, setShowZoneList] = useState(false);
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -243,6 +250,29 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setLayerVisibility((prev) => ({ ...prev, [layer]: !prev[layer] }));
   }, []);
 
+  // Zone 드로잉 완료
+  const handleZoneDrawComplete = useCallback((zone: Omit<ZoneConfig, 'id' | 'name'>) => {
+    const ZONE_LABELS: Record<ZoneType, string> = {
+      STORAGE: '보관 구역',
+      PICKING: '피킹 구역',
+      STAGING: '스테이징',
+      SAFETY: '안전 구역',
+    };
+    const newZone: ZoneConfig = {
+      ...zone,
+      id: crypto.randomUUID(),
+      name: `${ZONE_LABELS[zone.type]} ${zones.filter((z) => z.type === zone.type).length + 1}`,
+    };
+    setZones((prev) => [...prev, newZone]);
+    setDrawingZoneType(null);
+    setShowZoneList(true);
+  }, [zones]);
+
+  // Zone 삭제
+  const handleDeleteZone = useCallback((id: string) => {
+    setZones((prev) => prev.filter((z) => z.id !== id));
+  }, []);
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       {/* 3D 캔버스 */}
@@ -282,6 +312,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           onSelect={handleSelect}
           placingPreset={placingPreset}
           onPlace={handlePlace}
+          zones={zones}
+          drawingZoneType={drawingZoneType}
+          onZoneDrawComplete={handleZoneDrawComplete}
+          onZoneDrawCancel={() => setDrawingZoneType(null)}
         />
       </Canvas>
 
@@ -436,6 +470,111 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           onSavePreset={handleSavePreset}
           onDelete={handleDeleteObject}
           onClose={() => setEditingId(null)}
+        />
+      )}
+
+      {/* Zone 드로잉 버튼 */}
+      {!placingPreset && !drawingZoneType && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            display: 'flex',
+            gap: 6,
+            zIndex: 20,
+          }}
+        >
+          {(['STORAGE', 'PICKING', 'STAGING', 'SAFETY'] as ZoneType[]).map((type) => {
+            const colors: Record<ZoneType, string> = { STORAGE: '#3B82F6', PICKING: '#10B981', STAGING: '#F59E0B', SAFETY: '#EF4444' };
+            const labels: Record<ZoneType, string> = { STORAGE: '보관', PICKING: '피킹', STAGING: '스테이징', SAFETY: '안전' };
+            return (
+              <button
+                key={type}
+                onClick={() => setDrawingZoneType(type)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: `1px solid ${colors[type]}40`,
+                  background: `${colors[type]}15`,
+                  color: colors[type],
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {labels[type]}
+              </button>
+            );
+          })}
+          {zones.length > 0 && (
+            <button
+              onClick={() => setShowZoneList((v) => !v)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: '1px solid #30363D',
+                background: '#161B22',
+                color: '#E6EDF3',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              구역 {zones.length}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Zone 드로잉 모드 안내 */}
+      {drawingZoneType && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 60,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '10px 20px',
+            background: 'rgba(22,27,34,0.95)',
+            border: '1px solid #30363D',
+            borderRadius: 10,
+            fontSize: 12,
+            color: '#E6EDF3',
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
+          <button
+            onClick={() => setDrawingZoneType(null)}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid #30363D',
+              background: '#21262D',
+              color: '#8B949E',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            취소
+          </button>
+        </div>
+      )}
+
+      {/* Zone 목록 패널 */}
+      {showZoneList && (
+        <ZoneListPanel
+          zones={zones}
+          onDeleteZone={handleDeleteZone}
+          onClose={() => setShowZoneList(false)}
         />
       )}
 

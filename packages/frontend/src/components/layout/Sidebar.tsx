@@ -43,7 +43,7 @@ const MENU_ITEMS: MenuItem[] = [
 const PLAN_COLORS: Record<string, string> = {
   STARTER: '#2D7DD2',
   GROWTH: '#3FB950',
-  ENTERPRISE: '#A371F7',
+  ENTERPRISE: '#D4A017',
 };
 
 interface SidebarProps {
