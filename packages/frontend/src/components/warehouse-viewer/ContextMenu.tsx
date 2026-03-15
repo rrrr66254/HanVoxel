@@ -51,26 +51,30 @@ export function ContextMenu({
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 외부 클릭 시 닫기
+  // 외부 클릭 시 닫기 (메뉴 내부 클릭은 무시)
   useEffect(() => {
     if (!position) return;
 
-    const handleClick = () => onClose();
+    const handleClick = (e: MouseEvent) => {
+      // 메뉴 내부 클릭이면 무시
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) return;
+      onClose();
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
 
     // 약간 지연해서 등록 (우클릭 이벤트 충돌 방지)
     const timer = setTimeout(() => {
-      window.addEventListener('click', handleClick);
-      window.addEventListener('contextmenu', handleClick);
+      window.addEventListener('click', handleClick, true);
+      window.addEventListener('contextmenu', handleClick, true);
       window.addEventListener('keydown', handleKeyDown);
     }, 10);
 
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('contextmenu', handleClick);
+      window.removeEventListener('click', handleClick, true);
+      window.removeEventListener('contextmenu', handleClick, true);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [position, onClose]);
@@ -132,7 +136,7 @@ export function ContextMenu({
   };
 
   return (
-    <div ref={menuRef} style={menuStyle} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+    <div ref={menuRef} style={menuStyle} onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }} onMouseDown={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}>
       {/* 헤더 (오브젝트일 때) */}
       {object && (
         <div style={{
