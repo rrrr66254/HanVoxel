@@ -73,22 +73,22 @@ export function ContainerModel({
   return (
     <group>
       {/* 바닥판 */}
-      <mesh material={bodyMat} position={[0, WALL_THICKNESS / 2, 0]}>
+      <mesh material={bodyMat} position={[0, WALL_THICKNESS / 2, 0]} receiveShadow>
         <boxGeometry args={[width, WALL_THICKNESS, depth]} />
       </mesh>
 
       {/* 천장판 */}
-      <mesh material={bodyMat} position={[0, height - WALL_THICKNESS / 2, 0]}>
+      <mesh material={bodyMat} position={[0, height - WALL_THICKNESS / 2, 0]} castShadow>
         <boxGeometry args={[width, WALL_THICKNESS, depth]} />
       </mesh>
 
       {/* 좌측 벽 */}
-      <mesh material={bodyMat} position={[-halfW + WALL_THICKNESS / 2, halfH, 0]}>
+      <mesh material={bodyMat} position={[-halfW + WALL_THICKNESS / 2, halfH, 0]} castShadow>
         <boxGeometry args={[WALL_THICKNESS, height, depth]} />
       </mesh>
 
       {/* 우측 벽 */}
-      <mesh material={bodyMat} position={[halfW - WALL_THICKNESS / 2, halfH, 0]}>
+      <mesh material={bodyMat} position={[halfW - WALL_THICKNESS / 2, halfH, 0]} castShadow>
         <boxGeometry args={[WALL_THICKNESS, height, depth]} />
       </mesh>
 

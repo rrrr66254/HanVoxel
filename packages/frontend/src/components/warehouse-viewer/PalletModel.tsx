@@ -49,9 +49,9 @@ export function PalletModel({
     [isSelected],
   );
 
-  // 상판 판자 수
-  const topPlankCount = 7;
-  const gap = 0.005; // 판자 간 간격
+  // 상판 판자 수 (요청: 9개)
+  const topPlankCount = 9;
+  const gap = 0.004; // 판자 간 간격
   const plankWidth = (width - gap * (topPlankCount + 1)) / topPlankCount;
 
   // 하판 러너 수

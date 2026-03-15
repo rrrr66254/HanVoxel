@@ -149,10 +149,10 @@ export function RackModel({
   return (
     <group>
       {/* 수직 프레임 4개 (모서리) */}
-      <mesh geometry={vertFrameGeo} material={frameMat} position={[-halfW, height / 2, -halfD]} />
-      <mesh geometry={vertFrameGeo} material={frameMat} position={[halfW, height / 2, -halfD]} />
-      <mesh geometry={vertFrameGeo} material={frameMat} position={[-halfW, height / 2, halfD]} />
-      <mesh geometry={vertFrameGeo} material={frameMat} position={[halfW, height / 2, halfD]} />
+      <mesh geometry={vertFrameGeo} material={frameMat} position={[-halfW, height / 2, -halfD]} castShadow receiveShadow />
+      <mesh geometry={vertFrameGeo} material={frameMat} position={[halfW, height / 2, -halfD]} castShadow receiveShadow />
+      <mesh geometry={vertFrameGeo} material={frameMat} position={[-halfW, height / 2, halfD]} castShadow receiveShadow />
+      <mesh geometry={vertFrameGeo} material={frameMat} position={[halfW, height / 2, halfD]} castShadow receiveShadow />
 
       {/* 단별 수평 빔 + 선반판 */}
       {Array.from({ length: levels + 1 }, (_, i) => {
@@ -160,16 +160,16 @@ export function RackModel({
         return (
           <group key={`level-${i}`}>
             {/* 앞면 수평 빔 */}
-            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, halfD]} />
+            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, halfD]} castShadow />
             {/* 뒷면 수평 빔 */}
-            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, -halfD]} />
+            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, -halfD]} castShadow />
             {/* 좌측 수평 빔 */}
-            <mesh geometry={hBeamSideGeo} material={beamMat} position={[-halfW, y, 0]} />
+            <mesh geometry={hBeamSideGeo} material={beamMat} position={[-halfW, y, 0]} castShadow />
             {/* 우측 수평 빔 */}
-            <mesh geometry={hBeamSideGeo} material={beamMat} position={[halfW, y, 0]} />
+            <mesh geometry={hBeamSideGeo} material={beamMat} position={[halfW, y, 0]} castShadow />
             {/* 선반판 (바닥 제외, 1단부터) */}
             {i > 0 && (
-              <mesh geometry={shelfGeo} material={shelfMat} position={[0, y + 0.01, 0]} />
+              <mesh geometry={shelfGeo} material={shelfMat} position={[0, y + 0.01, 0]} castShadow receiveShadow />
             )}
           </group>
         );

@@ -26,8 +26,8 @@ export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, o
 
   return (
     <>
-      {/* 안개 */}
-      <fog attach="fog" args={[0x0D1117, 60, 120]} />
+      {/* 안개 — FogExp2(0x0D1117, 0.015) */}
+      <fogExp2 attach="fog" args={[0x0D1117, 0.015]} />
 
       {/* 환경광 */}
       <ambientLight intensity={0.35} color="#B0C4DE" />
@@ -70,7 +70,7 @@ export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, o
       >
         <planeGeometry args={[100, 100]} />
         <meshStandardMaterial
-          color="#1A1F26"
+          color="#2C3E50"
           metalness={0.1}
           roughness={0.85}
           transparent

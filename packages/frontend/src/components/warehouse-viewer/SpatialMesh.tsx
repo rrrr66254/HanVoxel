@@ -83,6 +83,8 @@ export function SpatialMesh({ object, onSelect, isSelected }: SpatialMeshProps) 
           setHovered(false);
           document.body.style.cursor = 'default';
         }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
       >
         <RackModel
           width={object.scaleX}
@@ -134,6 +136,8 @@ export function SpatialMesh({ object, onSelect, isSelected }: SpatialMeshProps) 
           setHovered(false);
           document.body.style.cursor = 'default';
         }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
       >
         <ContainerModel
           width={object.scaleX}
