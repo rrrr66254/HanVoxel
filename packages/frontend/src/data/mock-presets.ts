@@ -8,6 +8,8 @@ export const MOCK_CATEGORIES: PresetCategory[] = [
   { id: '10000000-0000-0000-0000-000000000004', name: 'CONTAINER',     label: '컨테이너',    description: 'ISO 표준 해상 컨테이너 규격',         sortOrder: 4 },
   { id: '10000000-0000-0000-0000-000000000005', name: 'AISLE',         label: '통로',        description: '창고 내 통로 너비 기준',              sortOrder: 5 },
   { id: '10000000-0000-0000-0000-000000000006', name: 'PRODUCT_BOX',   label: '제품 박스',   description: '업종별 박스 규격 및 팔레트 적재 기준', sortOrder: 6 },
+  { id: '10000000-0000-0000-0000-000000000007', name: 'FLOOR',         label: '바닥',        description: '공장 바닥 타일 및 마감재',            sortOrder: 7 },
+  { id: '10000000-0000-0000-0000-000000000008', name: 'WALL',          label: '벽',          description: '공장 벽면 패널 및 마감재',            sortOrder: 8 },
 ];
 
 const CAT = Object.fromEntries(MOCK_CATEGORIES.map((c) => [c.name, c.id]));
@@ -48,13 +50,13 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.CONTAINER, 'CONTAINER_REEFER_20FT', '20ft 냉장 컨테이너',    'ISO 1496','INTL',2.438,6.058,2.591,   { maxLoad:21200, capacity:28.3,  color:'#0ea5e9', innerWidth:2.286, innerDepth:5.486,  innerHeight:2.261 }),
   p(CAT.CONTAINER, 'CONTAINER_REEFER_40FT', '40ft 냉장 컨테이너',    'ISO 1496','INTL',2.438,12.192,2.591,  { maxLoad:25080, capacity:59.8,  color:'#0ea5e9', innerWidth:2.286, innerDepth:11.583, innerHeight:2.261 }),
 
-  // === 통로 ===
-  p(CAT.AISLE, 'AISLE_PEDESTRIAN',       '보행 전용 통로',              '산업안전보건기준','KR',  1.2,0,0, { color:'#475569' }),
-  p(CAT.AISLE, 'AISLE_MAIN',             '주 통로',                    '산업안전보건기준','KR',  2.4,0,0, { color:'#475569' }),
-  p(CAT.AISLE, 'AISLE_EMERGENCY',        '비상구 통로',                 '소방법',       'KR',  1.5,0,0, { color:'#f43f5e' }),
-  p(CAT.AISLE, 'AISLE_COUNTERBALANCE_3T','카운터밸런스 지게차 통로',      null,         'INTL', 4.0,0,0, { color:'#64748b' }),
-  p(CAT.AISLE, 'AISLE_REACH_TRUCK',      '리치트럭 통로',               null,         'INTL', 2.8,0,0, { color:'#64748b' }),
-  p(CAT.AISLE, 'AISLE_AGV_FORKLIFT',     'AGV 무인지게차 통로',          null,         'INTL', 2.5,0,0, { color:'#64748b' }),
+  // === 통로 (width=너비, depth=기본 길이 5m, height=0.02 얇은 마킹) ===
+  p(CAT.AISLE, 'AISLE_PEDESTRIAN',       '보행 전용 통로',              '산업안전보건기준','KR',  1.2,5.0,0.02, { color:'#475569', aisleType:'PEDESTRIAN' }),
+  p(CAT.AISLE, 'AISLE_MAIN',             '주 통로',                    '산업안전보건기준','KR',  2.4,5.0,0.02, { color:'#475569', aisleType:'MAIN' }),
+  p(CAT.AISLE, 'AISLE_EMERGENCY',        '비상구 통로',                 '소방법',       'KR',  1.5,5.0,0.02, { color:'#f43f5e', aisleType:'EMERGENCY' }),
+  p(CAT.AISLE, 'AISLE_COUNTERBALANCE_3T','카운터밸런스 지게차 통로',      null,         'INTL', 4.0,8.0,0.02, { color:'#64748b', aisleType:'FORKLIFT' }),
+  p(CAT.AISLE, 'AISLE_REACH_TRUCK',      '리치트럭 통로',               null,         'INTL', 2.8,6.0,0.02, { color:'#64748b', aisleType:'REACH' }),
+  p(CAT.AISLE, 'AISLE_AGV_FORKLIFT',     'AGV 무인지게차 통로',          null,         'INTL', 2.5,6.0,0.02, { color:'#64748b', aisleType:'AGV' }),
 
   // === 제품 박스 ===
   p(CAT.PRODUCT_BOX, 'BOX_FOOD_BEVERAGE', '식품·음료 박스',    null,'INTL', 0.4,0.3,0.3,  { qtyPerPallet:24, kgPerPallet:300, color:'#22c55e' }),
@@ -64,6 +66,19 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.PRODUCT_BOX, 'BOX_CHEMICAL',      '화학·소재 박스',    null,'INTL', 0.55,0.35,0.4,{ qtyPerPallet:8,  kgPerPallet:800, color:'#f97316' }),
   p(CAT.PRODUCT_BOX, 'BOX_GENERAL',       '일반 공산품 박스',  null,'INTL', 0.4,0.3,0.25, { qtyPerPallet:20, kgPerPallet:250, color:'#6b7280' }),
   p(CAT.PRODUCT_BOX, 'BOX_COLD_CHAIN',    '냉장 식품 박스',    null,'INTL', 0.4,0.3,0.25, { qtyPerPallet:20, kgPerPallet:280, color:'#06b6d4' }),
+
+  // === 바닥 (width/depth=면적, height=0.02 얇은 바닥) ===
+  p(CAT.FLOOR, 'FLOOR_EPOXY_GRAY',  '에폭시 코팅 바닥 (회색)', null,'KR', 10,10,0.02, { floorStyle:'EPOXY_GRAY',  color:'#6B7B8D' }),
+  p(CAT.FLOOR, 'FLOOR_EPOXY_GREEN', '에폭시 코팅 바닥 (녹색)', null,'KR', 10,10,0.02, { floorStyle:'EPOXY_GREEN', color:'#4A7B5A' }),
+  p(CAT.FLOOR, 'FLOOR_CONCRETE',    '콘크리트 바닥',           null,'INTL',10,10,0.02, { floorStyle:'CONCRETE',    color:'#8A8A82' }),
+  p(CAT.FLOOR, 'FLOOR_ANTI_SLIP',   '미끄럼방지 타일 바닥',     null,'KR', 10,10,0.02, { floorStyle:'ANTI_SLIP',   color:'#707878' }),
+  p(CAT.FLOOR, 'FLOOR_MARKING',     '안전 마킹 바닥',          null,'KR',  5, 5,0.02, { floorStyle:'MARKING',     color:'#D4A017' }),
+
+  // === 벽 (width=너비, depth=두께, height=높이) ===
+  p(CAT.WALL, 'WALL_SANDWICH_PANEL', '샌드위치 패널 벽',   null,'KR',  5,0.15,4, { wallStyle:'SANDWICH_PANEL',   color:'#C8CDD3' }),
+  p(CAT.WALL, 'WALL_CONCRETE',       '콘크리트 벽',        null,'INTL', 5,0.2, 4, { wallStyle:'CONCRETE_WALL',    color:'#9A978F' }),
+  p(CAT.WALL, 'WALL_METAL',          '금속 골판 벽',       null,'INTL', 5,0.1, 4, { wallStyle:'METAL_CORRUGATED', color:'#8090A0' }),
+  p(CAT.WALL, 'WALL_BRICK',          '벽돌 벽',            null,'INTL', 5,0.2, 4, { wallStyle:'BRICK',            color:'#8B5E3C' }),
 ];
 
 // 프리셋 생성 헬퍼
