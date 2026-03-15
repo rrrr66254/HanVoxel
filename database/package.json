@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "setup": "node -e \"const fs=require('fs');if(!fs.existsSync('.env')){fs.copyFileSync('.env.example','.env');console.log('.env created from .env.example')}else{console.log('.env already exists')}\"",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "prisma generate && prisma migrate dev",
     "db:migrate:create": "prisma migrate dev --create-only",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
