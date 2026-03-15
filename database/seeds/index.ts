@@ -10,10 +10,18 @@
 
 import path from "path";
 import fs from "fs";
+import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import { PgDriver } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { HS_CODE_MASTER_SEEDS, generateInsertSql } from "./hs-code-master";
 
-const prisma = new PrismaClient();
+// .env 로드 (seed 단독 실행 시에도 DATABASE_URL 확보)
+dotenv.config({ path: path.resolve(__dirname, "..", ".env"), debug: false });
+
+const pool = new Pool({ connectionString: process.env["DATABASE_URL"] });
+const adapter = new PgDriver(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function runSqlFile(filePath: string): Promise<void> {
   const absolutePath = path.resolve(__dirname, filePath);
@@ -46,4 +54,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
