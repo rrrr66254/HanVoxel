@@ -10,6 +10,7 @@ import qcRoutes from './routes/qc.routes';
 import pickingRoutes from './routes/picking.routes';
 import billingRoutes from './routes/billing.routes';
 import erpRoutes from './routes/erp.routes';
+import tradeRoutes from './routes/trade.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -29,6 +30,7 @@ app.use('/api/v1', qcRoutes);
 app.use('/api/v1', pickingRoutes);
 app.use('/api/v1', billingRoutes);
 app.use('/api/v1', erpRoutes);
+app.use('/api/v1', tradeRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {
