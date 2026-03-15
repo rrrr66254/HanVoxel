@@ -470,7 +470,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
               setCursorPos({ x: nx * 30 + 15, y: 0, z: nz * 25 + 20 });
             }}
           >
-            <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} rotateSpeed={0.5} zoomSpeed={1.2} />
+            <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} panSpeed={0.5} rotateSpeed={0.5} zoomSpeed={1.2} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
             {/* 네이티브 더블클릭 핸들러 (R3F 내부 컴포넌트) */}
             <NativeDoubleClickHandler
