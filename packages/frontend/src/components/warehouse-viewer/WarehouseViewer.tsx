@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -43,6 +43,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -75,14 +76,23 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   // 그리드 표시 여부
   const [gridVisible, setGridVisible] = useState(true);
 
+  // 드래그 앤 드롭 상태
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   // 우클릭 컨텍스트 메뉴
   const { contextState, openMenu, closeMenu } = useContextMenu();
+  // 오브젝트 우클릭이 빈 공간 우클릭을 덮어쓰지 않도록 추적
+  const objectContextMenuRef = useRef(false);
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  // 템플릿 객체가 placedObjects에 override된 경우 중복 제거
+  // 템플릿 객체가 placedObjects에 override된 경우 중복 제거, 삭제된 객체 필터링
   const placedIds = new Set(placedObjects.map((o) => o.id));
-  const allObjects = [...objects.filter((o) => !placedIds.has(o.id)), ...placedObjects];
+  const allObjects = [
+    ...objects.filter((o) => !placedIds.has(o.id) && !deletedIds.has(o.id)),
+    ...placedObjects.filter((o) => !deletedIds.has(o.id)),
+  ];
   const selectedObject = allObjects.find((o) => o.id === selectedId) ?? null;
   const editingObject = allObjects.find((o) => o.id === editingId) ?? null;
 
@@ -128,7 +138,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         scaleX: placingPreset.width || 1,
         scaleY: placingPreset.height || 1,
         scaleZ: placingPreset.depth || 1,
-        color: placingPreset.color ?? '#f59e0b',
+        color: null,
         opacity: placingPreset.opacity,
         visible: true,
         meshType: (placingPreset.meshType as MeshType) ?? 'box',
@@ -191,15 +201,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setSaving(false);
   }, []);
 
-  // 오브젝트 삭제
+  // 오브젝트 삭제 (초기 객체 + 배치된 객체 모두 지원)
   const handleDeleteObject = useCallback(
     async (id: string) => {
       setPlacedObjects((prev) => prev.filter((o) => o.id !== id));
+      setDeletedIds((prev) => new Set(prev).add(id));
       if (editingId === id) setEditingId(null);
       if (selectedId === id) setSelectedId(null);
+      if (selectedRackId === id) setSelectedRackId(null);
       await deleteSpatialObject(id);
     },
-    [editingId, selectedId],
+    [editingId, selectedId, selectedRackId],
   );
 
   // 내 프리셋으로 저장
@@ -442,6 +454,41 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setZones((prev) => [...prev, newZone]);
   }, []);
 
+  // 네이티브 DOM 이벤트로 드래그 감지 (R3F Canvas와의 호환성)
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    let dragCounter = 0;
+    const handleDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('application/hanvoxel-preset')) {
+        dragCounter++;
+        setIsDraggingOver(true);
+      }
+    };
+    const handleDragLeave = () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        setIsDraggingOver(false);
+      }
+    };
+    const handleDropNative = () => {
+      dragCounter = 0;
+      setIsDraggingOver(false);
+    };
+
+    wrapper.addEventListener('dragenter', handleDragEnter);
+    wrapper.addEventListener('dragleave', handleDragLeave);
+    wrapper.addEventListener('drop', handleDropNative);
+
+    return () => {
+      wrapper.removeEventListener('dragenter', handleDragEnter);
+      wrapper.removeEventListener('dragleave', handleDragLeave);
+      wrapper.removeEventListener('drop', handleDropNative);
+    };
+  }, []);
+
   // 2D 탑뷰 모드
   if (topViewMode) {
     return (
@@ -458,6 +505,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   return (
     <div
+      ref={wrapperRef}
       style={{ position: 'relative', width: '100%', height: '100%' }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -476,6 +524,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         }}
         onContextMenu={(e) => {
           e.preventDefault();
+          // 오브젝트 위 우클릭이 먼저 처리된 경우 빈 공간 메뉴 생략
+          if (objectContextMenuRef.current) return;
           openMenu(e);
         }}
         onPointerMove={(e) => {
@@ -504,7 +554,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           onSelect={handleSelect}
           onContextMenu={(obj, e) => {
             e.stopPropagation();
-            openMenu(e as unknown as React.MouseEvent, obj);
+            // 오브젝트 우클릭 플래그 설정 (Canvas 빈 공간 메뉴 방지)
+            objectContextMenuRef.current = true;
+            setTimeout(() => { objectContextMenuRef.current = false; }, 50);
+            openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
           }}
           placingPreset={placingPreset}
           onPlace={handlePlace}
@@ -814,7 +867,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         onDuplicate={handleDuplicate}
         onRotate90={handleRotate90}
         onMove={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
-        onColorChange={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
         onDelete={handleDeleteObject}
         onResetView={handleResetView}
         onTopView={() => handleViewModeChange('top')}
@@ -838,6 +890,40 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         onClose={() => setCatalogOpen(false)}
         onSelectPreset={handleSelectPreset}
       />
+
+      {/* 드래그 앤 드롭 오버레이 — Canvas 위에 투명 드롭 영역 표시 */}
+      {isDraggingOver && (
+        <div
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(45, 125, 210, 0.08)',
+            border: '2px dashed rgba(45, 125, 210, 0.5)',
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px 32px',
+              background: 'rgba(22, 27, 34, 0.9)',
+              border: '1px solid #2D7DD2',
+              borderRadius: 12,
+              color: '#7EB8E0',
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            여기에 드롭하여 배치
+          </div>
+        </div>
+      )}
     </div>
   );
 }

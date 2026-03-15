@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { X, Save, Trash2, Bookmark, RotateCcw } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
@@ -10,47 +10,6 @@ interface DimensionEditorProps {
   onClose: () => void;
 }
 
-// 타입별 기본 색상 (프리셋 원본 색상)
-const TYPE_DEFAULT_COLORS: Record<string, string> = {
-  RACK: '#5C6370',
-  BIN: '#10b981',
-  ZONE: '#3b82f6',
-  AISLE: '#6b7280',
-  WORKSTATION: '#8b5cf6',
-  MACHINE: '#ef4444',
-  SAFETY_ZONE: '#f43f5e',
-};
-
-// 색상 팔레트 5종
-const COLOR_SWATCHES = [
-  { color: '#5C6370', label: '스틸' },
-  { color: '#2D7DD2', label: '블루' },
-  { color: '#F0B429', label: '옐로우' },
-  { color: '#3FB950', label: '그린' },
-  { color: '#F85149', label: '레드' },
-];
-
-// 오브젝트 타입에 따른 기본 색상 결정
-function getDefaultColor(object: SpatialObject): string {
-  const meta = object.metadata as Record<string, unknown> | null;
-
-  // 컨테이너인 경우
-  if (meta?.type && typeof meta.type === 'string' &&
-      (meta.type.includes('FT') || meta.type.includes('REEFER'))) {
-    return '#1A5276';
-  }
-
-  // 팔레트 관련 코드인 경우
-  const code = object.code?.toUpperCase() ?? '';
-  if (code.includes('PALLET') || code.includes('T11') || code.includes('T12') || code.includes('T08')) {
-    return '#8B6914';
-  }
-
-  // 타입별 기본 색상
-  const typeName = object.type.name;
-  return TYPE_DEFAULT_COLORS[typeName] ?? '#5C6370';
-}
-
 /**
  * 배치된 오브젝트의 치수/위치 편집 패널
  * - 타입별 프리셋 기본 색상 자동 적용
@@ -58,8 +17,6 @@ function getDefaultColor(object: SpatialObject): string {
  * - "기본값으로 리셋" 버튼
  */
 export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onClose }: DimensionEditorProps) {
-  const defaultColor = useMemo(() => getDefaultColor(object), [object]);
-
   const [values, setValues] = useState({
     name: object.name,
     scaleX: object.scaleX,
@@ -69,7 +26,6 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
     positionY: object.positionY,
     positionZ: object.positionZ,
     rotationY: object.rotationY * (180 / Math.PI),
-    color: object.color ?? defaultColor,
     opacity: object.opacity,
   });
 
@@ -89,7 +45,6 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
       positionY: Number(values.positionY),
       positionZ: Number(values.positionZ),
       rotationY: Number(values.rotationY) * (Math.PI / 180),
-      color: String(values.color),
       opacity: Number(values.opacity),
     });
   };
@@ -105,7 +60,6 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
       positionY: object.positionY,
       positionZ: object.positionZ,
       rotationY: object.rotationY * (180 / Math.PI),
-      color: defaultColor,
       opacity: 1.0,
     });
   };
@@ -203,46 +157,9 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
           <NumInput label="Y" value={values.rotationY} onChange={(v) => handleChange('rotationY', v)} />
         </FieldRow>
 
-        {/* 색상 + 팔레트 + 투명도 */}
-        <FieldRow label="색상">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* 색상 팔레트 스왓치 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {COLOR_SWATCHES.map((swatch) => (
-                <button
-                  key={swatch.color}
-                  title={swatch.label}
-                  onClick={() => setValues((prev) => ({ ...prev, color: swatch.color }))}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 6,
-                    border: values.color === swatch.color
-                      ? '2px solid #E6EDF3'
-                      : '1px solid #30363D',
-                    background: swatch.color,
-                    cursor: 'pointer',
-                    padding: 0,
-                    transition: 'all 0.15s ease',
-                    boxShadow: values.color === swatch.color
-                      ? `0 0 6px ${swatch.color}80`
-                      : 'none',
-                  }}
-                />
-              ))}
-              <input
-                type="color"
-                value={values.color}
-                onChange={(e) => setValues((prev) => ({ ...prev, color: e.target.value }))}
-                style={{
-                  width: 24, height: 24, cursor: 'pointer',
-                  borderRadius: 6, border: '1px solid #30363D',
-                  background: 'transparent', padding: 0,
-                }}
-              />
-            </div>
-            <NumInput label="투명도" value={values.opacity} onChange={(v) => handleChange('opacity', v)} step="0.1" />
-          </div>
+        {/* 투명도 */}
+        <FieldRow label="투명도">
+          <NumInput label="값" value={values.opacity} onChange={(v) => handleChange('opacity', v)} step="0.1" />
         </FieldRow>
 
         {/* 적용 버튼 */}

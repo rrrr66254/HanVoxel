@@ -25,7 +25,7 @@ interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
   onSelect: (object: SpatialObject) => void;
-  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void }) => void;
+  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   placingPreset?: SpatialPreset | null;
   onPlace?: (position: [number, number, number]) => void;
   // Zone 시스템
@@ -127,42 +127,42 @@ export function WarehouseScene({
       />}
 
       {/* 창고 외벽 4면 — #1E3A5F 진한 파란 철판 + wireframe */}
-      {/* 좌측 벽 */}
-      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+      {/* 좌측 벽 (X축에 수직 → Y축으로 90° 회전) */}
+      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[WALL_D, WALL_H]} />
         <meshStandardMaterial color="#1E3A5F" transparent opacity={0.4} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
       </mesh>
-      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[WALL_D, WALL_H]} />
         <meshStandardMaterial color="#2D7DD2" wireframe transparent opacity={0.15} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* 우측 벽 */}
-      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+      {/* 우측 벽 (X축에 수직 → Y축으로 90° 회전) */}
+      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[WALL_D, WALL_H]} />
         <meshStandardMaterial color="#1E3A5F" transparent opacity={0.4} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
       </mesh>
-      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[WALL_D, WALL_H]} />
         <meshStandardMaterial color="#2D7DD2" wireframe transparent opacity={0.15} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* 뒷벽 */}
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+      {/* 뒷벽 (Z축에 수직 → 회전 불필요, 기본 방향) */}
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]}>
         <planeGeometry args={[WALL_W, WALL_H]} />
         <meshStandardMaterial color="#1E3A5F" transparent opacity={0.4} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
       </mesh>
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]}>
         <planeGeometry args={[WALL_W, WALL_H]} />
         <meshStandardMaterial color="#2D7DD2" wireframe transparent opacity={0.15} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* 앞벽 (도크) */}
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+      {/* 앞벽 (도크) (Z축에 수직 → 회전 불필요, 기본 방향) */}
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]}>
         <planeGeometry args={[WALL_W, WALL_H]} />
         <meshStandardMaterial color="#1E3A5F" transparent opacity={0.3} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
       </mesh>
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]}>
         <planeGeometry args={[WALL_W, WALL_H]} />
         <meshStandardMaterial color="#2D7DD2" wireframe transparent opacity={0.1} side={THREE.DoubleSide} />
       </mesh>
