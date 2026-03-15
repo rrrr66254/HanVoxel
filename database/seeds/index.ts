@@ -17,9 +17,7 @@ import { HS_CODE_MASTER_SEEDS, generateInsertSql } from "./hs-code-master";
 // .env 로드 (seed 단독 실행 시에도 DATABASE_URL 확보)
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: process.env["DATABASE_URL"] } },
-});
+const prisma = new PrismaClient();
 
 async function runSqlFile(filePath: string): Promise<void> {
   const absolutePath = path.resolve(__dirname, filePath);
