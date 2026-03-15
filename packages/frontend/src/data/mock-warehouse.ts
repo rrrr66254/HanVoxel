@@ -147,8 +147,8 @@ function createRackPairRow(
       [x + RACK.w / 2, RACK.h / 2, frontZ],
       [RACK.w, RACK.h, RACK.d],
       {
-        color: '#f59e0b',
-        opacity: 0.9,
+        color: null,
+        opacity: 1,
         metadata: {
           standard: 'KR_STANDARD',
           levels: RACK.levels,
@@ -170,8 +170,8 @@ function createRackPairRow(
       [x + RACK.w / 2, RACK.h / 2, backZ],
       [RACK.w, RACK.h, RACK.d],
       {
-        color: '#f59e0b',
-        opacity: 0.9,
+        color: null,
+        opacity: 1,
         metadata: {
           standard: 'KR_STANDARD',
           levels: RACK.levels,
@@ -249,17 +249,17 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     return createContainer(i + 1, x);
   }),
 
-  // 도크 구역 (전체 영역 표시)
+  // 도크 구역 (전체 영역 표시 — 바닥 레벨)
   obj('zone-dock', TYPES.ZONE, '컨테이너 도크 구역', 'ZONE-DOCK',
-    [BUILDING_W / 2, 1.5, DOCK_Z + DOCK_DEPTH / 2],
-    [BUILDING_W - 4, 3, DOCK_DEPTH],
+    [BUILDING_W / 2, 0.05, DOCK_Z + DOCK_DEPTH / 2],
+    [BUILDING_W - 4, 0.1, DOCK_DEPTH],
     { color: '#1d4ed8', opacity: 0.05, metadata: { purpose: '컨테이너 하역 구역', containerType: 'DRY_40FT' } },
   ),
 
-  // --- 입고 스테이징 구역 ---
+  // --- 입고 스테이징 구역 (바닥 레벨) ---
   obj('zone-inbound', TYPES.ZONE, '입고 스테이징', 'ZONE-IN',
-    [BUILDING_W / 4, RACK.h / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [BUILDING_W / 2 - 3, RACK.h / 1.5, STAGING_DEPTH],
+    [BUILDING_W / 4, 0.05, STAGING_Z + STAGING_DEPTH / 2],
+    [BUILDING_W / 2 - 3, 0.1, STAGING_DEPTH],
     {
       color: '#3b82f6',
       opacity: 0.06,
@@ -271,10 +271,10 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     },
   ),
 
-  // --- 출고 스테이징 구역 ---
+  // --- 출고 스테이징 구역 (바닥 레벨) ---
   obj('zone-outbound', TYPES.ZONE, '출고 스테이징', 'ZONE-OUT',
-    [BUILDING_W * 3 / 4, RACK.h / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [BUILDING_W / 2 - 3, RACK.h / 1.5, STAGING_DEPTH],
+    [BUILDING_W * 3 / 4, 0.05, STAGING_Z + STAGING_DEPTH / 2],
+    [BUILDING_W / 2 - 3, 0.1, STAGING_DEPTH],
     {
       color: '#10b981',
       opacity: 0.06,
@@ -286,10 +286,10 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     },
   ),
 
-  // --- 비상 통로 (소방법 기준 1.5m) ---
+  // --- 비상 통로 (소방법 기준 1.5m — 바닥 레벨) ---
   obj('emergency-aisle', TYPES.SAFETY_ZONE, '비상 통로', 'SAFE-MAIN',
-    [BUILDING_W / 2, 0.3, EMERGENCY_Z],
-    [BUILDING_W - 2, 0.6, AISLE.emergency],
+    [BUILDING_W / 2, 0.05, EMERGENCY_Z],
+    [BUILDING_W - 2, 0.1, AISLE.emergency],
     { color: '#f43f5e', opacity: 0.15, metadata: { standard: '산업안전보건기준 규칙 제35조', width: AISLE.emergency } },
   ),
 
@@ -343,10 +343,10 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     { color: '#8b5cf6', status: 'MAINTENANCE', metadata: { note: '장비 점검 중' } },
   ),
 
-  // --- 보관 구역 영역 표시 ---
+  // --- 보관 구역 영역 표시 (바닥 레벨) ---
   obj('zone-storage', TYPES.ZONE, '보관 구역', 'ZONE-STORAGE',
-    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, RACK.h / 2, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [ROW_WIDTH + 2, RACK.h + 0.5, RACK_ROW_PITCH * 3 + AISLE.reach],
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.05, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [ROW_WIDTH + 2, 0.1, RACK_ROW_PITCH * 3 + AISLE.reach],
     { color: '#f59e0b', opacity: 0.03, metadata: { rackStandard: 'KR_STANDARD', totalRacks: 48, totalPallets: 48 * 6 } },
   ),
 ];

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { SpatialPreset } from '../../types/preset';
 
 interface PresetCardProps {
@@ -18,6 +19,9 @@ const REGION_LABEL: Record<string, string> = {
  * 개별 프리셋 규격 카드 — 드래그 앤 드롭 지원
  */
 export function PresetCard({ preset, onSelect }: PresetCardProps) {
+  // 드래그 중 클릭 방지 플래그
+  const isDraggingRef = useRef(false);
+
   // 치수 포맷 (0인 축은 생략)
   const dims = [preset.width, preset.depth, preset.height]
     .filter((v) => v > 0)
@@ -26,15 +30,29 @@ export function PresetCard({ preset, onSelect }: PresetCardProps) {
 
   // 드래그 시작 — 프리셋 데이터를 dataTransfer에 저장
   const handleDragStart = (e: React.DragEvent) => {
+    isDraggingRef.current = true;
     e.dataTransfer.setData('application/hanvoxel-preset', JSON.stringify(preset));
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  // 드래그 종료
+  const handleDragEnd = () => {
+    // 클릭 방지 플래그를 비동기로 리셋 (click 이벤트 이후)
+    setTimeout(() => { isDraggingRef.current = false; }, 0);
+  };
+
+  // 클릭 — 드래그 중이 아닐 때만 실행
+  const handleClick = () => {
+    if (isDraggingRef.current) return;
+    onSelect?.(preset);
   };
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
-      onClick={() => onSelect?.(preset)}
+      onDragEnd={handleDragEnd}
+      onClick={handleClick}
       className={`rounded-lg border border-gray-700 bg-gray-800/80 p-3 transition-colors hover:border-gray-500 ${onSelect ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
     >
       {/* 헤더 */}

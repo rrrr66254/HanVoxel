@@ -374,13 +374,15 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDraggingOver(false);
     const data = e.dataTransfer.getData('application/hanvoxel-preset');
     if (!data) return;
 
     const preset: SpatialPreset = JSON.parse(data);
 
-    // 드롭 위치를 3D 좌표로 변환 (NDC → 바닥 평면 교차)
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    // 드롭 위치를 3D 좌표로 변환 (wrapper 기준 NDC → 바닥 평면)
+    const wrapper = wrapperRef.current;
+    const rect = wrapper ? wrapper.getBoundingClientRect() : (e.target as HTMLElement).getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
     // 근사 좌표 변환 (카메라 기준)
@@ -405,7 +407,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       scaleX: preset.width || 1,
       scaleY: preset.height || 1,
       scaleZ: preset.depth || 1,
-      color: preset.color ?? '#f59e0b',
+      color: null,
       opacity: preset.opacity,
       visible: true,
       meshType: (preset.meshType as MeshType) ?? 'box',
