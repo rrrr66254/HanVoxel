@@ -5,6 +5,9 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch";
+
+-- CreateExtension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- CreateTable
