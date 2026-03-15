@@ -43,6 +43,7 @@ const TYPES: Record<string, SpatialObjectType> = {
   BIN: { id: 'type-6', name: 'BIN', label: '빈', description: null, depth: 5 },
   WORKSTATION: { id: 'type-7', name: 'WORKSTATION', label: '작업대', description: null, depth: 3 },
   SAFETY_ZONE: { id: 'type-8', name: 'SAFETY_ZONE', label: '안전구역', description: null, depth: 3 },
+  WALL: { id: 'type-9', name: 'WALL', label: '벽', description: null, depth: 2 },
 };
 
 // ============================================================
@@ -188,20 +189,24 @@ function createRackPairRow(
   return racks;
 }
 
-// 통로 생성
+// 통로 생성 (바닥 마킹 스타일)
 function createAisle(
   id: string,
   name: string,
   code: string,
   pos: [number, number, number],
   scale: [number, number, number],
+  aisleType: string = 'REACH',
 ): SpatialObject {
-  return obj(id, TYPES.AISLE, name, code, pos, scale, {
-    color: '#475569',
-    opacity: 0.15,
-    meshType: 'box',
-    metadata: { standard: 'REACH_TRUCK', width: AISLE.reach },
-  });
+  return obj(id, TYPES.AISLE, name, code,
+    [pos[0], 0.01, pos[2]], // Y를 바닥 레벨로
+    [scale[0], 0.02, scale[2]], // height를 얇게
+    {
+      color: '#475569',
+      opacity: 1,
+      metadata: { standard: 'REACH_TRUCK', width: AISLE.reach, aisleType },
+    },
+  );
 }
 
 // DRY_40FT 컨테이너 생성
@@ -234,11 +239,56 @@ function createContainer(index: number, x: number): SpatialObject {
 // ============================================================
 
 export const MOCK_WAREHOUSE: SpatialObject[] = [
-  // --- 바닥 ---
-  obj('floor-1', TYPES.FLOOR, '1층 바닥', 'F1',
-    [BUILDING_W / 2, -0.05, BUILDING_D / 2],
-    [BUILDING_W + 4, BUILDING_D + 4, 1],
-    { color: '#1e293b', opacity: 0.6, meshType: 'plane', rotationX: -Math.PI / 2 },
+  // --- 바닥 (에폭시 코팅 타일) ---
+  // 보관 구역 바닥 (회색 에폭시)
+  obj('floor-storage', TYPES.FLOOR, '보관 구역 바닥', 'FLOOR-STORAGE',
+    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [ROW_WIDTH + 8, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 4],
+    { metadata: { floorStyle: 'EPOXY_GRAY' } },
+  ),
+  // 도크 구역 바닥 (콘크리트)
+  obj('floor-dock', TYPES.FLOOR, '도크 구역 바닥', 'FLOOR-DOCK',
+    [BUILDING_W / 2, 0.01, DOCK_Z + DOCK_DEPTH / 2],
+    [BUILDING_W - 2, 0.02, DOCK_DEPTH],
+    { metadata: { floorStyle: 'CONCRETE' } },
+  ),
+  // 스테이징 구역 바닥 (녹색 에폭시)
+  obj('floor-staging', TYPES.FLOOR, '스테이징 구역 바닥', 'FLOOR-STAGING',
+    [BUILDING_W / 2, 0.01, STAGING_Z + STAGING_DEPTH / 2],
+    [BUILDING_W - 4, 0.02, STAGING_DEPTH],
+    { metadata: { floorStyle: 'EPOXY_GREEN' } },
+  ),
+  // 주 통로 바닥 (미끄럼방지)
+  obj('floor-main-aisle', TYPES.FLOOR, '주 통로 바닥', 'FLOOR-MAIN-AISLE',
+    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [MAIN_AISLE_WIDTH, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 2],
+    { metadata: { floorStyle: 'ANTI_SLIP' } },
+  ),
+
+  // --- 벽 (샌드위치 패널) ---
+  // 뒷벽
+  obj('wall-back', TYPES.WALL, '뒷벽', 'WALL-BACK',
+    [BUILDING_W / 2, BUILDING_H / 2, BUILDING_D],
+    [BUILDING_W, BUILDING_H, 0.15],
+    { metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ),
+  // 좌측벽
+  obj('wall-left', TYPES.WALL, '좌측벽', 'WALL-LEFT',
+    [BUILDING_W / 2 - BUILDING_W / 2, BUILDING_H / 2, BUILDING_D / 2],
+    [BUILDING_D, BUILDING_H, 0.15],
+    { rotationY: Math.PI / 2, metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ),
+  // 우측벽
+  obj('wall-right', TYPES.WALL, '우측벽', 'WALL-RIGHT',
+    [BUILDING_W, BUILDING_H / 2, BUILDING_D / 2],
+    [BUILDING_D, BUILDING_H, 0.15],
+    { rotationY: Math.PI / 2, metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ),
+  // 앞벽 (도크 — 콘크리트)
+  obj('wall-front', TYPES.WALL, '앞벽 (도크)', 'WALL-FRONT',
+    [BUILDING_W / 2, BUILDING_H / 2, 0],
+    [BUILDING_W, BUILDING_H, 0.2],
+    { metadata: { wallStyle: 'CONCRETE_WALL' } },
   ),
 
   // --- 도크 영역 (DRY_40FT × 3기) ---
@@ -286,11 +336,11 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     },
   ),
 
-  // --- 비상 통로 (소방법 기준 1.5m — 바닥 레벨) ---
-  obj('emergency-aisle', TYPES.SAFETY_ZONE, '비상 통로', 'SAFE-MAIN',
-    [BUILDING_W / 2, 0.05, EMERGENCY_Z],
-    [BUILDING_W - 2, 0.1, AISLE.emergency],
-    { color: '#f43f5e', opacity: 0.15, metadata: { standard: '산업안전보건기준 규칙 제35조', width: AISLE.emergency } },
+  // --- 비상 통로 (소방법 기준 1.5m — 바닥 마킹) ---
+  obj('emergency-aisle', TYPES.AISLE, '비상 통로', 'SAFE-MAIN',
+    [BUILDING_W / 2, 0.01, EMERGENCY_Z],
+    [BUILDING_W - 2, 0.02, AISLE.emergency],
+    { color: '#f43f5e', opacity: 1, metadata: { standard: '산업안전보건기준 규칙 제35조', width: AISLE.emergency, aisleType: 'EMERGENCY' } },
   ),
 
   // --- 보관 구역 (KR_STANDARD 랙 6열 = 3쌍 back-to-back) ---
@@ -321,9 +371,9 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
 
   // --- 주 통로 (지게차, 보관구역 옆) ---
   obj('main-aisle', TYPES.AISLE, '주 통로 (지게차)', 'AISLE-MAIN',
-    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.05, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [MAIN_AISLE_WIDTH, 0.1, RACK_ROW_PITCH * 3 + AISLE.reach],
-    { color: '#64748b', opacity: 0.12, metadata: { standard: 'COUNTERBALANCE_3T', width: AISLE.forklift } },
+    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
+    [MAIN_AISLE_WIDTH, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach],
+    { color: '#64748b', opacity: 1, metadata: { standard: 'COUNTERBALANCE_3T', width: AISLE.forklift, aisleType: 'FORKLIFT' } },
   ),
 
   // --- 작업대 ---

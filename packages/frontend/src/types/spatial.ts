@@ -9,7 +9,8 @@ export type SpatialObjectTypeName =
   | 'BIN'
   | 'WORKSTATION'
   | 'MACHINE'
-  | 'SAFETY_ZONE';
+  | 'SAFETY_ZONE'
+  | 'WALL';
 
 // 공간 객체 상태
 export type SpatialObjectStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';

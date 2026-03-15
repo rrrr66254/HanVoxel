@@ -21,6 +21,16 @@ import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
+// 프리셋에서 스타일 메타데이터 추출 (통로/바닥/벽)
+function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
+  const extra = preset as unknown as Record<string, unknown>;
+  const meta: Record<string, unknown> = {};
+  if (extra.aisleType) meta.aisleType = extra.aisleType;
+  if (extra.floorStyle) meta.floorStyle = extra.floorStyle;
+  if (extra.wallStyle) meta.wallStyle = extra.wallStyle;
+  return meta;
+}
+
 // 기본 siteId / typeId
 const DEFAULT_SITE_ID = '00000000-0000-4000-a000-000000000001';
 const DEFAULT_TYPE_ID = '00000000-0000-4000-a000-000000000002';
@@ -218,6 +228,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     if (catName.includes('CONTAINER') || code.includes('FT') || code.includes('REEFER')) return { name: 'RACK' };
     // 통로
     if (catName.includes('AISLE') || code.includes('AISLE')) return { name: 'AISLE' };
+    // 바닥
+    if (catName.includes('FLOOR') || code.includes('FLOOR')) return { name: 'FLOOR' };
+    // 벽
+    if (catName.includes('WALL') || code.includes('WALL')) return { name: 'WALL' };
     return { name: 'RACK' };
   }, []);
 
@@ -240,9 +254,15 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       positionX: position[0], positionY: position[1], positionZ: position[2],
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: placingPreset.width || 1, scaleY: placingPreset.height || 1, scaleZ: placingPreset.depth || 1,
-      color: null, opacity: placingPreset.opacity, visible: true,
+      color: placingPreset.color ?? null, opacity: placingPreset.opacity, visible: true,
       meshType: (placingPreset.meshType as MeshType) ?? 'box',
-      metadata: { presetId: placingPreset.id, presetCode: placingPreset.code, levels: placingPreset.levels, levelHeight: placingPreset.levelHeight, loadPerLevel: placingPreset.loadPerLevel, ...(typeInfo.itemType ? { itemType: typeInfo.itemType } : {}) },
+      metadata: {
+        presetId: placingPreset.id, presetCode: placingPreset.code,
+        levels: placingPreset.levels, levelHeight: placingPreset.levelHeight, loadPerLevel: placingPreset.loadPerLevel,
+        ...(typeInfo.itemType ? { itemType: typeInfo.itemType } : {}),
+        // 통로/바닥/벽 스타일 메타데이터 전달
+        ...extractStyleMeta(placingPreset),
+      },
     };
     setPlacedObjects((prev) => [...prev, localObj]);
     setPlacingPreset(null);
@@ -364,7 +384,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
     const worldX = Math.round(nx * 30 + 15); const worldZ = Math.round(nz * 25 + 20);
-    const posY = (preset.height || 1) / 2;
+    const dropExtra = preset as unknown as Record<string, unknown>;
+    const isDropFloor = dropExtra.floorStyle !== undefined || preset.code?.includes('FLOOR');
+    const isDropAisle = dropExtra.aisleType !== undefined || preset.code?.includes('AISLE');
+    const posY = (isDropFloor || isDropAisle) ? 0.01 : (preset.height || 1) / 2;
     const code = `${preset.code}_${Date.now()}`;
     const dropTypeInfo = getTypeFromPreset(preset);
     const localObj: SpatialObject = {
@@ -374,8 +397,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       positionX: worldX, positionY: posY, positionZ: worldZ,
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: preset.width || 1, scaleY: preset.height || 1, scaleZ: preset.depth || 1,
-      color: null, opacity: preset.opacity, visible: true, meshType: (preset.meshType as MeshType) ?? 'box',
-      metadata: { presetId: preset.id, presetCode: preset.code, ...(dropTypeInfo.itemType ? { itemType: dropTypeInfo.itemType } : {}) },
+      color: preset.color ?? null, opacity: preset.opacity, visible: true, meshType: (preset.meshType as MeshType) ?? 'box',
+      metadata: { presetId: preset.id, presetCode: preset.code, ...(dropTypeInfo.itemType ? { itemType: dropTypeInfo.itemType } : {}), ...extractStyleMeta(preset) },
     };
     setPlacedObjects((prev) => [...prev, localObj]); setEditingId(localObj.id); setSelectedId(localObj.id); setRightPanel('editor');
     const saved = await createSpatialObject({ siteId: currentSiteId, typeId: DEFAULT_TYPE_ID, name: localObj.name, code: localObj.code, positionX: localObj.positionX, positionY: localObj.positionY, positionZ: localObj.positionZ, scaleX: localObj.scaleX, scaleY: localObj.scaleY, scaleZ: localObj.scaleZ, color: localObj.color, opacity: localObj.opacity, meshType: localObj.meshType, metadata: localObj.metadata });

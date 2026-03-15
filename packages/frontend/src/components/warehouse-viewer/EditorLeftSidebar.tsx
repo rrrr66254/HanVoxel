@@ -9,6 +9,8 @@ import {
   Eye,
   EyeOff,
   ChevronLeft,
+  Square,
+  PanelTop,
 } from 'lucide-react';
 import { PresetCard } from '../preset-catalog/PresetCard';
 import { getPresetCategories, getSpatialPresets } from '../../api/preset-api';
@@ -91,6 +93,8 @@ export function EditorLeftSidebar({
     if (label.includes('팔레트')) return <LayoutGrid size={16} />;
     if (label.includes('컨테이너')) return <Container size={16} />;
     if (label.includes('통로')) return <Route size={16} />;
+    if (label.includes('바닥')) return <Square size={16} />;
+    if (label.includes('벽')) return <PanelTop size={16} />;
     return <Package size={16} />;
   };
 

@@ -10,6 +10,7 @@ const TYPES: Record<string, SpatialObjectType> = {
   RACK:       { id: 'type-5', name: 'RACK',        label: '랙',       description: null, depth: 4 },
   WORKSTATION:{ id: 'type-7', name: 'WORKSTATION', label: '작업대',   description: null, depth: 3 },
   SAFETY_ZONE:{ id: 'type-8', name: 'SAFETY_ZONE', label: '안전구역', description: null, depth: 3 },
+  WALL:       { id: 'type-9', name: 'WALL',        label: '벽',       description: null, depth: 2 },
 };
 
 function obj(
@@ -67,12 +68,34 @@ export function generateWarehouseLayout(
 
   const objects: SpatialObject[] = [];
 
-  // --- 바닥 ---
+  // --- 바닥 (에폭시 코팅) ---
   objects.push(obj(
-    'floor-1', TYPES.FLOOR, '1층 바닥', 'F1',
-    [W / 2, -0.05, D / 2],
-    [W + 4, D + 4, 1],
-    { color: '#1e293b', opacity: 0.6, meshType: 'plane', rotationX: -Math.PI / 2 },
+    'floor-main', TYPES.FLOOR, '창고 바닥', 'FLOOR-MAIN',
+    [W / 2, 0.01, D / 2],
+    [W, 0.02, D],
+    { metadata: { floorStyle: 'EPOXY_GRAY' } },
+  ));
+
+  // --- 벽 (샌드위치 패널) ---
+  objects.push(obj(
+    'wall-back', TYPES.WALL, '뒷벽', 'WALL-BACK',
+    [W / 2, H / 2, D], [W, H, 0.15],
+    { metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ));
+  objects.push(obj(
+    'wall-left', TYPES.WALL, '좌측벽', 'WALL-LEFT',
+    [0, H / 2, D / 2], [D, H, 0.15],
+    { rotationY: Math.PI / 2, metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ));
+  objects.push(obj(
+    'wall-right', TYPES.WALL, '우측벽', 'WALL-RIGHT',
+    [W, H / 2, D / 2], [D, H, 0.15],
+    { rotationY: Math.PI / 2, metadata: { wallStyle: 'SANDWICH_PANEL' } },
+  ));
+  objects.push(obj(
+    'wall-front', TYPES.WALL, '앞벽', 'WALL-FRONT',
+    [W / 2, H / 2, 0], [W, H, 0.2],
+    { metadata: { wallStyle: 'CONCRETE_WALL' } },
   ));
 
   // --- 도크 영역 ---
@@ -126,12 +149,12 @@ export function generateWarehouseLayout(
     { color: '#10b981', opacity: 0.06 },
   ));
 
-  // --- 비상 통로 ---
+  // --- 비상 통로 (바닥 마킹) ---
   objects.push(obj(
-    'emergency-aisle', TYPES.SAFETY_ZONE, '비상 통로', 'SAFE-MAIN',
-    [W / 2, 0.3, EMERGENCY_Z],
-    [W - 2, 0.6, 1.5],
-    { color: '#f43f5e', opacity: 0.15 },
+    'emergency-aisle', TYPES.AISLE, '비상 통로', 'SAFE-MAIN',
+    [W / 2, 0.01, EMERGENCY_Z],
+    [W - 2, 0.02, 1.5],
+    { color: '#f43f5e', opacity: 1, metadata: { aisleType: 'EMERGENCY' } },
   ));
 
   // --- 보관 구역 랙 배치 ---
@@ -229,34 +252,34 @@ export function generateWarehouseLayout(
     }
   }
 
-  // --- 작업 통로 ---
+  // --- 작업 통로 (바닥 마킹) ---
   for (let pair = 0; pair < pairCount; pair++) {
     const centerZ = STORAGE_Z + pair * rowPitch + pairDepth / 2;
     // 앞쪽 통로
     if (pair === 0) {
       objects.push(obj(
         `aisle-front-${pair}`, TYPES.AISLE, `작업 통로 ${pair * 2 + 1}`, `AISLE-${String(pair * 2 + 1).padStart(2, '0')}`,
-        [storageOriginX + rowWidth / 2, 0.05, centerZ - pairDepth / 2 - aisleW / 2],
-        [rowWidth, 0.1, aisleW],
-        { color: '#475569', opacity: 0.15 },
+        [storageOriginX + rowWidth / 2, 0.01, centerZ - pairDepth / 2 - aisleW / 2],
+        [rowWidth, 0.02, aisleW],
+        { color: '#475569', opacity: 1, metadata: { aisleType: 'REACH' } },
       ));
     }
     // 뒤쪽 통로
     objects.push(obj(
       `aisle-back-${pair}`, TYPES.AISLE, `작업 통로 ${pair * 2 + 2}`, `AISLE-${String(pair * 2 + 2).padStart(2, '0')}`,
-      [storageOriginX + rowWidth / 2, 0.05, centerZ + pairDepth / 2 + aisleW / 2],
-      [rowWidth, 0.1, aisleW],
-      { color: '#475569', opacity: 0.15 },
+      [storageOriginX + rowWidth / 2, 0.01, centerZ + pairDepth / 2 + aisleW / 2],
+      [rowWidth, 0.02, aisleW],
+      { color: '#475569', opacity: 1, metadata: { aisleType: 'REACH' } },
     ));
   }
 
-  // --- 주 통로 ---
+  // --- 주 통로 (지게차) ---
   const storageEndZ = STORAGE_Z + pairCount * rowPitch;
   objects.push(obj(
     'main-aisle', TYPES.AISLE, '주 통로 (지게차)', 'AISLE-MAIN',
-    [storageOriginX + rowWidth + mainAisleW / 2 + 0.5, 0.05, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
-    [mainAisleW, 0.1, storageEndZ - STORAGE_Z + aisleW],
-    { color: '#64748b', opacity: 0.12 },
+    [storageOriginX + rowWidth + mainAisleW / 2 + 0.5, 0.01, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
+    [mainAisleW, 0.02, storageEndZ - STORAGE_Z + aisleW],
+    { color: '#64748b', opacity: 1, metadata: { aisleType: 'FORKLIFT' } },
   ));
 
   // --- 작업대 ---

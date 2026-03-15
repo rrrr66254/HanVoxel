@@ -1,10 +1,14 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Group } from 'three';
+import * as THREE from 'three';
 import { Plane, Raycaster, Vector2, Vector3 } from 'three';
 import type { SpatialPreset } from '../../types/preset';
 import type { SpatialObject } from '../../types/spatial';
 import { RackModel } from './RackModel';
+import { AisleModel } from './AisleModel';
+import { FloorTileModel } from './FloorTileModel';
+import { WallPanelModel } from './WallPanelModel';
 import { checkCollision } from '../../utils/collision';
 
 interface GhostMeshProps {
@@ -36,14 +40,18 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
   const { camera, gl } = useThree();
   const [isColliding, setIsColliding] = useState(false);
 
-  // 프리셋 메타에서 랙 정보 추출, 없으면 KR_STANDARD 사용
+  // 프리셋에서 스타일 정보 추출
+  const extra = preset as unknown as Record<string, unknown>;
   const meta = preset.metadata as Record<string, unknown> | null;
-  const isRack = meta?.levels !== undefined || preset.width === KR_STANDARD.w;
+  const isRack = (meta?.levels !== undefined || preset.levels !== null) && !extra.floorStyle && !extra.wallStyle;
+  const isAisle = extra.aisleType !== undefined || preset.code?.includes('AISLE');
+  const isFloor = extra.floorStyle !== undefined || preset.code?.includes('FLOOR');
+  const isWall = extra.wallStyle !== undefined || preset.code?.includes('WALL');
   const w = preset.width || KR_STANDARD.w;
   const d = preset.depth || KR_STANDARD.d;
   const h = preset.height || KR_STANDARD.h;
-  const levels = (meta?.levels as number) ?? KR_STANDARD.levels;
-  const levelHeight = (meta?.levelHeight as number) ?? KR_STANDARD.levelHeight;
+  const levels = (preset.levels as number) ?? (meta?.levels as number) ?? KR_STANDARD.levels;
+  const levelHeight = (preset.levelHeight as number) ?? (meta?.levelHeight as number) ?? KR_STANDARD.levelHeight;
 
   // 매 프레임 마우스 추적 + 충돌 검사
   useFrame(() => {
@@ -54,15 +62,20 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
     if (hit) {
       const snapX = Math.round(hit.x);
       const snapZ = Math.round(hit.z);
-      const posY = h / 2;
+      // 통로/바닥은 바닥에 깔림, 벽은 절반 높이, 일반은 절반 높이
+      const posY = (isAisle || isFloor) ? 0.01 : (isWall ? h / 2 : h / 2);
 
       groupRef.current.position.x = snapX;
       groupRef.current.position.y = posY;
       groupRef.current.position.z = snapZ;
 
-      // AABB 충돌 검사
-      const colliding = checkCollision(snapX, posY, snapZ, w, h, d, existingObjects);
-      setIsColliding(colliding);
+      // 통로/바닥은 충돌 검사 안 함 (바닥에 깔리므로)
+      if (isAisle || isFloor) {
+        setIsColliding(false);
+      } else {
+        const colliding = checkCollision(snapX, posY, snapZ, w, h, d, existingObjects);
+        setIsColliding(colliding);
+      }
     }
   });
 
@@ -120,6 +133,57 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
             opacity={0.5}
             depthWrite={false}
           />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 통로 고스트 — 바닥 마킹 미리보기
+  if (isAisle) {
+    const aisleColor = (extra.color as string) ?? '#64748b';
+    const isEmergency = (extra.aisleType as string) === 'EMERGENCY';
+    return (
+      <group ref={groupRef} position={[0, 0.01, 0]}>
+        <AisleModel width={w} length={d} color={aisleColor} isEmergency={isEmergency} />
+        {/* 반투명 오버레이 */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <planeGeometry args={[w + 0.1, d + 0.1]} />
+          <meshStandardMaterial color={glowColor} transparent opacity={0.2} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 바닥 고스트 — 텍스처 미리보기
+  if (isFloor) {
+    const floorStyle = (extra.floorStyle as string) ?? 'EPOXY_GRAY';
+    return (
+      <group ref={groupRef} position={[0, 0.01, 0]}>
+        <FloorTileModel
+          width={w} depth={d}
+          style={floorStyle as 'EPOXY_GRAY' | 'EPOXY_GREEN' | 'CONCRETE' | 'ANTI_SLIP' | 'MARKING'}
+        />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <planeGeometry args={[w + 0.1, d + 0.1]} />
+          <meshStandardMaterial color={glowColor} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 벽 고스트 — 텍스처 미리보기
+  if (isWall) {
+    const wallStyle = (extra.wallStyle as string) ?? 'SANDWICH_PANEL';
+    const thickness = d || 0.15;
+    return (
+      <group ref={groupRef} position={[0, h / 2, 0]}>
+        <WallPanelModel
+          width={w} height={h} thickness={thickness}
+          style={wallStyle as 'SANDWICH_PANEL' | 'CONCRETE_WALL' | 'METAL_CORRUGATED' | 'BRICK'}
+        />
+        <mesh>
+          <boxGeometry args={[w + 0.1, h + 0.1, thickness + 0.1]} />
+          <meshStandardMaterial color={glowColor} transparent opacity={0.2} depthWrite={false} />
         </mesh>
       </group>
     );

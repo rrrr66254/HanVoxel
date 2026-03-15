@@ -6,7 +6,8 @@ interface RackModelProps {
   height: number;  // 랙 전체 높이 (m)
   depth: number;   // 랙 전체 깊이 (m)
   levels: number;  // 단수
-  levelHeight: number; // 단간 높이 (m)
+  levelHeight: number; // 기본 단간 높이 (m) — levelHeights가 없을 때 사용
+  levelHeights?: number[]; // 층별 개별 높이 배열
   isSelected?: boolean;
   isHovered?: boolean;
 }
@@ -39,9 +40,26 @@ export function RackModel({
   depth,
   levels,
   levelHeight,
+  levelHeights,
   isSelected = false,
   isHovered = false,
 }: RackModelProps) {
+  // 층별 높이 배열 — 개별 값이 있으면 사용, 없으면 균일 높이
+  const perLevelHeights = useMemo(
+    () => levelHeights ?? Array.from({ length: levels }, () => levelHeight),
+    [levelHeights, levels, levelHeight],
+  );
+
+  // 각 층의 누적 Y 위치 계산
+  const levelYPositions = useMemo(() => {
+    const positions: number[] = [0]; // 바닥 (0번)
+    let cumY = 0;
+    for (let i = 0; i < levels; i++) {
+      cumY += perLevelHeights[i] ?? levelHeight;
+      positions.push(cumY);
+    }
+    return positions;
+  }, [perLevelHeights, levels, levelHeight]);
   // 선반판 geometry 캐싱
   const shelfGeo = useMemo(
     () => new THREE.BoxGeometry(width - FRAME_THICKNESS * 2, 0.02, depth - FRAME_THICKNESS * 2),
@@ -74,8 +92,8 @@ export function RackModel({
 
     // 앞면, 뒷면에 X자 브레이싱 (각 단마다)
     for (let i = 0; i < levels; i++) {
-      const y0 = i * levelHeight;
-      const y1 = (i + 1) * levelHeight;
+      const y0 = levelYPositions[i];
+      const y1 = levelYPositions[i + 1];
 
       // 앞면 X자
       const frontZ = halfD;
@@ -102,7 +120,7 @@ export function RackModel({
       lines.push(bGeo1, bGeo2);
     }
     return lines;
-  }, [width, depth, levels, levelHeight]);
+  }, [width, depth, levels, levelYPositions]);
 
   // 프레임 머티리얼
   const frameMat = useMemo(
@@ -154,26 +172,23 @@ export function RackModel({
       <mesh geometry={vertFrameGeo} material={frameMat} position={[-halfW, height / 2, halfD]} castShadow receiveShadow />
       <mesh geometry={vertFrameGeo} material={frameMat} position={[halfW, height / 2, halfD]} castShadow receiveShadow />
 
-      {/* 단별 수평 빔 + 선반판 */}
-      {Array.from({ length: levels + 1 }, (_, i) => {
-        const y = i * levelHeight;
-        return (
-          <group key={`level-${i}`}>
-            {/* 앞면 수평 빔 */}
-            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, halfD]} castShadow />
-            {/* 뒷면 수평 빔 */}
-            <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, -halfD]} castShadow />
-            {/* 좌측 수평 빔 */}
-            <mesh geometry={hBeamSideGeo} material={beamMat} position={[-halfW, y, 0]} castShadow />
-            {/* 우측 수평 빔 */}
-            <mesh geometry={hBeamSideGeo} material={beamMat} position={[halfW, y, 0]} castShadow />
-            {/* 선반판 (바닥 제외, 1단부터) */}
-            {i > 0 && (
-              <mesh geometry={shelfGeo} material={shelfMat} position={[0, y + 0.01, 0]} castShadow receiveShadow />
-            )}
-          </group>
-        );
-      })}
+      {/* 단별 수평 빔 + 선반판 — 층별 개별 높이 반영 */}
+      {levelYPositions.map((y, i) => (
+        <group key={`level-${i}`}>
+          {/* 앞면 수평 빔 */}
+          <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, halfD]} castShadow />
+          {/* 뒷면 수평 빔 */}
+          <mesh geometry={hBeamFrontGeo} material={beamMat} position={[0, y, -halfD]} castShadow />
+          {/* 좌측 수평 빔 */}
+          <mesh geometry={hBeamSideGeo} material={beamMat} position={[-halfW, y, 0]} castShadow />
+          {/* 우측 수평 빔 */}
+          <mesh geometry={hBeamSideGeo} material={beamMat} position={[halfW, y, 0]} castShadow />
+          {/* 선반판 (바닥 제외, 1단부터) */}
+          {i > 0 && (
+            <mesh geometry={shelfGeo} material={shelfMat} position={[0, y + 0.01, 0]} castShadow receiveShadow />
+          )}
+        </group>
+      ))}
 
       {/* 대각 브레이싱 */}
       {braceLines.map((geo, idx) => (

@@ -240,32 +240,32 @@ export function MoveModeGhost({
     const hit = raycaster.current.ray.intersectPlane(floorPlane, intersection);
     if (!hit) return;
 
-    // 마우스 ray의 Y 높이 계산 — 카메라에서 수직면과의 교차점으로 Y 추정
-    // ray 방향의 Y 성분을 이용하여 마우스가 가리키는 높이 계산
+    // 마우스 ray의 Y 높이 계산 — 랙 위치를 지나는 카메라 방향 수직면 사용
     const ray = raycaster.current.ray;
-    if (ray.direction.y !== 0) {
-      // ray가 각 높이의 수평면과 만나는 점을 기준으로 Y 높이 추정
-      // 카메라에서 바닥(Y=0) 교차점까지의 XZ 거리 대비 실제 교차점까지의 비율로 Y 계산
-      const t = -ray.origin.y / ray.direction.y; // floor 교차 t값
-      if (t > 0) {
-        // 마우스가 가리키는 "의도한 Y 높이"를 화면 Y 위치로부터 역산
-        // 간단한 방법: ray와 랙 근처 Z 평면의 교차점 Y 사용
-        const nearestRack = racks.find((r) => {
-          const dx = intersection.x - r.positionX;
-          const dz = intersection.z - r.positionZ;
-          return Math.sqrt(dx * dx + dz * dz) < 3.0;
-        });
-        if (nearestRack) {
-          // 랙의 Z 위치에 있는 수직 평면과 ray의 교차점
-          const rackPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -nearestRack.positionZ);
-          const rackHit = new THREE.Vector3();
-          if (ray.intersectPlane(rackPlane, rackHit)) {
-            mouseWorldY.current = Math.max(0, rackHit.y);
-          }
-        } else {
-          mouseWorldY.current = 0;
-        }
+    const nearestRack = racks.find((r) => {
+      const dx = intersection.x - r.positionX;
+      const dz = intersection.z - r.positionZ;
+      return Math.sqrt(dx * dx + dz * dz) < 3.0;
+    });
+    if (nearestRack) {
+      // 카메라→랙 방향의 XZ 성분으로 수직면 법선 생성 (Y=0 평면에 투영)
+      const camToRack = new THREE.Vector3(
+        nearestRack.positionX - camera.position.x,
+        0, // Y 성분 제거 — 수직면이므로
+        nearestRack.positionZ - camera.position.z,
+      ).normalize();
+
+      // 랙 위치를 지나는 수직면 (카메라를 바라보는 방향)
+      const planeNormal = camToRack.clone();
+      const planeDist = -planeNormal.dot(new THREE.Vector3(nearestRack.positionX, 0, nearestRack.positionZ));
+      const verticalPlane = new THREE.Plane(planeNormal, planeDist);
+
+      const rackHit = new THREE.Vector3();
+      if (ray.intersectPlane(verticalPlane, rackHit)) {
+        mouseWorldY.current = Math.max(0, rackHit.y);
       }
+    } else {
+      mouseWorldY.current = 0;
     }
 
     const newPos = new THREE.Vector3(intersection.x, movingObject.positionY, intersection.z);

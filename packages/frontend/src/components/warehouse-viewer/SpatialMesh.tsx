@@ -5,6 +5,9 @@ import type { SpatialObject } from '../../types/spatial';
 import { RackModel } from './RackModel';
 import { PalletModel } from './PalletModel';
 import { ContainerModel } from './ContainerModel';
+import { AisleModel } from './AisleModel';
+import { FloorTileModel } from './FloorTileModel';
+import { WallPanelModel } from './WallPanelModel';
 
 interface SpatialMeshProps {
   object: SpatialObject;
@@ -85,6 +88,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
   if (isRack) {
     const levels = (meta?.levels as number) ?? 3;
     const levelHeight = (meta?.levelHeight as number) ?? 1.5;
+    const levelHeights = meta?.levelHeights as number[] | undefined;
 
     return (
       <group
@@ -112,6 +116,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           depth={object.scaleZ}
           levels={levels}
           levelHeight={levelHeight}
+          levelHeights={levelHeights}
           isSelected={isSelected}
           isHovered={hovered}
         />
@@ -192,7 +197,138 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
     );
   }
 
-  // 기본 메시 렌더링 (구역, 통로, 작업대 등)
+  // 통로(AISLE) 모델 렌더링
+  const isAisle = typeName === 'AISLE';
+  if (isAisle) {
+    const aisleColor = baseColor;
+    const isEmergency = (meta?.aisleType as string) === 'EMERGENCY' || object.code?.includes('EMERGENCY');
+
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
+        <AisleModel
+          width={object.scaleX}
+          length={object.scaleZ}
+          color={aisleColor}
+          isSelected={isSelected}
+          isHovered={hovered}
+          isEmergency={isEmergency}
+        />
+        {hovered && (
+          <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>({object.type.label})</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                너비 {object.scaleX}m × 길이 {object.scaleZ}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 바닥(FLOOR) 모델 렌더링
+  const isFloor = typeName === 'FLOOR' || (meta?.floorStyle && typeof meta.floorStyle === 'string');
+  if (isFloor) {
+    const floorStyle = (meta?.floorStyle as string) ?? 'EPOXY_GRAY';
+
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      >
+        <FloorTileModel
+          width={object.scaleX}
+          depth={object.scaleZ}
+          style={floorStyle as 'EPOXY_GRAY' | 'EPOXY_GREEN' | 'CONCRETE' | 'ANTI_SLIP' | 'MARKING'}
+          isSelected={isSelected}
+          isHovered={hovered}
+        />
+        {hovered && (
+          <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>바닥</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleZ}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 벽(WALL) 모델 렌더링
+  const isWall = meta?.wallStyle && typeof meta.wallStyle === 'string';
+  if (isWall) {
+    const wallStyle = meta.wallStyle as string;
+
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
+      >
+        <WallPanelModel
+          width={object.scaleX}
+          height={object.scaleY}
+          thickness={object.scaleZ}
+          style={wallStyle as 'SANDWICH_PANEL' | 'CONCRETE_WALL' | 'METAL_CORRUGATED' | 'BRICK'}
+          isSelected={isSelected}
+          isHovered={hovered}
+        />
+        {hovered && (
+          <Html distanceFactor={15} position={[0, object.scaleY / 2 + 0.3, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>벽</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleY}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 기본 메시 렌더링 (구역, 작업대 등)
   const renderGeometry = () => {
     switch (object.meshType ?? 'box') {
       case 'cylinder':
