@@ -5,5 +5,7 @@ export { ObjectInfoPanel } from './ObjectInfoPanel';
 export { RackModel } from './RackModel';
 export { PalletModel } from './PalletModel';
 export { ContainerModel } from './ContainerModel';
-export { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
+export { EditorTopBar } from './EditorTopBar';
+export { EditorLeftSidebar } from './EditorLeftSidebar';
+export { EditorBottomBar } from './EditorBottomBar';
 export { ContextMenu } from './ContextMenu';

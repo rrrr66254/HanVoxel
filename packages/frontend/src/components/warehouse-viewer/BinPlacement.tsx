@@ -257,17 +257,11 @@ export function RackDetailPanel({
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 70,
-        left: 16,
-        width: 260,
-        background: '#161B22',
-        border: '1px solid #30363D',
-        borderRadius: 12,
+        width: '100%',
+        height: '100%',
+        background: '#1A1D24',
         color: '#E6EDF3',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        zIndex: 20,
-        overflow: 'hidden',
+        overflow: 'auto',
       }}
     >
       <div style={{

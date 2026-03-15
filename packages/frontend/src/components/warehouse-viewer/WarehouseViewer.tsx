@@ -4,16 +4,15 @@ import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { WarehouseScene } from './WarehouseScene';
-import { ObjectInfoPanel } from './ObjectInfoPanel';
 import { DimensionEditor } from './DimensionEditor';
-import { PresetCatalog } from '../preset-catalog';
-import { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
-import { KeyboardControlsHandler, KeyboardHint } from './KeyboardControls';
+import { EditorTopBar } from './EditorTopBar';
+import { EditorLeftSidebar } from './EditorLeftSidebar';
+import { EditorBottomBar } from './EditorBottomBar';
+import { KeyboardControlsHandler } from './KeyboardControls';
 import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer, RackDetailPanel } from './BinPlacement';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
 import type { BinOccupancy } from './BinPlacement';
-import { ZoneListPanel } from './ZoneDrawing';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
 import { createSpatialPreset } from '../../api/preset-api';
@@ -36,11 +35,21 @@ interface WarehouseViewerProps {
 }
 
 /**
- * 3D 창고 뷰어 — 전문 WMS 수준 UI
+ * 3D 창고 뷰어 — 오늘의집 스타일 레이아웃
+ *
+ * ┌─────────────────────────────────────────────┐
+ * │  EditorTopBar                               │
+ * ├────┬────────────────────────────────┬───────┤
+ * │ L  │                                │  R    │
+ * │ e  │        3D Canvas               │  패널 │
+ * │ f  │                                │       │
+ * │ t  │                                │       │
+ * ├────┴────────────────────────────────┴───────┤
+ * │  EditorBottomBar                            │
+ * └─────────────────────────────────────────────┘
  */
 export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
@@ -61,20 +70,16 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   // Zone 시스템 상태
   const [zones, setZones] = useState<ZoneConfig[]>([]);
   const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
-  const [showZoneList, setShowZoneList] = useState(false);
-
-  // 키보드 힌트
-  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
 
   // BIN 적재 시스템
-  const [binOccupancy, setBinOccupancy] = useState<BinOccupancy[]>([]);
+  const [binOccupancy] = useState<BinOccupancy[]>([]);
   const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
 
   // 2D 탑뷰 Zone 드로잉 모드
   const [topViewMode, setTopViewMode] = useState(false);
 
   // 그리드 표시 여부
-  const [gridVisible, setGridVisible] = useState(true);
+  const [gridVisible, setGridVisible] = useState(false);
 
   // 드래그 앤 드롭 상태
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -82,7 +87,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   // 우클릭 컨텍스트 메뉴
   const { contextState, openMenu, closeMenu } = useContextMenu();
-  // 오브젝트 우클릭이 빈 공간 우클릭을 덮어쓰지 않도록 추적
   const objectContextMenuRef = useRef(false);
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -93,7 +97,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     ...objects.filter((o) => !placedIds.has(o.id) && !deletedIds.has(o.id)),
     ...placedObjects.filter((o) => !deletedIds.has(o.id)),
   ];
-  const selectedObject = allObjects.find((o) => o.id === selectedId) ?? null;
   const editingObject = allObjects.find((o) => o.id === editingId) ?? null;
 
   // 레이어 필터링된 활성 객체
@@ -111,7 +114,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   // 프리셋 카드 클릭 → 배치 모드 진입
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
     setPlacingPreset(preset);
-    setCatalogOpen(false);
     setSelectedId(null);
     setEditingId(null);
   }, []);
@@ -180,7 +182,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     [placingPreset, currentSiteId],
   );
 
-  // 치수 편집 적용 — placedObjects에 있으면 업데이트, 없으면 템플릿 객체를 override로 추가
+  // 치수 편집 적용
   const handleUpdateObject = useCallback(async (updated: SpatialObject) => {
     setSaving(true);
     setPlacedObjects((prev) => {
@@ -188,7 +190,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       if (exists) {
         return prev.map((o) => (o.id === updated.id ? updated : o));
       }
-      // 템플릿 객체 → placedObjects에 override로 추가
       return [...prev, updated];
     });
     await updateSpatialObject(updated.id, {
@@ -201,7 +202,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setSaving(false);
   }, []);
 
-  // 오브젝트 삭제 (초기 객체 + 배치된 객체 모두 지원)
+  // 오브젝트 삭제
   const handleDeleteObject = useCallback(
     async (id: string) => {
       setPlacedObjects((prev) => prev.filter((o) => o.id !== id));
@@ -274,16 +275,13 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       rotationY: obj.rotationY + Math.PI / 2,
     };
     setPlacedObjects((prev) => prev.map((o) => (o.id === updatedObj.id ? updatedObj : o)));
-    await updateSpatialObject(updatedObj.id, {
-      rotationY: updatedObj.rotationY,
-    });
+    await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY });
   }, []);
 
-  // 객체 선택 — 모든 객체를 DimensionEditor로 편집 가능
+  // 객체 선택
   const handleSelect = useCallback((obj: SpatialObject) => {
     setSelectedId(obj.id);
     setEditingId(obj.id);
-    // 랙 선택 시 상세 패널 표시
     if (obj.type.name === 'RACK') {
       setSelectedRackId(obj.id);
     } else {
@@ -291,7 +289,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     }
   }, []);
 
-  // 뷰 모드 변경 → 카메라 위치 전환
+  // 뷰 모드 변경
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     const controls = controlsRef.current;
@@ -355,7 +353,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     };
     setZones((prev) => [...prev, newZone]);
     setDrawingZoneType(null);
-    setShowZoneList(true);
     handleViewModeChange('perspective');
   }, [zones, handleViewModeChange]);
 
@@ -364,7 +361,13 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setZones((prev) => prev.filter((z) => z.id !== id));
   }, []);
 
-  // 드래그 앤 드롭으로 프리셋 배치
+  // Zone 그리기 시작 (좌측 사이드바에서 호출)
+  const handleDrawZone = useCallback((type: ZoneType) => {
+    setDrawingZoneType(type);
+    handleViewModeChange('top');
+  }, [handleViewModeChange]);
+
+  // 드래그 앤 드롭
   const handleDragOver = useCallback((e: React.DragEvent) => {
     if (e.dataTransfer.types.includes('application/hanvoxel-preset')) {
       e.preventDefault();
@@ -374,16 +377,16 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
+    setIsDraggingOver(false);
     const data = e.dataTransfer.getData('application/hanvoxel-preset');
     if (!data) return;
 
     const preset: SpatialPreset = JSON.parse(data);
 
-    // 드롭 위치를 3D 좌표로 변환 (NDC → 바닥 평면 교차)
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const wrapper = wrapperRef.current;
+    const rect = wrapper ? wrapper.getBoundingClientRect() : (e.target as HTMLElement).getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    // 근사 좌표 변환 (카메라 기준)
     const worldX = Math.round(nx * 30 + 15);
     const worldZ = Math.round(nz * 25 + 20);
     const posY = (preset.height || 1) / 2;
@@ -405,7 +408,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       scaleX: preset.width || 1,
       scaleY: preset.height || 1,
       scaleZ: preset.depth || 1,
-      color: preset.color ?? '#f59e0b',
+      color: null,
       opacity: preset.opacity,
       visible: true,
       meshType: (preset.meshType as MeshType) ?? 'box',
@@ -454,7 +457,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setZones((prev) => [...prev, newZone]);
   }, []);
 
-  // 네이티브 DOM 이벤트로 드래그 감지 (R3F Canvas와의 호환성)
+  // 네이티브 DOM 이벤트로 드래그 감지
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -492,7 +495,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   // 2D 탑뷰 모드
   if (topViewMode) {
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div className="flex h-full w-full flex-col bg-[#0D1117]">
         <TopViewZoneDrawer
           zones={zones}
           onAddZone={handleAddZoneFromTopView}
@@ -504,426 +507,193 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{ position: 'relative', width: '100%', height: '100%' }}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {/* 3D 캔버스 */}
-      <Canvas
-        camera={{ position: [30, 20, 35], fov: 60, near: 0.1, far: 500 }}
-        shadows
-        style={{ background: '#0D1117' }}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setSelectedId(null);
-            setEditingId(null);
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          // 오브젝트 위 우클릭이 먼저 처리된 경우 빈 공간 메뉴 생략
-          if (objectContextMenuRef.current) return;
-          openMenu(e);
-        }}
-        onPointerMove={(e) => {
-          const rect = (e.target as HTMLElement).getBoundingClientRect();
-          const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-          const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-          setCursorPos({ x: nx * 30 + 15, y: 0, z: nz * 25 + 20 });
-        }}
-      >
-        <OrbitControls
-          ref={controlsRef}
-          makeDefault
-          minDistance={5}
-          maxDistance={120}
-          maxPolarAngle={Math.PI / 2.05}
-          enableDamping
-          dampingFactor={0.08}
-          enabled={!placingPreset && !drawingZoneType}
-          rotateSpeed={0.5}
-          zoomSpeed={1.2}
-        />
-        <KeyboardControlsHandler controlsRef={controlsRef} enabled={!placingPreset && !drawingZoneType} />
-        <WarehouseScene
-          objects={activeObjects}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onContextMenu={(obj, e) => {
-            e.stopPropagation();
-            // 오브젝트 우클릭 플래그 설정 (Canvas 빈 공간 메뉴 방지)
-            objectContextMenuRef.current = true;
-            setTimeout(() => { objectContextMenuRef.current = false; }, 50);
-            openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
-          }}
-          placingPreset={placingPreset}
-          onPlace={handlePlace}
-          zones={zones}
-          drawingZoneType={drawingZoneType}
-          onZoneDrawComplete={handleZoneDrawComplete}
-          onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
-          gridVisible={gridVisible}
-          binOccupancy={binOccupancy}
-        />
-      </Canvas>
-
-      {/* 뷰어 툴바 */}
-      <ViewerToolbar
+    <div className="flex h-full w-full flex-col bg-[#0D1117]">
+      {/* 상단 바 */}
+      <EditorTopBar
         activeTool={activeTool}
         onToolChange={setActiveTool}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        onTopView2D={() => setTopViewMode(true)}
+        saving={saving}
+        objectCount={activeObjects.length}
+      />
+
+      {/* 메인 영역 (사이드바 + 캔버스 + 우측 패널) */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 좌측 사이드바 */}
+        <EditorLeftSidebar
+          onSelectPreset={handleSelectPreset}
+          layerVisibility={layerVisibility}
+          onLayerToggle={handleLayerToggle}
+          onDrawZone={handleDrawZone}
+          zones={zones}
+          onDeleteZone={handleDeleteZone}
+        />
+
+        {/* 3D 캔버스 영역 */}
+        <div
+          ref={wrapperRef}
+          className="relative flex-1"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          <Canvas
+            camera={{ position: [30, 20, 35], fov: 60, near: 0.1, far: 500 }}
+            shadows
+            style={{ background: '#0D1117' }}
+            gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedId(null);
+                setEditingId(null);
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (objectContextMenuRef.current) return;
+              openMenu(e);
+            }}
+            onPointerMove={(e) => {
+              const rect = (e.target as HTMLElement).getBoundingClientRect();
+              const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+              const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+              setCursorPos({ x: nx * 30 + 15, y: 0, z: nz * 25 + 20 });
+            }}
+          >
+            <OrbitControls
+              ref={controlsRef}
+              makeDefault
+              minDistance={5}
+              maxDistance={120}
+              maxPolarAngle={Math.PI / 2.05}
+              enableDamping
+              dampingFactor={0.08}
+              enabled={!placingPreset && !drawingZoneType}
+              rotateSpeed={0.5}
+              zoomSpeed={1.2}
+            />
+            <KeyboardControlsHandler controlsRef={controlsRef} enabled={!placingPreset && !drawingZoneType} />
+            <WarehouseScene
+              objects={activeObjects}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              onContextMenu={(obj, e) => {
+                e.stopPropagation();
+                objectContextMenuRef.current = true;
+                setTimeout(() => { objectContextMenuRef.current = false; }, 50);
+                openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
+              }}
+              placingPreset={placingPreset}
+              onPlace={handlePlace}
+              zones={zones}
+              drawingZoneType={drawingZoneType}
+              onZoneDrawComplete={handleZoneDrawComplete}
+              onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
+              gridVisible={gridVisible}
+              binOccupancy={binOccupancy}
+            />
+          </Canvas>
+
+          {/* 배치 모드 안내 배너 */}
+          {placingPreset && (
+            <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
+              <span className="font-bold text-blue-400">{placingPreset.name}</span>
+              배치 중 — 클릭하여 위치 확정
+              <button
+                onClick={() => setPlacingPreset(null)}
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700"
+              >
+                취소
+              </button>
+            </div>
+          )}
+
+          {/* Zone 드로잉 모드 안내 */}
+          {drawingZoneType && (
+            <div className="absolute bottom-14 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 px-5 py-2.5 text-xs text-gray-300 shadow-lg">
+              클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
+              <button
+                onClick={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700"
+              >
+                취소
+              </button>
+            </div>
+          )}
+
+          {/* 드래그 앤 드롭 오버레이 */}
+          {isDraggingOver && (
+            <div
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-500/50 bg-blue-500/5"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <div className="rounded-xl border border-blue-500 bg-[#1A1D24]/90 px-8 py-4 text-sm font-medium text-blue-300">
+                여기에 드롭하여 배치
+              </div>
+            </div>
+          )}
+
+          {/* 우클릭 컨텍스트 메뉴 */}
+          <ContextMenu
+            object={contextState.object}
+            position={contextState.position}
+            onClose={closeMenu}
+            onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
+            onDuplicate={handleDuplicate}
+            onRotate90={handleRotate90}
+            onMove={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
+            onDelete={handleDeleteObject}
+            onResetView={handleResetView}
+            onTopView={() => handleViewModeChange('top')}
+            onFrontView={() => handleViewModeChange('front')}
+            onToggleGrid={() => setGridVisible((v) => !v)}
+            gridVisible={gridVisible}
+          />
+        </div>
+
+        {/* 우측 속성 패널 */}
+        {editingObject && (
+          <div className="w-72 border-l border-[#2A2F38] bg-[#1A1D24]">
+            <DimensionEditor
+              object={editingObject}
+              onUpdate={handleUpdateObject}
+              onSavePreset={handleSavePreset}
+              onDelete={handleDeleteObject}
+              onClose={() => setEditingId(null)}
+            />
+          </div>
+        )}
+
+        {/* 랙 상세 패널 (우측 — DimensionEditor와 함께 표시) */}
+        {selectedRackId && !editingObject && (() => {
+          const rack = allObjects.find((o) => o.id === selectedRackId);
+          if (!rack) return null;
+          return (
+            <div className="w-64 border-l border-[#2A2F38] bg-[#1A1D24]">
+              <RackDetailPanel
+                rack={rack}
+                occupancy={binOccupancy}
+                onClose={() => setSelectedRackId(null)}
+              />
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* 하단 바 */}
+      <EditorBottomBar
+        cursorPos={cursorPos}
+        gridVisible={gridVisible}
+        onToggleGrid={() => setGridVisible((v) => !v)}
         snapEnabled={snapEnabled}
         onSnapToggle={() => setSnapEnabled((v) => !v)}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-        layerVisibility={layerVisibility}
-        onLayerToggle={handleLayerToggle}
       />
-
-      {/* 좌표 표시 */}
-      <CoordinateDisplay x={cursorPos.x} y={cursorPos.y} z={cursorPos.z} />
-
-      {/* 미니맵 */}
-      <Minimap objectCount={activeObjects.length} />
-
-      {/* 객체 수 + 저장 상태 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '8px 16px',
-          background: '#161B22',
-          border: '1px solid #30363D',
-          borderRadius: 8,
-          fontSize: 12,
-          color: '#E6EDF3',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          zIndex: 20,
-        }}
-      >
-        <span style={{ fontWeight: 700, color: '#2D7DD2' }}>{activeObjects.length}</span>
-        <span style={{ color: '#8B949E' }}>공간 객체</span>
-        {saving && (
-          <span style={{ fontSize: 10, color: '#D29922', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#D29922', animation: 'pulse 1s infinite' }} />
-            저장 중...
-          </span>
-        )}
-      </div>
-
-      {/* 배치 모드 안내 배너 */}
-      {placingPreset && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 60,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '10px 20px',
-            background: 'rgba(45, 125, 210, 0.15)',
-            border: '1px solid rgba(45, 125, 210, 0.4)',
-            borderRadius: 10,
-            fontSize: 12,
-            color: '#7EB8E0',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-            zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <span style={{ fontWeight: 700, color: '#2D7DD2' }}>{placingPreset.name}</span>
-          배치 중 — 클릭하여 위치 확정
-          <button
-            onClick={() => setPlacingPreset(null)}
-            style={{
-              padding: '4px 12px',
-              borderRadius: 6,
-              border: '1px solid #30363D',
-              background: '#21262D',
-              color: '#8B949E',
-              fontSize: 11,
-              cursor: 'pointer',
-            }}
-          >
-            취소
-          </button>
-        </div>
-      )}
-
-      {/* 우측 패널들 */}
-      {/* 카탈로그 토글 버튼 */}
-      {!catalogOpen && !editingObject && (
-        <button
-          onClick={() => setCatalogOpen(true)}
-          style={{
-            position: 'absolute',
-            top: 70,
-            right: 16,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: 10,
-            border: '1px solid #30363D',
-            background: '#161B22',
-            color: '#E6EDF3',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-            transition: 'all 0.2s ease',
-            zIndex: 20,
-            fontFamily: 'inherit',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2D7DD2';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(45,125,210,0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#30363D';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.4)';
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-            <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-            <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-            <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-          </svg>
-          표준 규격
-        </button>
-      )}
-
-      {/* 선택된 객체 정보 패널 */}
-      {!catalogOpen && !editingObject && (
-        <ObjectInfoPanel
-          object={selectedObject}
-          onClose={() => setSelectedId(null)}
-        />
-      )}
-
-      {/* 치수 편집 패널 */}
-      {editingObject && (
-        <DimensionEditor
-          object={editingObject}
-          onUpdate={handleUpdateObject}
-          onSavePreset={handleSavePreset}
-          onDelete={handleDeleteObject}
-          onClose={() => setEditingId(null)}
-        />
-      )}
-
-      {/* Zone 드로잉 버튼 */}
-      {!placingPreset && !drawingZoneType && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 16,
-            right: 16,
-            display: 'flex',
-            gap: 6,
-            zIndex: 20,
-          }}
-        >
-          {(['STORAGE', 'PICKING', 'STAGING', 'SAFETY'] as ZoneType[]).map((type) => {
-            const colors: Record<ZoneType, string> = { STORAGE: '#3B82F6', PICKING: '#10B981', STAGING: '#F59E0B', SAFETY: '#EF4444' };
-            const labels: Record<ZoneType, string> = { STORAGE: '보관', PICKING: '피킹', STAGING: '스테이징', SAFETY: '안전' };
-            return (
-              <button
-                key={type}
-                onClick={() => { setDrawingZoneType(type); handleViewModeChange('top'); }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 8,
-                  border: `1px solid ${colors[type]}40`,
-                  background: `${colors[type]}15`,
-                  color: colors[type],
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {labels[type]}
-              </button>
-            );
-          })}
-          {/* 2D 탑뷰 모드 버튼 */}
-          <button
-            onClick={() => setTopViewMode(true)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 8,
-              border: '1px solid rgba(45,125,210,0.3)',
-              background: 'rgba(45,125,210,0.1)',
-              color: '#2D7DD2',
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            2D 편집
-          </button>
-
-          {zones.length > 0 && (
-            <button
-              onClick={() => setShowZoneList((v) => !v)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 8,
-                border: '1px solid #30363D',
-                background: '#161B22',
-                color: '#E6EDF3',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              구역 {zones.length}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Zone 드로잉 모드 안내 */}
-      {drawingZoneType && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 60,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '10px 20px',
-            background: 'rgba(22,27,34,0.95)',
-            border: '1px solid #30363D',
-            borderRadius: 10,
-            fontSize: 12,
-            color: '#E6EDF3',
-            zIndex: 30,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
-          <button
-            onClick={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
-            style={{
-              padding: '4px 12px',
-              borderRadius: 6,
-              border: '1px solid #30363D',
-              background: '#21262D',
-              color: '#8B949E',
-              fontSize: 11,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            취소
-          </button>
-        </div>
-      )}
-
-      {/* 키보드 단축키 힌트 */}
-      <KeyboardHint
-        visible={showKeyboardHint}
-        onToggle={() => setShowKeyboardHint((v) => !v)}
-      />
-
-      {/* 랙 상세 패널 */}
-      {selectedRackId && (() => {
-        const rack = allObjects.find((o) => o.id === selectedRackId);
-        if (!rack) return null;
-        return (
-          <RackDetailPanel
-            rack={rack}
-            occupancy={binOccupancy}
-            onClose={() => setSelectedRackId(null)}
-          />
-        );
-      })()}
-
-      {/* 우클릭 컨텍스트 메뉴 */}
-      <ContextMenu
-        object={contextState.object}
-        position={contextState.position}
-        onClose={closeMenu}
-        onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
-        onDuplicate={handleDuplicate}
-        onRotate90={handleRotate90}
-        onMove={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
-        onDelete={handleDeleteObject}
-        onResetView={handleResetView}
-        onTopView={() => handleViewModeChange('top')}
-        onFrontView={() => handleViewModeChange('front')}
-        onToggleGrid={() => setGridVisible((v) => !v)}
-        gridVisible={gridVisible}
-      />
-
-      {/* Zone 목록 패널 */}
-      {showZoneList && (
-        <ZoneListPanel
-          zones={zones}
-          onDeleteZone={handleDeleteZone}
-          onClose={() => setShowZoneList(false)}
-        />
-      )}
-
-      {/* 프리셋 카탈로그 */}
-      <PresetCatalog
-        visible={catalogOpen}
-        onClose={() => setCatalogOpen(false)}
-        onSelectPreset={handleSelectPreset}
-      />
-
-      {/* 드래그 앤 드롭 오버레이 — Canvas 위에 투명 드롭 영역 표시 */}
-      {isDraggingOver && (
-        <div
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(45, 125, 210, 0.08)',
-            border: '2px dashed rgba(45, 125, 210, 0.5)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'auto',
-          }}
-        >
-          <div
-            style={{
-              padding: '16px 32px',
-              background: 'rgba(22, 27, 34, 0.9)',
-              border: '1px solid #2D7DD2',
-              borderRadius: 12,
-              color: '#7EB8E0',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            여기에 드롭하여 배치
-          </div>
-        </div>
-      )}
     </div>
   );
 }

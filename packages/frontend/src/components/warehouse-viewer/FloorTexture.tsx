@@ -25,13 +25,13 @@ function createEpoxyTileTexture(): THREE.CanvasTexture {
   canvas.height = CANVAS_RES;
   const ctx = canvas.getContext('2d')!;
 
-  // 타일 배경
-  ctx.fillStyle = '#1A2332';
+  // 타일 배경 (밝은 에폭시 그레이)
+  ctx.fillStyle = '#2A3545';
   ctx.fillRect(0, 0, CANVAS_RES, CANVAS_RES);
 
-  // 줄눈 (grout lines)
+  // 줄눈 (grout lines — 밝은 선으로 타일 구분)
   const groutPx = Math.max(2, Math.round(CANVAS_RES * GROUT_WIDTH / TILE_SIZE));
-  ctx.strokeStyle = '#1A2030';
+  ctx.strokeStyle = '#3A4A5A';
   ctx.lineWidth = groutPx;
 
   // 수직선
