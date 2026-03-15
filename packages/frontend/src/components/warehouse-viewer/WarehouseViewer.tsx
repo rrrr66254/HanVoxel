@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
@@ -56,6 +56,19 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [movingObjectId, setMovingObjectId] = useState<string | null>(null);
   const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number; z: number } | null>(null);
 
+  // 토스트 메시지 (배치 차단 시)
+  const [toast, setToast] = useState<{ message: string; time: number } | null>(null);
+  const handleBlockedToast = useCallback((message: string) => {
+    setToast({ message, time: Date.now() });
+  }, []);
+
+  // 토스트 자동 소멸 (3초)
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   // 뷰어 상태
   const [activeTool, setActiveTool] = useState<ToolMode>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -83,8 +96,11 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const objectContextMenuRef = useRef(false);
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  // 싱글클릭 지연 타이머 (더블클릭과 분리용)
-  const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // (더블클릭은 NativeDoubleClickHandler에서 네이티브로 처리)
+
+  // 포인터 이벤트 추적 (클릭 vs 드래그 구분, 5px 임계값)
+  const pointerDownPosRef = useRef<{ x: number; y: number; button: number } | null>(null);
+  const wasDragRef = useRef(false);
 
   // 전체 오브젝트 목록
   const placedIds = new Set(placedObjects.map((o) => o.id));
@@ -149,41 +165,21 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setOriginalPosition(null);
   }, []);
 
-  // === 싱글 클릭 — 300ms 지연 후 선택 + 편집 패널 열기 ===
+  // === R3F onClick — 선택만 처리 (편집 패널은 더블클릭에서) ===
   const handleSelect = useCallback((obj: SpatialObject) => {
-    if (isMoving) return;
-
-    // 이전 싱글클릭 타이머 취소 (더블클릭 시 싱글클릭 방지)
-    if (singleClickTimerRef.current) {
-      clearTimeout(singleClickTimerRef.current);
-      singleClickTimerRef.current = null;
-    }
-
-    // 300ms 후 싱글클릭 처리 (더블클릭이 오면 취소됨)
-    singleClickTimerRef.current = setTimeout(() => {
-      console.log('[HanVoxel] 싱글클릭 →', obj.name, obj.type.name);
-      setSelectedId(obj.id);
-      setEditingId(obj.id);
-      setRightPanel('editor');
-      setRackDetailId(null);
-      singleClickTimerRef.current = null;
-    }, 300);
+    if (isMoving || wasDragRef.current) return;
+    setSelectedId(obj.id);
   }, [isMoving]);
 
-  // === 더블 클릭 — R3F 네이티브 onDoubleClick 이벤트 ===
-  const handleDoubleClick = useCallback((obj: SpatialObject) => {
-    if (isMoving) return;
-
-    // 싱글클릭 타이머 취소
-    if (singleClickTimerRef.current) {
-      clearTimeout(singleClickTimerRef.current);
-      singleClickTimerRef.current = null;
-    }
+  // === 더블클릭 콜백 (NativeDoubleClickHandler에서 호출) ===
+  const handleNativeDoubleClick = useCallback((objectId: string) => {
+    const obj = allObjects.find((o) => o.id === objectId);
+    if (!obj) return;
 
     const meta = obj.metadata as Record<string, unknown> | null;
     const isRack = obj.type.name === 'RACK' && meta?.levels;
 
-    console.log('[HanVoxel] 더블클릭 →', obj.name, obj.type.name, isRack ? '→ RackDetailPanel' : '→ ObjectEditor');
+    console.log('[HanVoxel] 더블클릭 감지 ->', obj.name, obj.type.name, isRack ? '-> RackDetailPanel' : '-> ObjectEditor');
 
     if (isRack) {
       setRackDetailId(obj.id);
@@ -196,7 +192,16 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       setRackDetailId(null);
       setSelectedId(obj.id);
     }
-  }, [isMoving]);
+  }, [allObjects]);
+
+  // === 싱글클릭 콜백 (NativeDoubleClickHandler에서 호출) ===
+  const handleNativeSingleClick = useCallback((objectId: string) => {
+    console.log('[HanVoxel] 싱글클릭 감지 ->', objectId);
+    setSelectedId(objectId);
+    setEditingId(objectId);
+    setRightPanel('editor');
+    setRackDetailId(null);
+  }, []);
 
   // === 프리셋 카테고리 → 타입 매핑 ===
   const getTypeFromPreset = useCallback((preset: SpatialPreset): { name: SpatialObject['type']['name']; itemType?: string } => {
@@ -390,10 +395,40 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     return () => { wrapper.removeEventListener('dragenter', enter); wrapper.removeEventListener('dragleave', leave); wrapper.removeEventListener('drop', drop); };
   }, []);
 
-  // 싱글클릭 타이머 cleanup
+
+  // OrbitControls 마우스 버튼 매핑 (좌클릭=패닝, 우클릭=회전, 휠=줌)
   useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.mouseButtons = {
+        LEFT: THREE.MOUSE.PAN,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.ROTATE,
+      };
+    }
+  });
+
+  // 포인터 이벤트 추적 — 클릭 vs 드래그 구분 (5px 임계값)
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const onDown = (e: PointerEvent) => {
+      pointerDownPosRef.current = { x: e.clientX, y: e.clientY, button: e.button };
+      wasDragRef.current = false;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pointerDownPosRef.current) return;
+      const dx = e.clientX - pointerDownPosRef.current.x;
+      const dy = e.clientY - pointerDownPosRef.current.y;
+      if (dx * dx + dy * dy > 25) wasDragRef.current = true; // 5px^2 = 25
+    };
+    const onUp = () => { pointerDownPosRef.current = null; };
+    wrapper.addEventListener('pointerdown', onDown);
+    wrapper.addEventListener('pointermove', onMove);
+    wrapper.addEventListener('pointerup', onUp);
     return () => {
-      if (singleClickTimerRef.current) clearTimeout(singleClickTimerRef.current);
+      wrapper.removeEventListener('pointerdown', onDown);
+      wrapper.removeEventListener('pointermove', onMove);
+      wrapper.removeEventListener('pointerup', onUp);
     };
   }, []);
 
@@ -426,8 +461,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             shadows
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-            onClick={(e) => { if (e.target === e.currentTarget && !isMoving) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (objectContextMenuRef.current || isMoving) return; openMenu(e); }}
+            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving) return; openMenu(e); }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -437,9 +472,19 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           >
             <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} rotateSpeed={0.5} zoomSpeed={1.2} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
+            {/* 네이티브 더블클릭 핸들러 (R3F 내부 컴포넌트) */}
+            <NativeDoubleClickHandler
+              objects={activeObjects}
+              onSingleClick={handleNativeSingleClick}
+              onDoubleClick={handleNativeDoubleClick}
+              disabled={isMoving}
+              wasDragRef={wasDragRef}
+            />
+
             <WarehouseScene
-              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect} onDoubleClick={handleDoubleClick}
+              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
               onContextMenu={(obj, e) => {
+                if (wasDragRef.current) return; // 드래그였으면 컨텍스트 메뉴 표시 안 함
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
                 openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
@@ -461,6 +506,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
                 onDrop={handleMoveDrop}
                 onDropToBin={handleMoveDropToBin}
                 onCancel={handleMoveCancel}
+                onBlockedToast={handleBlockedToast}
               />
             )}
           </Canvas>
@@ -495,6 +541,14 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           {isDraggingOver && (
             <div onDragOver={handleDragOver} onDrop={handleDrop} className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-500/50 bg-blue-500/5" style={{ pointerEvents: 'auto' }}>
               <div className="rounded-xl border border-blue-500 bg-[#1A1D24]/90 px-8 py-4 text-sm font-medium text-blue-300">여기에 드롭하여 배치</div>
+            </div>
+          )}
+
+          {/* 배치 차단 토스트 */}
+          {toast && (
+            <div className="absolute bottom-14 right-4 z-50 animate-pulse rounded-lg border border-red-500/40 bg-red-950/90 px-4 py-2.5 text-xs text-red-300 shadow-lg backdrop-blur">
+              <span className="mr-2 font-bold text-red-400">배치 불가</span>
+              {toast.message}
             </div>
           )}
 
@@ -534,4 +588,134 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} />
     </div>
   );
+}
+
+// ============================================================
+// 네이티브 더블클릭 핸들러 (Canvas 내부 컴포넌트)
+// R3F의 onDoubleClick이 불안정해서 직접 구현
+// ============================================================
+
+interface NativeDoubleClickHandlerProps {
+  objects: SpatialObject[];
+  onSingleClick: (objectId: string) => void;
+  onDoubleClick: (objectId: string) => void;
+  disabled: boolean;
+  wasDragRef: React.MutableRefObject<boolean>;
+}
+
+function NativeDoubleClickHandler({ objects, onSingleClick, onDoubleClick, disabled, wasDragRef }: NativeDoubleClickHandlerProps) {
+  const { camera, gl, scene } = useThree();
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const raycaster = useRef(new THREE.Raycaster());
+  const pointer = useRef(new THREE.Vector2());
+
+  // 오브젝트 ID 맵 (mesh -> objectId) 구축
+  const objectIdMap = useRef(new Map<string, string>());
+  useEffect(() => {
+    objectIdMap.current.clear();
+    objects.forEach((obj) => {
+      objectIdMap.current.set(obj.id, obj.id);
+    });
+  }, [objects]);
+
+  // raycaster로 클릭한 위치의 오브젝트 감지
+  const findObjectAtPosition = useCallback((clientX: number, clientY: number): string | null => {
+    const rect = gl.domElement.getBoundingClientRect();
+    pointer.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.current.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.current.setFromCamera(pointer.current, camera);
+    const intersects = raycaster.current.intersectObjects(scene.children, true);
+
+    // 교차된 메시에서 userData.objectId를 가진 부모를 찾음
+    for (const hit of intersects) {
+      let current: THREE.Object3D | null = hit.object;
+      while (current) {
+        const userData = current.userData as Record<string, unknown>;
+        if (userData?.objectId && typeof userData.objectId === 'string') {
+          return userData.objectId;
+        }
+        current = current.parent;
+      }
+    }
+
+    // userData가 없는 경우: 위치 기반으로 가장 가까운 오브젝트 매칭
+    if (intersects.length > 0) {
+      const hitPoint = intersects[0].point;
+      let bestId: string | null = null;
+      let bestDist = Infinity;
+      for (const obj of objects) {
+        const dx = hitPoint.x - obj.positionX;
+        const dy = hitPoint.y - obj.positionY;
+        const dz = hitPoint.z - obj.positionZ;
+        const dist = dx * dx + dy * dy + dz * dz;
+        // 오브젝트 바운딩 범위 내인지 확인
+        const halfW = obj.scaleX / 2 + 0.5;
+        const halfH = obj.scaleY / 2 + 0.5;
+        const halfD = obj.scaleZ / 2 + 0.5;
+        if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH && Math.abs(dz) <= halfD) {
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestId = obj.id;
+          }
+        }
+      }
+      return bestId;
+    }
+
+    return null;
+  }, [camera, gl, scene, objects]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const handleClick = (e: MouseEvent) => {
+      // 좌클릭만 처리
+      if (e.button !== 0) return;
+      if (disabled) return;
+      if (wasDragRef.current) return;
+
+      const objectId = findObjectAtPosition(e.clientX, e.clientY);
+      if (!objectId) {
+        // 빈 공간 클릭 — 타이머 리셋
+        if (clickTimerRef.current) {
+          clearTimeout(clickTimerRef.current);
+          clickTimerRef.current = null;
+        }
+        clickCountRef.current = 0;
+        return;
+      }
+
+      clickCountRef.current++;
+
+      if (clickCountRef.current === 1) {
+        // 첫 번째 클릭 — 250ms 대기
+        clickTimerRef.current = setTimeout(() => {
+          // 싱글클릭으로 확정
+          console.log('[HanVoxel] 네이티브 싱글클릭 확정 ->', objectId);
+          onSingleClick(objectId);
+          clickCountRef.current = 0;
+          clickTimerRef.current = null;
+        }, 250);
+      } else if (clickCountRef.current >= 2) {
+        // 더블클릭 확정
+        if (clickTimerRef.current) {
+          clearTimeout(clickTimerRef.current);
+          clickTimerRef.current = null;
+        }
+        clickCountRef.current = 0;
+        console.log('[HanVoxel] 네이티브 더블클릭 확정 ->', objectId);
+        onDoubleClick(objectId);
+      }
+    };
+
+    canvas.addEventListener('click', handleClick);
+    return () => {
+      canvas.removeEventListener('click', handleClick);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    };
+  }, [gl, disabled, wasDragRef, findObjectAtPosition, onSingleClick, onDoubleClick]);
+
+  return null; // 렌더링 없음 — 이벤트 핸들러만 등록
 }

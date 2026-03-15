@@ -8,6 +8,9 @@ import type { BinOccupancy } from './BinPlacement';
 // 바닥 평면 (Y=0)
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
+// BIN 크기 여유 허용률 (5%)
+const BIN_TOLERANCE = 0.05;
+
 interface MoveModeProps {
   /** 이동 중인 오브젝트 */
   movingObject: SpatialObject;
@@ -23,11 +26,24 @@ interface MoveModeProps {
   onDropToBin?: (obj: SpatialObject, bin: BinOccupancy) => void;
   /** 이동 취소 (ESC) */
   onCancel: () => void;
+  /** 배치 차단 시 토스트 메시지 */
+  onBlockedToast?: (message: string) => void;
 }
 
 interface CollisionResult {
   collides: boolean;
-  nearBin: { rackId: string; level: number; position: THREE.Vector3; valid: boolean; reason?: string } | null;
+  nearBin: {
+    rackId: string;
+    level: number;
+    position: THREE.Vector3;
+    valid: boolean;
+    reason?: string;
+    // 크기 검사 상세 정보 (토스트 메시지용)
+    detail?: {
+      objW: number; objD: number; objH: number;
+      binW: number; binD: number; binH: number;
+    };
+  } | null;
 }
 
 /**
@@ -36,6 +52,7 @@ interface CollisionResult {
  * - 충돌 시 빨간색, 정상 시 초록색
  * - 랙 위에서는 BIN 스냅
  * - ESC로 취소, 좌클릭으로 드롭
+ * - BIN 크기 초과 시 배치 완전 차단
  */
 export function MoveModeGhost({
   movingObject,
@@ -45,14 +62,25 @@ export function MoveModeGhost({
   onDrop,
   onDropToBin,
   onCancel,
+  onBlockedToast,
 }: MoveModeProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { camera, gl } = useThree();
   const [ghostPos, setGhostPos] = useState(new THREE.Vector3(movingObject.positionX, movingObject.positionY, movingObject.positionZ));
   const [collision, setCollision] = useState<CollisionResult>({ collides: false, nearBin: null });
+  // 배치 차단 시 흔들림 애니메이션
+  const [shakeTime, setShakeTime] = useState<number | null>(null);
 
   const pointer = useRef(new THREE.Vector2());
   const raycaster = useRef(new THREE.Raycaster());
+
+  // 배치 가능 여부 판단
+  const canPlace = useMemo(() => {
+    // BIN 근처: valid일 때만 배치 가능
+    if (collision.nearBin) return collision.nearBin.valid;
+    // 일반 위치: 충돌 없으면 배치 가능
+    return !collision.collides;
+  }, [collision]);
 
   // 다른 오브젝트 AABB 목록 (이동 대상 제외)
   const otherBoxes = useMemo(() => {
@@ -86,11 +114,12 @@ export function MoveModeGhost({
       let cumY = 0;
       for (let lv = 0; lv < levels; lv++) {
         const h = levelHeights[lv] ?? levelHeight;
+        // BIN 바닥 Y = 랙 바닥 + 누적 높이 + 빔 두께(0.15m)
         const y = baseY + cumY + 0.15;
         bins.push({
           level: lv,
           worldPos: new THREE.Vector3(rack.positionX, y, rack.positionZ),
-          height: h,
+          height: h - 0.15, // 빔 두께 제외한 실제 사용 가능 높이
           rackId: rack.id,
           rackW: rack.scaleX,
           rackD: rack.scaleZ,
@@ -101,7 +130,7 @@ export function MoveModeGhost({
     }).flat();
   }, [racks, movingObject.id]);
 
-  // AABB 충돌 검사
+  // AABB 충돌 + BIN 스냅 검사
   const checkCollision = useCallback((pos: THREE.Vector3): CollisionResult => {
     const halfW = movingObject.scaleX / 2;
     const halfH = movingObject.scaleY / 2;
@@ -109,9 +138,7 @@ export function MoveModeGhost({
     const objMin = new THREE.Vector3(pos.x - halfW, pos.y - halfH, pos.z - halfD);
     const objMax = new THREE.Vector3(pos.x + halfW, pos.y + halfH, pos.z + halfD);
 
-    // 바닥 오브젝트 여부 (팔레트/박스) — BIN 이동 가능
-    // type.name이 'BIN'이거나, metadata.itemType이 pallet/box이거나,
-    // 랙이 아닌 오브젝트 (levels 메타데이터 없음)는 BIN 후보로 판단
+    // BIN 이동 후보 판단
     const meta = movingObject.metadata as Record<string, unknown> | null;
     const hasLevels = meta?.levels && (meta.levels as number) > 0;
     const typeName = movingObject.type.name;
@@ -119,27 +146,44 @@ export function MoveModeGhost({
       || meta?.itemType === 'pallet'
       || meta?.itemType === 'box'
       || (typeName !== 'RACK' && typeName !== 'AISLE' && typeName !== 'ZONE' && typeName !== 'SAFETY_ZONE')
-      || (typeName === 'RACK' && !hasLevels); // 랙 타입이지만 levels 없으면 팔레트/박스일 수 있음
+      || (typeName === 'RACK' && !hasLevels);
 
     // BIN 스냅 검사
     if (isBinCandidate) {
       let bestBin: CollisionResult['nearBin'] = null;
-      let bestDist = 3.0;
+      let bestDist = 3.0; // 3m 이내에서 BIN 감지
 
       for (const bin of rackBins) {
         const dist2D = Math.sqrt((pos.x - bin.worldPos.x) ** 2 + (pos.z - bin.worldPos.z) ** 2);
         if (dist2D < bestDist) {
           bestDist = dist2D;
 
-          const fitsW = movingObject.scaleX <= bin.rackW + 0.1;
-          const fitsD = movingObject.scaleZ <= bin.rackD + 0.1;
-          const fitsH = movingObject.scaleY <= bin.height;
+          const objW = movingObject.scaleX;
+          const objD = movingObject.scaleZ;
+          const objH = movingObject.scaleY;
+
+          // BIN 크기 (warehouse-standards.md 기준)
+          // BIN 너비 = 랙 W (1열 기준), BIN 깊이 = 랙 D, BIN 높이 = 층 높이
+          const binW = bin.rackW;
+          const binD = bin.rackD;
+          const binH = bin.height;
+
+          // 5% 여유 적용한 최대 크기
+          const maxW = binW * (1 - BIN_TOLERANCE);
+          const maxD = binD * (1 - BIN_TOLERANCE);
+          const maxH = binH * (1 - BIN_TOLERANCE);
+
+          const fitsW = objW <= maxW;
+          const fitsD = objD <= maxD;
+          const fitsH = objH <= maxH;
           const occupied = binOccupancy.some((o) => o.rackId === bin.rackId && o.level === bin.level);
 
+          // 상세 사유 생성
           let reason: string | undefined;
-          if (!fitsH) reason = `높이 초과 (${movingObject.scaleY.toFixed(2)}m > ${bin.height.toFixed(2)}m)`;
-          else if (!fitsW || !fitsD) reason = '크기 초과';
-          else if (occupied) reason = '이미 적재됨';
+          if (occupied) reason = 'BIN 점유됨';
+          else if (!fitsH) reason = `높이 초과: ${objH.toFixed(2)}m > ${maxH.toFixed(2)}m`;
+          else if (!fitsW) reason = `너비 초과: ${objW.toFixed(2)}m > ${maxW.toFixed(2)}m`;
+          else if (!fitsD) reason = `깊이 초과: ${objD.toFixed(2)}m > ${maxD.toFixed(2)}m`;
 
           bestBin = {
             rackId: bin.rackId,
@@ -147,12 +191,12 @@ export function MoveModeGhost({
             position: bin.worldPos.clone().add(new THREE.Vector3(0, movingObject.scaleY / 2, 0)),
             valid: fitsW && fitsD && fitsH && !occupied,
             reason,
+            detail: { objW, objD, objH, binW: maxW, binD: maxD, binH: maxH },
           };
         }
       }
 
       if (bestBin) {
-        console.log('[HanVoxel] BIN 스냅 감지:', bestBin.rackId, 'level:', bestBin.level, 'valid:', bestBin.valid, bestBin.reason ?? '');
         return { collides: false, nearBin: bestBin };
       }
     }
@@ -170,7 +214,7 @@ export function MoveModeGhost({
   }, [movingObject, otherBoxes, rackBins, binOccupancy]);
 
   // 매 프레임 마우스 추적
-  useFrame(() => {
+  useFrame((_state, delta) => {
     if (!groupRef.current) return;
 
     raycaster.current.setFromCamera(pointer.current, camera);
@@ -191,7 +235,33 @@ export function MoveModeGhost({
     }
 
     setCollision(result);
+
+    // 배치 차단 흔들림 애니메이션
+    if (shakeTime !== null) {
+      const elapsed = Date.now() - shakeTime;
+      if (elapsed < 300) {
+        const shakeOffset = Math.sin(elapsed * 0.05) * 0.1 * (1 - elapsed / 300);
+        groupRef.current.position.x += shakeOffset;
+      } else {
+        setShakeTime(null);
+      }
+    }
   });
+
+  // 커서 변경
+  useEffect(() => {
+    const canvas = gl.domElement;
+    if (collision.nearBin && !collision.nearBin.valid) {
+      canvas.style.cursor = 'not-allowed';
+    } else if (collision.collides) {
+      canvas.style.cursor = 'not-allowed';
+    } else if (collision.nearBin?.valid) {
+      canvas.style.cursor = 'pointer';
+    } else {
+      canvas.style.cursor = 'crosshair';
+    }
+    return () => { canvas.style.cursor = 'default'; };
+  }, [gl, collision]);
 
   // 마우스 이벤트 등록
   useEffect(() => {
@@ -206,10 +276,28 @@ export function MoveModeGhost({
     const handleClick = (e: MouseEvent) => {
       if (e.button !== 0) return;
 
-      console.log('[HanVoxel] 이동 모드 클릭 — 충돌:', collision.collides, 'BIN:', collision.nearBin ? `${collision.nearBin.rackId} L${collision.nearBin.level} valid=${collision.nearBin.valid}` : 'none');
+      // === 배치 가능 여부 엄격 검사 ===
 
+      // BIN 근처에서 invalid인 경우 — 완전 차단
+      if (collision.nearBin && !collision.nearBin.valid) {
+        const reason = collision.nearBin.reason ?? '이 위치에 배치할 수 없습니다';
+        console.log('[HanVoxel] 배치 차단:', reason);
+        onBlockedToast?.(reason);
+        setShakeTime(Date.now());
+        return; // 배치 완전 차단
+      }
+
+      // 일반 충돌인 경우 — 완전 차단
+      if (collision.collides) {
+        console.log('[HanVoxel] 배치 차단: 충돌 감지');
+        onBlockedToast?.('다른 오브젝트와 충돌합니다');
+        setShakeTime(Date.now());
+        return; // 배치 완전 차단
+      }
+
+      // BIN에 유효한 배치
       if (collision.nearBin?.valid && onDropToBin) {
-        console.log('[HanVoxel] BIN에 배치 확정 →', collision.nearBin.rackId, 'level:', collision.nearBin.level);
+        console.log('[HanVoxel] BIN 배치 확정 ->', collision.nearBin.rackId, 'level:', collision.nearBin.level);
         onDropToBin(movingObject, {
           rackId: collision.nearBin.rackId,
           level: collision.nearBin.level,
@@ -221,9 +309,11 @@ export function MoveModeGhost({
           depth: movingObject.scaleZ,
           height: movingObject.scaleY,
         });
-      } else if (!collision.collides) {
-        onDrop(movingObject, ghostPos);
+        return;
       }
+
+      // 일반 바닥 배치 (충돌 없음, BIN 아님)
+      onDrop(movingObject, ghostPos);
     };
 
     const handleKey = (e: KeyboardEvent) => {
@@ -239,33 +329,36 @@ export function MoveModeGhost({
       canvas.removeEventListener('click', handleClick);
       window.removeEventListener('keydown', handleKey);
     };
-  }, [gl, camera, collision, ghostPos, movingObject, onDrop, onDropToBin, onCancel]);
+  }, [gl, camera, collision, ghostPos, movingObject, onDrop, onDropToBin, onCancel, onBlockedToast]);
 
   // 색상 결정
+  const isBlocked = (collision.nearBin && !collision.nearBin.valid) || collision.collides;
   const ghostColor = collision.nearBin
     ? (collision.nearBin.valid ? '#3FB950' : '#F85149')
     : (collision.collides ? '#F85149' : '#2D7DD2');
 
   const statusText = collision.nearBin
-    ? (collision.nearBin.valid ? 'BIN에 배치 (클릭)' : (collision.nearBin.reason ?? '적재 불가'))
-    : (collision.collides ? '충돌 — 배치 불가' : '클릭하여 배치');
+    ? (collision.nearBin.valid
+        ? 'BIN에 배치 (클릭)'
+        : (collision.nearBin.reason ?? '적재 불가'))
+    : (collision.collides ? '충돌 -- 배치 불가' : '클릭하여 배치');
 
   return (
     <group ref={groupRef}>
       {/* 반투명 고스트 메시 */}
       <mesh>
         <boxGeometry args={[movingObject.scaleX, movingObject.scaleY, movingObject.scaleZ]} />
-        <meshStandardMaterial color={ghostColor} transparent opacity={0.4} depthWrite={false} />
+        <meshStandardMaterial color={ghostColor} transparent opacity={isBlocked ? 0.25 : 0.4} depthWrite={false} />
       </mesh>
       {/* 외곽선 */}
       <mesh>
         <boxGeometry args={[movingObject.scaleX + 0.05, movingObject.scaleY + 0.05, movingObject.scaleZ + 0.05]} />
-        <meshStandardMaterial color={ghostColor} transparent opacity={0.15} wireframe depthWrite={false} />
+        <meshStandardMaterial color={ghostColor} transparent opacity={isBlocked ? 0.3 : 0.15} wireframe depthWrite={false} />
       </mesh>
       {/* 상태 라벨 */}
       <Html distanceFactor={12} position={[0, movingObject.scaleY / 2 + 0.5, 0]} style={{ pointerEvents: 'none' }}>
         <div style={{
-          background: collision.collides || (collision.nearBin && !collision.nearBin.valid) ? 'rgba(248,81,73,0.15)' : 'rgba(63,185,80,0.15)',
+          background: isBlocked ? 'rgba(248,81,73,0.15)' : 'rgba(63,185,80,0.15)',
           border: `1px solid ${ghostColor}`,
           borderRadius: 6,
           padding: '4px 10px',
@@ -277,6 +370,20 @@ export function MoveModeGhost({
           {statusText}
         </div>
       </Html>
+      {/* 차단 시 X 마크 표시 */}
+      {isBlocked && (
+        <Html distanceFactor={8} position={[0, 0, 0]} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            fontSize: 32,
+            color: '#F85149',
+            fontWeight: 900,
+            textShadow: '0 0 8px rgba(248,81,73,0.5)',
+            opacity: 0.6,
+          }}>
+            X
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

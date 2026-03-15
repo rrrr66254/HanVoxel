@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Edit3, Copy, RotateCw, Move, Trash2, Maximize, ArrowUp, ArrowRight, Grid3x3 } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
+// 메뉴 크기 상수
+const MENU_WIDTH = 200;
+const MENU_ITEM_HEIGHT = 36; // 각 항목 높이 (패딩 포함)
+const MENU_HEADER_HEIGHT = 50; // 오브젝트 헤더 높이
+const MENU_DIVIDER_HEIGHT = 9; // 구분선 높이
+const MENU_PADDING = 8; // 상하 패딩
+const VIEWPORT_MARGIN = 8; // viewport 경계 여백
+
 interface ContextMenuProps {
   /** 우클릭한 오브젝트 (없으면 빈 공간 메뉴) */
   object: SpatialObject | null;
@@ -32,8 +40,9 @@ interface MenuItemDef {
 
 /**
  * 3D 뷰어 우클릭 컨텍스트 메뉴
- * - 오브젝트 위 우클릭: 편집/복제/회전 90°/이동/색상/삭제
+ * - 오브젝트 위 우클릭: 편집/복제/회전 90도/이동/삭제
  * - 빈 공간 우클릭: 줌 리셋/탑 뷰/프론트 뷰/그리드 토글
+ * - viewport 경계 체크로 잘림 방지
  */
 export function ContextMenu({
   object, position, onClose,
@@ -73,7 +82,7 @@ export function ContextMenu({
     ? [
         { icon: <Edit3 size={13} />, label: '편집', onClick: () => { onEdit?.(object); onClose(); } },
         { icon: <Copy size={13} />, label: '복제', onClick: () => { onDuplicate?.(object); onClose(); } },
-        { icon: <RotateCw size={13} />, label: '90° 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
+        { icon: <RotateCw size={13} />, label: '90도 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
         { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); }, dividerAfter: true },
         { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: '#F85149' },
       ]
@@ -84,13 +93,36 @@ export function ContextMenu({
         { icon: <Grid3x3 size={13} />, label: gridVisible ? '그리드 숨기기' : '그리드 표시', onClick: () => { onToggleGrid?.(); onClose(); } },
       ];
 
-  // 화면 경계 보정
+  // 메뉴 높이 동적 계산
+  const dividerCount = items.filter((item) => item.dividerAfter).length;
+  const menuHeight = MENU_PADDING
+    + (object ? MENU_HEADER_HEIGHT : 0)
+    + items.length * MENU_ITEM_HEIGHT
+    + dividerCount * MENU_DIVIDER_HEIGHT
+    + MENU_PADDING;
+
+  // viewport 경계 보정
+  let menuX = position.x;
+  let menuY = position.y;
+
+  // 우측 경계 체크
+  if (menuX + MENU_WIDTH > window.innerWidth) {
+    menuX = window.innerWidth - MENU_WIDTH - VIEWPORT_MARGIN;
+  }
+  // 하단 경계 체크
+  if (menuY + menuHeight > window.innerHeight) {
+    menuY = window.innerHeight - menuHeight - VIEWPORT_MARGIN;
+  }
+  // 좌측/상단 최소값
+  if (menuX < VIEWPORT_MARGIN) menuX = VIEWPORT_MARGIN;
+  if (menuY < VIEWPORT_MARGIN) menuY = VIEWPORT_MARGIN;
+
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
-    top: position.y,
-    left: position.x,
+    top: menuY,
+    left: menuX,
     zIndex: 100,
-    minWidth: 180,
+    minWidth: MENU_WIDTH,
     background: 'rgba(22,27,34,0.98)',
     border: '1px solid #30363D',
     borderRadius: 10,
