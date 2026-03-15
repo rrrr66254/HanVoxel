@@ -7,12 +7,16 @@ interface ContainerModelProps {
   height: number;  // 외부 높이 (m)
   isSelected?: boolean;
   isHovered?: boolean;
+  isReefer?: boolean; // 냉장 컨테이너 여부
+  containerColor?: string; // 사용자 지정 색상
 }
 
 // 컨테이너 색상
-const CONTAINER_COLOR = '#1A5276';
+const DRY_COLOR = '#1A5276';
+const REEFER_COLOR = '#E8E8E8';
 const FITTING_COLOR = '#7F8C8D';
-const DOOR_COLOR = '#154360';
+const DRY_DOOR_COLOR = '#154360';
+const REEFER_DOOR_COLOR = '#B0B0B0';
 
 // 벽 두께
 const WALL_THICKNESS = 0.05;
@@ -31,14 +35,19 @@ export function ContainerModel({
   height,
   isSelected = false,
   isHovered = false,
+  isReefer = false,
+  containerColor,
 }: ContainerModelProps) {
+  const baseColor = containerColor ?? (isReefer ? REEFER_COLOR : DRY_COLOR);
+  const baseDoorColor = isReefer ? REEFER_DOOR_COLOR : DRY_DOOR_COLOR;
+
   const bodyMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: isSelected ? '#2D7DD2' : isHovered ? '#2471A3' : CONTAINER_COLOR,
-      metalness: 0.5,
-      roughness: 0.6,
+      color: isSelected ? '#2D7DD2' : isHovered ? '#2471A3' : baseColor,
+      metalness: isReefer ? 0.7 : 0.5,
+      roughness: isReefer ? 0.3 : 0.6,
     }),
-    [isSelected, isHovered],
+    [isSelected, isHovered, baseColor, isReefer],
   );
 
   const fittingMat = useMemo(
@@ -52,11 +61,11 @@ export function ContainerModel({
 
   const doorMat = useMemo(
     () => new THREE.MeshStandardMaterial({
-      color: isSelected ? '#2563EB' : DOOR_COLOR,
-      metalness: 0.5,
+      color: isSelected ? '#2563EB' : baseDoorColor,
+      metalness: isReefer ? 0.7 : 0.5,
       roughness: 0.5,
     }),
-    [isSelected],
+    [isSelected, baseDoorColor, isReefer],
   );
 
   const halfW = width / 2;
@@ -184,6 +193,23 @@ export function ContainerModel({
           <boxGeometry args={[0.04, 0.04, depth]} />
         </mesh>
       ))}
+
+      {/* 냉장 컨테이너 — 냉각 유닛 (뒷면) */}
+      {isReefer && (
+        <group position={[0, halfH, -halfD - 0.15]}>
+          {/* 냉각 유닛 본체 */}
+          <mesh material={fittingMat}>
+            <boxGeometry args={[width * 0.7, height * 0.6, 0.25]} />
+          </mesh>
+          {/* 냉각 팬 (2개) */}
+          <mesh material={bodyMat} position={[-width * 0.15, 0, -0.13]}>
+            <cylinderGeometry args={[height * 0.12, height * 0.12, 0.05, 16]} />
+          </mesh>
+          <mesh material={bodyMat} position={[width * 0.15, 0, -0.13]}>
+            <cylinderGeometry args={[height * 0.12, height * 0.12, 0.05, 16]} />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }

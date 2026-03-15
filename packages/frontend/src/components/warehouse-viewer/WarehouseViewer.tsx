@@ -510,7 +510,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   return (
     <div className="flex h-full w-full flex-col bg-[#0D1117]">
       {/* 상단 바 */}
-      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} />
+      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} />
 
       {/* 메인 영역 */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -669,7 +669,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       />
 
       {/* 하단 바 */}
-      <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} editLayer={editLayer} onEditLayerChange={setEditLayer} />
+      <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} />
     </div>
   );
 }
