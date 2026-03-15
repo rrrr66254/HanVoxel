@@ -22,28 +22,30 @@ const raycaster = new Raycaster();
 const pointer = new Vector2();
 const intersection = new Vector3();
 
+// KR_STANDARD 랙 기본 규격 (warehouse-standards.md)
+const KR_STANDARD = { w: 2.7, d: 1.1, h: 5.4, levels: 3, levelHeight: 1.5 };
+
 /**
- * 배치 모드 고스트 메시 — 실제 랙 구조 표시 + AABB 충돌 감지
- * - 랙 타입: 실제 프레임/빔 구조 표시
- * - 충돌 시: 빨간색 (배치 불가)
- * - 정상: 파란색 글로우
+ * 배치 모드 고스트 메시 — KR_STANDARD 랙 구조 표시 + AABB 충돌 감지
+ * - 실제 프레임/빔/브레이싱 구조 표시
+ * - 배치 가능: 파란 반투명 glow (opacity 0.5)
+ * - 배치 불가(충돌): 빨간 반투명 (opacity 0.5)
  */
 export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshProps) {
   const groupRef = useRef<Group>(null);
   const { camera, gl } = useThree();
   const [isColliding, setIsColliding] = useState(false);
 
-  const w = preset.width || 1;
-  const d = preset.depth || 1;
-  const h = preset.height || 1;
-
-  // 랙인지 판별
+  // 프리셋 메타에서 랙 정보 추출, 없으면 KR_STANDARD 사용
   const meta = preset.metadata as Record<string, unknown> | null;
-  const isRack = meta?.levels !== undefined;
-  const levels = (meta?.levels as number) ?? 3;
-  const levelHeight = (meta?.levelHeight as number) ?? 1.5;
+  const isRack = meta?.levels !== undefined || preset.width === KR_STANDARD.w;
+  const w = preset.width || KR_STANDARD.w;
+  const d = preset.depth || KR_STANDARD.d;
+  const h = preset.height || KR_STANDARD.h;
+  const levels = (meta?.levels as number) ?? KR_STANDARD.levels;
+  const levelHeight = (meta?.levelHeight as number) ?? KR_STANDARD.levelHeight;
 
-  // 매 프레임마다 마우스 위치로 이동 + 충돌 검사
+  // 매 프레임 마우스 추적 + 충돌 검사
   useFrame(() => {
     if (!groupRef.current) return;
 
@@ -64,7 +66,7 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
     }
   });
 
-  // 마우스 이벤트 등록/해제
+  // 마우스 이벤트
   useEffect(() => {
     const canvas = gl.domElement;
 
@@ -91,21 +93,13 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
     };
   }, [gl, camera, onPlace, isColliding]);
 
-  // 랙 구조 고스트
+  const glowColor = isColliding ? '#EF4444' : '#2D7DD2';
+
+  // 랙 구조 고스트 (항상 실제 구조체 표시)
   if (isRack) {
     return (
       <group ref={groupRef} position={[0, h / 2, 0]}>
-        {/* 반투명 외곽 박스 (글로우 효과) */}
-        <mesh>
-          <boxGeometry args={[w + 0.1, h + 0.1, d + 0.1]} />
-          <meshStandardMaterial
-            color={isColliding ? '#EF4444' : '#2D7DD2'}
-            transparent
-            opacity={0.08}
-            depthWrite={false}
-          />
-        </mesh>
-        {/* 실제 랙 구조 (반투명) */}
+        {/* 실제 랙 구조 (프레임/빔/브레이싱) */}
         <group position={[0, -h / 2, 0]}>
           <RackModel
             width={w}
@@ -117,13 +111,13 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
             isHovered={false}
           />
         </group>
-        {/* 오버레이 반투명 색상 */}
+        {/* 충돌/유효 상태 반투명 오버레이 (opacity 0.5) */}
         <mesh>
-          <boxGeometry args={[w, h, d]} />
+          <boxGeometry args={[w + 0.15, h + 0.15, d + 0.15]} />
           <meshStandardMaterial
-            color={isColliding ? '#EF4444' : '#2D7DD2'}
+            color={glowColor}
             transparent
-            opacity={isColliding ? 0.3 : 0.15}
+            opacity={0.5}
             depthWrite={false}
           />
         </mesh>
@@ -131,26 +125,25 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
     );
   }
 
-  // 기본 박스 고스트
+  // 기본 박스 고스트 (비랙 오브젝트)
   return (
     <group ref={groupRef} position={[0, h / 2, 0]}>
       <mesh>
         <boxGeometry args={[w, h, d]} />
         <meshStandardMaterial
-          color={isColliding ? '#EF4444' : '#2D7DD2'}
+          color={glowColor}
           transparent
-          opacity={isColliding ? 0.4 : 0.3}
+          opacity={0.5}
           depthWrite={false}
         />
       </mesh>
-      {/* 와이어프레임 */}
       <mesh>
         <boxGeometry args={[w, h, d]} />
         <meshStandardMaterial
-          color={isColliding ? '#EF4444' : '#3B82F6'}
+          color={glowColor}
           wireframe
           transparent
-          opacity={0.6}
+          opacity={0.7}
         />
       </mesh>
     </group>

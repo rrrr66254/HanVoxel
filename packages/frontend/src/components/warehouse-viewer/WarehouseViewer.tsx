@@ -8,6 +8,7 @@ import { ObjectInfoPanel } from './ObjectInfoPanel';
 import { DimensionEditor } from './DimensionEditor';
 import { PresetCatalog } from '../preset-catalog';
 import { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
+import { KeyboardControlsHandler, KeyboardHint } from './KeyboardControls';
 import { ZoneListPanel } from './ZoneDrawing';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
@@ -56,6 +57,9 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [zones, setZones] = useState<ZoneConfig[]>([]);
   const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
   const [showZoneList, setShowZoneList] = useState(false);
+
+  // 키보드 힌트
+  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -306,6 +310,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           rotateSpeed={0.5}
           zoomSpeed={1.2}
         />
+        <KeyboardControlsHandler controlsRef={controlsRef} enabled={!placingPreset && !drawingZoneType} />
         <WarehouseScene
           objects={activeObjects}
           selectedId={selectedId}
@@ -568,6 +573,12 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           </button>
         </div>
       )}
+
+      {/* 키보드 단축키 힌트 */}
+      <KeyboardHint
+        visible={showKeyboardHint}
+        onToggle={() => setShowKeyboardHint((v) => !v)}
+      />
 
       {/* Zone 목록 패널 */}
       {showZoneList && (

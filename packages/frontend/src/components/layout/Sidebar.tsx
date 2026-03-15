@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Warehouse,
   Settings,
+  Crown,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -20,46 +21,51 @@ interface MenuItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  color?: string;
+  section?: string;
 }
 
-// 메뉴 목록
+// 메뉴 목록 (섹션별 구분)
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'viewer', icon: Box, label: '3D 창고 뷰어', color: '#2D7DD2' },
-  { id: 'wizard', icon: Warehouse, label: '새 창고 만들기' },
-  { id: 'roi', icon: TrendingUp, label: 'ROI 계산기', color: '#3FB950' },
-  { id: 'sla', icon: BarChart3, label: 'SLA 모니터링', color: '#2D7DD2' },
-  { id: 'qc', icon: ClipboardCheck, label: '품질 검수', color: '#D29922' },
-  { id: 'picking', icon: Smartphone, label: '모바일 피킹', color: '#A371F7' },
-  { id: 'subscription', icon: CreditCard, label: '구독 관리', color: '#39D2C0' },
-  { id: 'erp', icon: FileText, label: 'ERP 관리', color: '#D29922' },
-  { id: 'trade', icon: Globe, label: '무역 인텔리전스', color: '#39D2C0' },
-  { id: 'reorder', icon: ShoppingCart, label: '자동 발주', color: '#6366F1' },
-  { id: 'connector', icon: Link2, label: 'ERP 커넥터', color: '#F85149' },
-  { id: 'benchmark', icon: Shield, label: '업계 벤치마크', color: '#EC4899' },
+  { id: 'viewer', icon: Box, label: '3D 창고 뷰어', section: '공간 관리' },
+  { id: 'wizard', icon: Warehouse, label: '새 창고 만들기', section: '공간 관리' },
+  { id: 'roi', icon: TrendingUp, label: 'ROI 계산기', section: '공간 관리' },
+  { id: 'sla', icon: BarChart3, label: 'SLA 모니터링', section: '운영' },
+  { id: 'qc', icon: ClipboardCheck, label: '품질 검수', section: '운영' },
+  { id: 'picking', icon: Smartphone, label: '모바일 피킹', section: '운영' },
+  { id: 'subscription', icon: CreditCard, label: '구독 관리', section: '설정' },
+  { id: 'erp', icon: FileText, label: 'ERP 관리', section: '인텔리전스' },
+  { id: 'trade', icon: Globe, label: '무역 인텔리전스', section: '인텔리전스' },
+  { id: 'reorder', icon: ShoppingCart, label: '자동 발주', section: '인텔리전스' },
+  { id: 'connector', icon: Link2, label: 'ERP 커넥터', section: '인텔리전스' },
+  { id: 'benchmark', icon: Shield, label: '업계 벤치마크', section: '인텔리전스' },
 ];
 
-// 플랜 배지 색상
-const PLAN_COLORS: Record<string, string> = {
-  STARTER: '#2D7DD2',
-  GROWTH: '#3FB950',
-  ENTERPRISE: '#D4A017',
-};
+// 섹션 순서
+const SECTIONS = ['공간 관리', '운영', '인텔리전스', '설정'];
 
 interface SidebarProps {
   activeMode: string;
   onModeChange: (mode: string) => void;
   planType?: string;
+  onToggleAdmin?: () => void;
 }
 
-export function Sidebar({ activeMode, onModeChange, planType = 'STARTER' }: SidebarProps) {
+export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onToggleAdmin }: SidebarProps) {
+  const isEnterprise = planType === 'ENTERPRISE';
+
+  // 섹션별 메뉴 그룹핑
+  const grouped = SECTIONS.map((section) => ({
+    section,
+    items: MENU_ITEMS.filter((item) => item.section === section),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <aside
       style={{
-        width: 240,
+        width: 260,
         height: '100vh',
-        background: '#161B22',
-        borderRight: '1px solid #30363D',
+        background: '#0D1117',
+        borderRight: '1px solid #21262D',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -69,32 +75,33 @@ export function Sidebar({ activeMode, onModeChange, planType = 'STARTER' }: Side
       {/* 로고 */}
       <div
         style={{
-          padding: '20px 20px 16px',
+          padding: '20px 24px 16px',
           borderBottom: '1px solid #21262D',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: 36,
+              height: 36,
+              borderRadius: 10,
               background: 'linear-gradient(135deg, #2D7DD2, #3FB950)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: 800,
               color: '#fff',
+              boxShadow: '0 2px 8px rgba(45,125,210,0.3)',
             }}
           >
             H
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#E6EDF3', letterSpacing: '-0.3px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#E6EDF3', letterSpacing: '-0.3px' }}>
               HanVoxel
             </div>
-            <div style={{ fontSize: 10, color: '#484F58', marginTop: 1 }}>
+            <div style={{ fontSize: 10, color: '#484F58', marginTop: 1, letterSpacing: '0.3px' }}>
               Spatial Digital Twin
             </div>
           </div>
@@ -106,110 +113,140 @@ export function Sidebar({ activeMode, onModeChange, planType = 'STARTER' }: Side
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 8px',
+          padding: '8px 12px',
         }}
       >
-        <div style={{ fontSize: 10, fontWeight: 600, color: '#484F58', padding: '4px 12px 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          메뉴
-        </div>
-        {MENU_ITEMS.map((item) => {
-          const isActive = activeMode === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onModeChange(item.id)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 12px',
-                marginBottom: 2,
-                borderRadius: 8,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
-                color: isActive ? '#E6EDF3' : '#8B949E',
-                background: isActive ? 'rgba(45, 125, 210, 0.15)' : 'transparent',
-                borderLeft: isActive ? '3px solid #2D7DD2' : '3px solid transparent',
-                transition: 'all 0.15s ease',
-                textAlign: 'left',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = '#21262D';
-                  e.currentTarget.style.color = '#E6EDF3';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#8B949E';
-                }
-              }}
-            >
-              <Icon
-                size={16}
-                style={{ color: isActive ? '#2D7DD2' : (item.color ?? '#8B949E'), opacity: isActive ? 1 : 0.7 }}
-              />
-              {item.label}
-            </button>
-          );
-        })}
+        {grouped.map((group, gi) => (
+          <div key={group.section}>
+            {gi > 0 && (
+              <div style={{ height: 1, background: '#21262D', margin: '8px 8px' }} />
+            )}
+            <div style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: '#484F58',
+              padding: '8px 20px 6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              {group.section}
+            </div>
+            {group.items.map((item) => {
+              const isActive = activeMode === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onModeChange(item.id)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 20px',
+                    marginBottom: 2,
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: isActive ? 600 : 400,
+                    letterSpacing: '0.3px',
+                    color: isActive ? '#E6EDF3' : '#8B949E',
+                    background: isActive ? '#1C2A3A' : 'transparent',
+                    borderLeft: isActive ? '3px solid #2D7DD2' : '3px solid transparent',
+                    transition: 'all 0.15s ease',
+                    textAlign: 'left',
+                    fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = '#161B22';
+                      e.currentTarget.style.color = '#E6EDF3';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#8B949E';
+                    }
+                  }}
+                >
+                  <Icon
+                    size={18}
+                    style={{ color: isActive ? '#2D7DD2' : '#6E7681', flexShrink: 0 }}
+                  />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* 하단 설정 + 플랜 배지 */}
       <div style={{ borderTop: '1px solid #21262D', padding: '12px' }}>
         <button
+          onClick={onToggleAdmin}
           style={{
             width: '100%',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '9px 12px',
+            gap: 12,
+            padding: '12px 20px',
             borderRadius: 8,
             border: 'none',
             cursor: 'pointer',
-            fontSize: 13,
+            fontSize: 14,
             color: '#8B949E',
             background: 'transparent',
             fontFamily: 'inherit',
             transition: 'all 0.15s ease',
             textAlign: 'left',
+            letterSpacing: '0.3px',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#21262D'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#161B22'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
         >
-          <Settings size={16} />
+          <Settings size={18} style={{ color: '#6E7681' }} />
           설정
         </button>
 
         {/* 플랜 배지 */}
         <div
           style={{
-            margin: '8px 12px 4px',
-            padding: '8px 12px',
-            borderRadius: 8,
-            background: '#0D1117',
-            border: '1px solid #30363D',
+            margin: '8px 8px 4px',
+            padding: '12px 16px',
+            borderRadius: 12,
+            background: isEnterprise
+              ? 'linear-gradient(135deg, rgba(240,180,41,0.12), rgba(240,180,41,0.04))'
+              : '#161B22',
+            border: isEnterprise
+              ? '1px solid rgba(240,180,41,0.3)'
+              : '1px solid #30363D',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <span style={{ fontSize: 11, color: '#8B949E' }}>현재 플랜</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isEnterprise && (
+              <Crown size={14} style={{ color: '#F0B429' }} />
+            )}
+            <span style={{ fontSize: 11, color: '#8B949E' }}>현재 플랜</span>
+          </div>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 700,
-              color: PLAN_COLORS[planType] ?? '#8B949E',
-              padding: '2px 8px',
-              borderRadius: 4,
-              background: `${PLAN_COLORS[planType] ?? '#8B949E'}20`,
-              letterSpacing: '0.3px',
+              color: isEnterprise ? '#F0B429' : planType === 'GROWTH' ? '#3FB950' : '#2D7DD2',
+              padding: '3px 10px',
+              borderRadius: 6,
+              background: isEnterprise
+                ? 'rgba(240,180,41,0.15)'
+                : planType === 'GROWTH'
+                  ? 'rgba(63,185,80,0.15)'
+                  : 'rgba(45,125,210,0.15)',
+              letterSpacing: '0.5px',
             }}
           >
             {planType}
