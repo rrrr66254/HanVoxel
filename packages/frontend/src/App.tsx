@@ -10,13 +10,14 @@ import { PickingMobile } from './components/picking-mobile';
 import { UpgradeModal } from './components/upgrade-modal';
 import { SubscriptionDashboard } from './components/subscription-dashboard';
 import { ErpDashboard } from './components/erp-dashboard';
+import { TradeDashboard } from './components/trade-intelligence';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -47,6 +48,10 @@ function App() {
   };
 
   const openUpgrade = () => setUpgradeOpen(true);
+
+  if (mode === 'trade') {
+    return <TradeDashboard onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'erp') {
     return <ErpDashboard onBack={() => setMode('viewer')} />;
@@ -176,6 +181,12 @@ function App() {
           className="rounded-lg border border-amber-700/50 bg-amber-900/30 px-4 py-2 text-xs text-amber-300 backdrop-blur transition-colors hover:bg-amber-900/50"
         >
           ERP 관리
+        </button>
+        <button
+          onClick={() => setMode('trade')}
+          className="rounded-lg border border-teal-700/50 bg-teal-900/30 px-4 py-2 text-xs text-teal-300 backdrop-blur transition-colors hover:bg-teal-900/50"
+        >
+          무역 인텔리전스
         </button>
       </div>
     </div>
