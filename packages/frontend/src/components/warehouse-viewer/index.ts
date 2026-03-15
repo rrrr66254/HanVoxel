@@ -9,3 +9,6 @@ export { EditorTopBar } from './EditorTopBar';
 export { EditorLeftSidebar } from './EditorLeftSidebar';
 export { EditorBottomBar } from './EditorBottomBar';
 export { ContextMenu } from './ContextMenu';
+export { ObjectEditor } from './ObjectEditor';
+export { RackDetailPanel } from './RackDetailPanel';
+export { MoveModeGhost } from './MoveMode';
