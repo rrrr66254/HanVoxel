@@ -904,3 +904,135 @@ model SkuCost {
   @@index([siteId])
   @@map("sku_costs")
 }
+
+// ============================================================
+// Phase 3 Step 2 — HS 코드 글로벌 무역 인텔리전스
+// ============================================================
+
+/// HS 코드 마스터 (6자리 기준)
+model HsCodeMaster {
+  hsCode        String @id @map("hs_code") @db.VarChar(10)
+  /// 한국어 품목 설명
+  description   String @db.VarChar(500)
+  /// 영문 품목 설명
+  descriptionEn String @map("description_en") @db.VarChar(500)
+  /// 챕터 (2자리, 예: "87")
+  chapter       String @db.VarChar(2)
+  /// 헤딩 (4자리, 예: "8703")
+  heading       String @db.VarChar(4)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([chapter])
+  @@index([heading])
+  @@map("hs_code_master")
+}
+
+/// 유저 HS 코드 즐겨찾기
+model HsCodeWatch {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  /// HS 코드 (6자리)
+  hsCode        String   @map("hs_code") @db.VarChar(10)
+  /// 품목 설명
+  description   String   @db.VarChar(500)
+  /// 영문 품목 설명
+  descriptionEn String?  @map("description_en") @db.VarChar(500)
+  /// 주요 관심 코드 여부
+  isMain        Boolean  @default(false) @map("is_main")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([companyId, hsCode])
+  @@index([companyId])
+  @@map("hs_code_watch")
+}
+
+/// 수집된 무역 데이터 캐시 (TTL 관리)
+model TradeDataCache {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// HS 코드 (6자리)
+  hsCode      String   @map("hs_code") @db.VarChar(10)
+  /// 보고국 ISO3 코드
+  reporterIso String   @map("reporter_iso") @db.VarChar(3)
+  /// 상대국 ISO3 코드
+  partnerIso  String   @map("partner_iso") @db.VarChar(3)
+  /// 기간 (YYYY-MM 형식)
+  period      String   @db.VarChar(7)
+  /// 수출/수입 (EXPORT | IMPORT)
+  flowType    String   @map("flow_type") @db.VarChar(10)
+  /// 교역 금액 (USD)
+  valueUsd    Float    @map("value_usd")
+  /// 중량 (kg)
+  weightKg    Float?   @map("weight_kg")
+  /// 데이터 소스 (UN_COMTRADE | KR_CUSTOMS | US_CENSUS | EU_EUROSTAT)
+  source      String   @db.VarChar(20)
+  /// 수집 시각
+  fetchedAt   DateTime @default(now()) @map("fetched_at") @db.Timestamptz
+  /// 캐시 만료 시각
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz
+
+  @@unique([hsCode, reporterIso, partnerIso, period, flowType])
+  @@index([hsCode])
+  @@index([expiresAt])
+  @@map("trade_data_cache")
+}
+
+/// 유저 HS 코드 검색 로그
+model HsSearchLog {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 회사 ID (비로그인 시 null)
+  companyId   String?  @map("company_id") @db.Uuid
+  /// 검색한 HS 코드
+  hsCode      String   @map("hs_code") @db.VarChar(10)
+  /// 보고국 ISO3 코드
+  reporterIso String   @map("reporter_iso") @db.VarChar(3)
+  /// 검색 시각
+  searchedAt  DateTime @default(now()) @map("searched_at") @db.Timestamptz
+  /// 결과 건수
+  resultCount Int      @default(0) @map("result_count")
+  /// 캐시 히트 여부
+  cacheHit    Boolean  @default(false) @map("cache_hit")
+
+  @@index([hsCode])
+  @@index([searchedAt])
+  @@map("hs_search_log")
+}
+
+/// HS 코드별 선점 현황 (데이터 플라이휠 추적)
+model HsCodeCoverage {
+  /// HS 코드 (6자리, PK)
+  hsCode          String    @id @map("hs_code") @db.VarChar(10)
+  /// 마지막 수집 시각
+  lastFetchedAt   DateTime? @map("last_fetched_at") @db.Timestamptz
+  /// 총 수집 횟수
+  fetchCount      Int       @default(0) @map("fetch_count")
+  /// 유저 검색 횟수
+  searchCount     Int       @default(0) @map("search_count")
+  /// 우선순위 점수
+  priority        Float     @default(0)
+  /// 인기 코드 여부 (검색 10회 이상)
+  isPopular       Boolean   @default(false) @map("is_popular")
+  /// 캐시 보유 국가 ISO3 목록
+  countriesCached String[]  @map("countries_cached")
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("hs_code_coverage")
+}
+
+/// 야간 배치 실행 로그
+model PrefetchBatchLog {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 실행 시각
+  runAt        DateTime @default(now()) @map("run_at") @db.Timestamptz
+  /// 사용한 API 호출 수
+  callsUsed    Int      @map("calls_used")
+  /// 새로 추가한 코드 수
+  codesAdded   Int      @map("codes_added")
+  /// 캐시 히트율 (%)
+  cacheHitRate Float    @map("cache_hit_rate")
+  /// 전략 (POPULAR: 인기갱신, ADJACENT: 인접선점, RANDOM: 랜덤탐색)
+  strategy     String   @db.VarChar(20)
+
+  @@index([runAt])
+  @@map("prefetch_batch_log")
+}
