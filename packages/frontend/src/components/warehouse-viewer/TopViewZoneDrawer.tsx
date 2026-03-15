@@ -66,6 +66,21 @@ export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: T
     return { x: Math.round(worldX), z: Math.round(worldZ) };
   }, [zoom, pan]);
 
+  // 캔버스 리사이즈 감지
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setCanvasSize({ w: entry.contentRect.width, h: entry.contentRect.height });
+      }
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
   // 캔버스 렌더링
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -173,7 +188,7 @@ export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: T
     }
 
     ctx.restore();
-  }, [zones, startPos, currentPos, selectedType, zoom, pan]);
+  }, [zones, startPos, currentPos, selectedType, zoom, pan, canvasSize]);
 
   // 마우스 이벤트
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -300,22 +315,23 @@ export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: T
 
           <div style={{ width: 1, height: 24, background: '#21262D', margin: '0 4px' }} />
 
-          {/* 3D로 복귀 */}
+          {/* 3D로 복귀 (완료) */}
           <button
             onClick={onClose}
             style={{
               padding: '5px 14px',
               borderRadius: 6,
-              border: '1px solid #30363D',
-              background: '#21262D',
-              color: '#E6EDF3',
+              border: '1px solid #3FB950',
+              background: '#238636',
+              color: '#FFFFFF',
               fontSize: 11,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
+              transition: 'all 0.15s ease',
             }}
           >
-            3D 모드로 복귀
+            완료 (3D 복귀)
           </button>
         </div>
       </div>
