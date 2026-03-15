@@ -95,7 +95,7 @@ export function EditorLeftSidebar({
   };
 
   return (
-    <div className="flex h-full select-none">
+    <div className="flex h-full min-h-0 select-none">
       {/* 아이콘 탭 바 (56px) */}
       <div className="flex w-14 flex-col items-center border-r border-[#2A2F38] bg-[#12151A] py-2">
         <SideTabBtn
@@ -121,7 +121,7 @@ export function EditorLeftSidebar({
 
       {/* 확장 패널 (280px) */}
       {expanded && (
-        <div className="flex h-full w-72 flex-col overflow-hidden border-r border-[#2A2F38] bg-[#1A1D24]">
+        <div className="flex h-full min-h-0 w-72 flex-col overflow-hidden border-r border-[#2A2F38] bg-[#1A1D24]">
           {/* 패널 헤더 */}
           <div className="flex items-center justify-between border-b border-[#2A2F38] px-4 py-3">
             <h3 className="text-sm font-semibold text-white">

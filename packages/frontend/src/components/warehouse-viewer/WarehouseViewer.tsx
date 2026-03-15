@@ -450,7 +450,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} />
 
       {/* 메인 영역 */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* 좌측 사이드바 */}
         <EditorLeftSidebar onSelectPreset={handleSelectPreset} layerVisibility={layerVisibility} onLayerToggle={handleLayerToggle} onDrawZone={handleDrawZone} zones={zones} onDeleteZone={handleDeleteZone} />
 
@@ -566,13 +566,13 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
         {/* 우측 패널 — 편집기 또는 랙 상세 */}
         {rightPanel === 'editor' && editingObject && (
-          <div className="w-72 border-l border-[#2A2F38] bg-[#1A1D24]">
+          <div className="flex min-h-0 w-72 flex-col overflow-hidden border-l border-[#2A2F38] bg-[#1A1D24]">
             <ObjectEditor object={editingObject} onUpdate={handleUpdateObject} onSavePreset={handleSavePreset} onDelete={handleDeleteObject} onClose={() => { setEditingId(null); setRightPanel('none'); }} />
           </div>
         )}
 
         {rightPanel === 'rackDetail' && rackDetailObject && (
-          <div className="w-80 border-l border-[#2A2F38] bg-[#1A1D24]">
+          <div className="flex min-h-0 w-80 flex-col overflow-hidden border-l border-[#2A2F38] bg-[#1A1D24]">
             <RackDetailPanel
               rack={rackDetailObject}
               occupancy={binOccupancy}
