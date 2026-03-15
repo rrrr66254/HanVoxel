@@ -6,3 +6,4 @@ export { RackModel } from './RackModel';
 export { PalletModel } from './PalletModel';
 export { ContainerModel } from './ContainerModel';
 export { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
+export { ContextMenu } from './ContextMenu';

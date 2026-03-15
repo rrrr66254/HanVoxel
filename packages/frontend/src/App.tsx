@@ -14,6 +14,7 @@ import { TradeDashboard } from './components/trade-intelligence';
 import { ReorderDashboard } from './components/reorder-dashboard';
 import { ConnectorDashboard } from './components/connector-dashboard';
 import { BenchmarkDashboard } from './components/benchmark-dashboard';
+import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
@@ -21,7 +22,7 @@ import type { WizardFormData, WarehouseTemplate } from './types/warehouse-templa
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'settings';
 
 // 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
 // localStorage에서 adminMode 확인, 없으면 기본 true
@@ -75,6 +76,8 @@ function App() {
   // 서브페이지 컨텐츠 렌더링
   const renderSubPage = () => {
     switch (mode) {
+      case 'settings':
+        return <SettingsPage onBack={goBack} />;
       case 'benchmark':
         return <BenchmarkDashboard onBack={goBack} />;
       case 'connector':
@@ -109,7 +112,7 @@ function App() {
       <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
         <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginLeft: 24 }}>
-          <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
+          <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} isEnterprise={adminMode} onNavigateSettings={() => setMode('settings')} />
           <div style={{ flex: 1, overflow: 'auto' }}>
             {subPage}
           </div>

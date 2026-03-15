@@ -1,8 +1,11 @@
 import { useRef, useMemo } from 'react';
 import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
+import { EpoxyFloor } from './FloorTexture';
 import { SpatialMesh } from './SpatialMesh';
 import { GhostMesh } from './GhostMesh';
+import { BinOccupancyRenderer } from './BinPlacement';
+import type { BinOccupancy } from './BinPlacement';
 import { ZoneRenderer, ZoneDrawer } from './ZoneDrawing';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import type { SpatialObject } from '../../types/spatial';
@@ -22,6 +25,7 @@ interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
   onSelect: (object: SpatialObject) => void;
+  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void }) => void;
   placingPreset?: SpatialPreset | null;
   onPlace?: (position: [number, number, number]) => void;
   // Zone 시스템
@@ -30,6 +34,10 @@ interface WarehouseSceneProps {
   onZoneDrawComplete?: (zone: Omit<ZoneConfig, 'id' | 'name'>) => void;
   onZoneDrawCancel?: () => void;
   onSelectZone?: (zone: ZoneConfig) => void;
+  // 그리드 표시
+  gridVisible?: boolean;
+  // BIN 적재
+  binOccupancy?: BinOccupancy[];
 }
 
 /**
@@ -42,8 +50,10 @@ interface WarehouseSceneProps {
  * - 조명: 천장 PointLight 4개 (형광등 배치, 흰색 1.5)
  */
 export function WarehouseScene({
-  objects, selectedId, onSelect, placingPreset, onPlace,
+  objects, selectedId, onSelect, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
+  gridVisible = true,
+  binOccupancy = [],
 }: WarehouseSceneProps) {
   const floorRef = useRef<THREE.Mesh>(null);
 
@@ -99,23 +109,11 @@ export function WarehouseScene({
       <pointLight position={[WALL_CENTER_X - 12, 7.5, WALL_CENTER_Z + 10]} intensity={1.5} color="#FFFFFF" distance={30} decay={2} />
       <pointLight position={[WALL_CENTER_X + 12, 7.5, WALL_CENTER_Z + 10]} intensity={1.5} color="#FFFFFF" distance={30} decay={2} />
 
-      {/* 바닥면 — #1A2332 진한 네이비 */}
-      <mesh
-        ref={floorRef}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[WALL_CENTER_X, -0.01, WALL_CENTER_Z]}
-        receiveShadow
-      >
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial
-          color="#1A2332"
-          metalness={0.15}
-          roughness={0.8}
-        />
-      </mesh>
+      {/* 에폭시 타일 바닥 + 안전선 + 이름 라벨 */}
+      <EpoxyFloor />
 
-      {/* 격자 — #2D7DD2 파란 격자선 */}
-      <Grid
+      {/* 격자 오버레이 (토글 가능) — #2D7DD2 파란 격자선 */}
+      {gridVisible && <Grid
         args={[100, 100]}
         cellSize={1}
         cellThickness={0.5}
@@ -125,8 +123,8 @@ export function WarehouseScene({
         sectionColor="#2D7DD2"
         fadeDistance={70}
         fadeStrength={1.5}
-        position={[WALL_CENTER_X, 0, WALL_CENTER_Z]}
-      />
+        position={[WALL_CENTER_X, 0.005, WALL_CENTER_Z]}
+      />}
 
       {/* 창고 외벽 4면 — #1E3A5F 진한 파란 철판 + wireframe */}
       {/* 좌측 벽 */}
@@ -204,9 +202,15 @@ export function WarehouseScene({
           key={obj.id}
           object={obj}
           onSelect={onSelect}
+          onContextMenu={onContextMenu}
           isSelected={obj.id === selectedId}
         />
       ))}
+
+      {/* BIN 적재 오브젝트 */}
+      {binOccupancy.length > 0 && (
+        <BinOccupancyRenderer occupancy={binOccupancy} racks={objects} />
+      )}
 
       {/* Zone 렌더링 */}
       {zones.length > 0 && (

@@ -9,6 +9,10 @@ import { DimensionEditor } from './DimensionEditor';
 import { PresetCatalog } from '../preset-catalog';
 import { ViewerToolbar, CoordinateDisplay, Minimap } from './ViewerToolbar';
 import { KeyboardControlsHandler, KeyboardHint } from './KeyboardControls';
+import { ContextMenu, useContextMenu } from './ContextMenu';
+import { BinOccupancyRenderer, RackDetailPanel } from './BinPlacement';
+import { TopViewZoneDrawer } from './TopViewZoneDrawer';
+import type { BinOccupancy } from './BinPlacement';
 import { ZoneListPanel } from './ZoneDrawing';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
@@ -60,6 +64,19 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   // 키보드 힌트
   const [showKeyboardHint, setShowKeyboardHint] = useState(false);
+
+  // BIN 적재 시스템
+  const [binOccupancy, setBinOccupancy] = useState<BinOccupancy[]>([]);
+  const [selectedRackId, setSelectedRackId] = useState<string | null>(null);
+
+  // 2D 탑뷰 Zone 드로잉 모드
+  const [topViewMode, setTopViewMode] = useState(false);
+
+  // 그리드 표시 여부
+  const [gridVisible, setGridVisible] = useState(true);
+
+  // 우클릭 컨텍스트 메뉴
+  const { contextState, openMenu, closeMenu } = useContextMenu();
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
@@ -197,11 +214,61 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     }
   }, []);
 
+  // 오브젝트 복제
+  const handleDuplicate = useCallback(async (obj: SpatialObject) => {
+    const newObj: SpatialObject = {
+      ...obj,
+      id: crypto.randomUUID(),
+      name: `${obj.name} (복사)`,
+      code: `${obj.code}_COPY_${Date.now()}`,
+      positionX: obj.positionX + 3,
+      positionZ: obj.positionZ + 3,
+    };
+    setPlacedObjects((prev) => [...prev, newObj]);
+    setEditingId(newObj.id);
+    setSelectedId(newObj.id);
+
+    await createSpatialObject({
+      siteId: newObj.siteId,
+      typeId: newObj.typeId,
+      name: newObj.name,
+      code: newObj.code,
+      positionX: newObj.positionX,
+      positionY: newObj.positionY,
+      positionZ: newObj.positionZ,
+      scaleX: newObj.scaleX,
+      scaleY: newObj.scaleY,
+      scaleZ: newObj.scaleZ,
+      color: newObj.color,
+      opacity: newObj.opacity,
+      meshType: newObj.meshType,
+      metadata: newObj.metadata,
+    });
+  }, []);
+
+  // 오브젝트 90° 회전
+  const handleRotate90 = useCallback(async (obj: SpatialObject) => {
+    const updatedObj: SpatialObject = {
+      ...obj,
+      rotationY: obj.rotationY + Math.PI / 2,
+    };
+    setPlacedObjects((prev) => prev.map((o) => (o.id === updatedObj.id ? updatedObj : o)));
+    await updateSpatialObject(updatedObj.id, {
+      rotationY: updatedObj.rotationY,
+    });
+  }, []);
+
   // 객체 선택
   const handleSelect = useCallback((obj: SpatialObject) => {
     setSelectedId(obj.id);
     if (obj.metadata && typeof obj.metadata === 'object' && 'presetId' in obj.metadata) {
       setEditingId(obj.id);
+    }
+    // 랙 선택 시 상세 패널 표시
+    if (obj.type.name === 'RACK') {
+      setSelectedRackId(obj.id);
+    } else {
+      setSelectedRackId(null);
     }
   }, []);
 
@@ -277,6 +344,29 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setZones((prev) => prev.filter((z) => z.id !== id));
   }, []);
 
+  // 2D 탑뷰에서 Zone 추가
+  const handleAddZoneFromTopView = useCallback((zone: Omit<ZoneConfig, 'id'>) => {
+    const newZone: ZoneConfig = {
+      ...zone,
+      id: crypto.randomUUID(),
+    };
+    setZones((prev) => [...prev, newZone]);
+  }, []);
+
+  // 2D 탑뷰 모드
+  if (topViewMode) {
+    return (
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <TopViewZoneDrawer
+          zones={zones}
+          onAddZone={handleAddZoneFromTopView}
+          onDeleteZone={handleDeleteZone}
+          onClose={() => setTopViewMode(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       {/* 3D 캔버스 */}
@@ -290,6 +380,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             setSelectedId(null);
             setEditingId(null);
           }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          openMenu(e);
         }}
         onPointerMove={(e) => {
           const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -315,12 +409,18 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           objects={activeObjects}
           selectedId={selectedId}
           onSelect={handleSelect}
+          onContextMenu={(obj, e) => {
+            e.stopPropagation();
+            openMenu(e as unknown as React.MouseEvent, obj);
+          }}
           placingPreset={placingPreset}
           onPlace={handlePlace}
           zones={zones}
           drawingZoneType={drawingZoneType}
           onZoneDrawComplete={handleZoneDrawComplete}
           onZoneDrawCancel={() => setDrawingZoneType(null)}
+          gridVisible={gridVisible}
+          binOccupancy={binOccupancy}
         />
       </Canvas>
 
@@ -514,6 +614,25 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
               </button>
             );
           })}
+          {/* 2D 탑뷰 모드 버튼 */}
+          <button
+            onClick={() => setTopViewMode(true)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: '1px solid rgba(45,125,210,0.3)',
+              background: 'rgba(45,125,210,0.1)',
+              color: '#2D7DD2',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            2D 편집
+          </button>
+
           {zones.length > 0 && (
             <button
               onClick={() => setShowZoneList((v) => !v)}
@@ -578,6 +697,37 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       <KeyboardHint
         visible={showKeyboardHint}
         onToggle={() => setShowKeyboardHint((v) => !v)}
+      />
+
+      {/* 랙 상세 패널 */}
+      {selectedRackId && (() => {
+        const rack = allObjects.find((o) => o.id === selectedRackId);
+        if (!rack) return null;
+        return (
+          <RackDetailPanel
+            rack={rack}
+            occupancy={binOccupancy}
+            onClose={() => setSelectedRackId(null)}
+          />
+        );
+      })()}
+
+      {/* 우클릭 컨텍스트 메뉴 */}
+      <ContextMenu
+        object={contextState.object}
+        position={contextState.position}
+        onClose={closeMenu}
+        onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
+        onDuplicate={handleDuplicate}
+        onRotate90={handleRotate90}
+        onMove={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
+        onColorChange={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); }}
+        onDelete={handleDeleteObject}
+        onResetView={handleResetView}
+        onTopView={() => handleViewModeChange('top')}
+        onFrontView={() => handleViewModeChange('front')}
+        onToggleGrid={() => setGridVisible((v) => !v)}
+        gridVisible={gridVisible}
       />
 
       {/* Zone 목록 패널 */}
