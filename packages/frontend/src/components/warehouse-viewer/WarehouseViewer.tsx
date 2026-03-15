@@ -552,16 +552,6 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             </div>
           )}
 
-          {/* 컨텍스트 메뉴 */}
-          <ContextMenu
-            object={contextState.object} position={contextState.position} onClose={closeMenu}
-            onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); setRightPanel('editor'); }}
-            onDuplicate={handleDuplicate} onRotate90={handleRotate90}
-            onMove={handleStartMove}
-            onDelete={handleDeleteObject} onResetView={handleResetView}
-            onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
-            onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}
-          />
         </div>
 
         {/* 우측 패널 — 편집기 또는 랙 상세 */}
@@ -583,6 +573,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           </div>
         )}
       </div>
+
+      {/* 컨텍스트 메뉴 — Canvas 외부에서 렌더 (클릭 이벤트 버블링 방지) */}
+      <ContextMenu
+        object={contextState.object} position={contextState.position} onClose={closeMenu}
+        onEdit={(obj) => { setEditingId(obj.id); setSelectedId(obj.id); setRightPanel('editor'); }}
+        onDuplicate={handleDuplicate} onRotate90={handleRotate90}
+        onMove={handleStartMove}
+        onDelete={handleDeleteObject} onResetView={handleResetView}
+        onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
+        onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}
+      />
 
       {/* 하단 바 */}
       <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} />

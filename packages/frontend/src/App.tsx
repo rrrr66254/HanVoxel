@@ -140,7 +140,7 @@ function App() {
           />
         )}
 
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
           <WarehouseViewer objects={objects} />
         </div>
       </div>
