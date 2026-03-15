@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: hanvoxel
-      POSTGRES_PASSWORD: hanvoxel_dev_2024
+      POSTGRES_PASSWORD: hanvoxel_password
       POSTGRES_DB: hanvoxel
     ports:
       - "5432:5432"
