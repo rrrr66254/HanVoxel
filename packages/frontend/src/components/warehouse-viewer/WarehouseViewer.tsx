@@ -56,6 +56,19 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [movingObjectId, setMovingObjectId] = useState<string | null>(null);
   const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number; z: number } | null>(null);
 
+  // 토스트 메시지 (배치 차단 시)
+  const [toast, setToast] = useState<{ message: string; time: number } | null>(null);
+  const handleBlockedToast = useCallback((message: string) => {
+    setToast({ message, time: Date.now() });
+  }, []);
+
+  // 토스트 자동 소멸 (3초)
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   // 뷰어 상태
   const [activeTool, setActiveTool] = useState<ToolMode>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -502,6 +515,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
                 onDrop={handleMoveDrop}
                 onDropToBin={handleMoveDropToBin}
                 onCancel={handleMoveCancel}
+                onBlockedToast={handleBlockedToast}
               />
             )}
           </Canvas>
@@ -536,6 +550,14 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           {isDraggingOver && (
             <div onDragOver={handleDragOver} onDrop={handleDrop} className="absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-500/50 bg-blue-500/5" style={{ pointerEvents: 'auto' }}>
               <div className="rounded-xl border border-blue-500 bg-[#1A1D24]/90 px-8 py-4 text-sm font-medium text-blue-300">여기에 드롭하여 배치</div>
+            </div>
+          )}
+
+          {/* 배치 차단 토스트 */}
+          {toast && (
+            <div className="absolute bottom-14 right-4 z-50 animate-pulse rounded-lg border border-red-500/40 bg-red-950/90 px-4 py-2.5 text-xs text-red-300 shadow-lg backdrop-blur">
+              <span className="mr-2 font-bold text-red-400">배치 불가</span>
+              {toast.message}
             </div>
           )}
 
