@@ -132,7 +132,7 @@ export function ContextMenu({
   };
 
   return (
-    <div ref={menuRef} style={menuStyle} onClick={(e) => e.stopPropagation()}>
+    <div ref={menuRef} style={menuStyle} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
       {/* 헤더 (오브젝트일 때) */}
       {object && (
         <div style={{
