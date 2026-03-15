@@ -87,6 +87,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0, z: 0 });
   const [layerVisibility, setLayerVisibility] = useState({ racks: true, aisles: true, zones: true });
 
+  // 편집 레이어 모드: 'structure'(바닥/벽) vs 'objects'(랙/팔레트/박스 등)
+  type EditLayerMode = 'structure' | 'objects';
+  const [editLayer, setEditLayer] = useState<EditLayerMode>('objects');
+
   // Zone 시스템 상태
   const [zones, setZones] = useState<ZoneConfig[]>([]);
   const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
@@ -285,6 +289,15 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }, [placingPreset, currentSiteId]);
 
   // === 오브젝트 CRUD ===
+  // 로컬 프리뷰 업데이트 (DB 저장 없이 실시간 반영)
+  const handlePreviewUpdate = useCallback((updated: SpatialObject) => {
+    setPlacedObjects((prev) => {
+      const exists = prev.some((o) => o.id === updated.id);
+      if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+      return [...prev, updated];
+    });
+  }, []);
+
   const handleUpdateObject = useCallback(async (updated: SpatialObject) => {
     setSaving(true);
     setPlacedObjects((prev) => {
@@ -544,6 +557,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
               zones={zones} drawingZoneType={drawingZoneType}
               onZoneDrawComplete={handleZoneDrawComplete}
               onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
+              editLayer={editLayer} onResize={handlePreviewUpdate}
               gridVisible={gridVisible} binOccupancy={binOccupancy}
             />
 
@@ -615,7 +629,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             onClick={(e) => e.stopPropagation()}
             style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,125,210,0.15)' }}
           >
-            <ObjectEditor object={editingObject} onUpdate={handleUpdateObject} onSavePreset={handleSavePreset} onDelete={(id) => { handleDeleteObject(id); setEditingId(null); setRightPanel('none'); }} onClose={() => { setEditingId(null); setRightPanel('none'); }} />
+            <ObjectEditor object={editingObject} onUpdate={handleUpdateObject} onPreview={handlePreviewUpdate} onSavePreset={handleSavePreset} onDelete={(id) => { handleDeleteObject(id); setEditingId(null); setRightPanel('none'); }} onClose={() => { setEditingId(null); setRightPanel('none'); }} />
           </div>
         </div>
       )}
@@ -655,7 +669,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       />
 
       {/* 하단 바 */}
-      <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} />
+      <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} editLayer={editLayer} onEditLayerChange={setEditLayer} />
     </div>
   );
 }

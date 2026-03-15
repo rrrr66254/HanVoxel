@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { SpatialPreset } from '../../types/preset';
+import { PresetThumbnail } from './PresetThumbnail';
 
 interface PresetCardProps {
   preset: SpatialPreset;
@@ -15,12 +16,29 @@ const REGION_LABEL: Record<string, string> = {
   INTL: '국제',
 };
 
+// 프리셋 코드에서 카테고리 추론
+function inferCategory(preset: SpatialPreset): string {
+  const catName = preset.category?.name?.toUpperCase() ?? '';
+  if (catName) return catName;
+  const code = preset.code?.toUpperCase() ?? '';
+  if (code.includes('RACK') || preset.levels) return 'RACK';
+  if (code.includes('LOADED')) return 'LOADED_PALLET';
+  if (code.includes('PALLET') || code.startsWith('T11') || code.startsWith('T12') || code.startsWith('T08') || code.startsWith('ISO_')) return 'PALLET';
+  if (code.includes('CONTAINER') || code.includes('DRY_') || code.includes('HC_') || code.includes('REEFER')) return 'CONTAINER';
+  if (code.includes('AISLE')) return 'AISLE';
+  if (code.includes('BOX') || code.includes('FOOD') || code.includes('AUTO') || code.includes('PHARMA')) return 'PRODUCT_BOX';
+  if (code.includes('FLOOR')) return 'FLOOR';
+  if (code.includes('WALL')) return 'WALL';
+  if (code.includes('DOOR')) return 'DOOR';
+  return 'RACK';
+}
+
 /**
- * 개별 프리셋 규격 카드 — 드래그 앤 드롭 지원
+ * 개별 프리셋 규격 카드 — 등각 투영 썸네일 + 드래그 앤 드롭
  */
 export function PresetCard({ preset, onSelect }: PresetCardProps) {
-  // 드래그 중 클릭 방지 플래그
   const isDraggingRef = useRef(false);
+  const category = inferCategory(preset);
 
   // 치수 포맷 (0인 축은 생략)
   const dims = [preset.width, preset.depth, preset.height]
@@ -28,20 +46,16 @@ export function PresetCard({ preset, onSelect }: PresetCardProps) {
     .map((v) => `${(v * 1000).toFixed(0)}`)
     .join(' × ');
 
-  // 드래그 시작 — 프리셋 데이터를 dataTransfer에 저장
   const handleDragStart = (e: React.DragEvent) => {
     isDraggingRef.current = true;
     e.dataTransfer.setData('application/hanvoxel-preset', JSON.stringify(preset));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  // 드래그 종료
   const handleDragEnd = () => {
-    // 클릭 방지 플래그를 비동기로 리셋 (click 이벤트 이후)
     setTimeout(() => { isDraggingRef.current = false; }, 0);
   };
 
-  // 클릭 — 드래그 중이 아닐 때만 실행
   const handleClick = () => {
     if (isDraggingRef.current) return;
     onSelect?.(preset);
@@ -55,42 +69,52 @@ export function PresetCard({ preset, onSelect }: PresetCardProps) {
       onClick={handleClick}
       className={`rounded-lg border border-gray-700 bg-gray-800/80 p-3 transition-colors hover:border-gray-500 ${onSelect ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
     >
-      {/* 헤더 */}
-      <div className="mb-2 flex items-start justify-between">
-        <h4 className="text-sm font-semibold text-white leading-tight">{preset.name}</h4>
-        {preset.color && (
-          <span
-            className="mt-0.5 h-3 w-3 shrink-0 rounded-full border border-gray-600"
-            style={{ backgroundColor: preset.color }}
+      {/* 상단: 썸네일 + 기본 정보 */}
+      <div className="mb-2 flex gap-3">
+        {/* 등각 투영 썸네일 */}
+        <div className="shrink-0 rounded-md bg-gray-900/60 p-1" style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <PresetThumbnail
+            category={category}
+            code={preset.code ?? ''}
+            width={preset.width}
+            depth={preset.depth}
+            height={preset.height}
+            color={preset.color}
+            levels={preset.levels}
+            size={64}
           />
-        )}
-      </div>
-
-      {/* 코드 + 지역 배지 */}
-      <div className="mb-2 flex flex-wrap gap-1">
-        <span className="rounded bg-gray-700 px-1.5 py-0.5 text-[10px] font-mono text-gray-300">
-          {preset.code}
-        </span>
-        {preset.region && (
-          <span className="rounded bg-blue-900/50 px-1.5 py-0.5 text-[10px] text-blue-300">
-            {REGION_LABEL[preset.region] ?? preset.region}
-          </span>
-        )}
-        {preset.standard && (
-          <span className="rounded bg-emerald-900/50 px-1.5 py-0.5 text-[10px] text-emerald-300">
-            {preset.standard}
-          </span>
-        )}
-      </div>
-
-      {/* 치수 */}
-      {dims && (
-        <div className="mb-1 text-xs text-gray-400">
-          <span className="text-gray-500">치수</span>{' '}
-          <span className="font-mono text-gray-300">{dims}</span>
-          <span className="text-gray-500"> mm</span>
         </div>
-      )}
+
+        {/* 이름 + 배지 */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-semibold text-white leading-tight truncate">{preset.name}</h4>
+
+          {/* 코드 + 지역 배지 */}
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            <span className="rounded bg-gray-700 px-1.5 py-0.5 text-[10px] font-mono text-gray-300 truncate max-w-[100px]">
+              {preset.code}
+            </span>
+            {preset.region && (
+              <span className="rounded bg-blue-900/50 px-1.5 py-0.5 text-[10px] text-blue-300">
+                {REGION_LABEL[preset.region] ?? preset.region}
+              </span>
+            )}
+            {preset.standard && (
+              <span className="rounded bg-emerald-900/50 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                {preset.standard}
+              </span>
+            )}
+          </div>
+
+          {/* 치수 (컴팩트) */}
+          {dims && (
+            <div className="mt-1 text-[11px] text-gray-400">
+              <span className="font-mono text-gray-300">{dims}</span>
+              <span className="text-gray-500"> mm</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 상세 스펙 */}
       <div className="space-y-0.5 text-[11px] text-gray-400">

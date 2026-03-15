@@ -1,22 +1,64 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { X, Save, Trash2, Bookmark, RotateCcw } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 interface ObjectEditorProps {
   object: SpatialObject;
   onUpdate: (updated: SpatialObject) => void;
+  onPreview?: (updated: SpatialObject) => void;
   onSavePreset: (object: SpatialObject) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }
 
+// 오브젝트 타입 분류
+type ObjectCategory = 'rack' | 'pallet' | 'loadedPallet' | 'box' | 'container' | 'aisle' | 'floor' | 'wall' | 'door' | 'generic';
+
+function getObjectCategory(typeName: string, meta: Record<string, unknown>, code: string): ObjectCategory {
+  if (meta.floorStyle) return 'floor';
+  if (meta.doorStyle) return 'door';
+  if (meta.wallStyle) return 'wall';
+  if (typeName === 'FLOOR') return 'floor';
+  if (typeName === 'WALL') return 'wall';
+  if (typeName === 'AISLE' || meta.aisleType || code.includes('AISLE')) return 'aisle';
+  if (typeName === 'RACK' && meta.levels) return 'rack';
+  if (code.includes('LOADED')) return 'loadedPallet';
+  if (meta.itemType === 'pallet' || code.includes('PALLET') || code.includes('T11') || code.includes('T12') || code.includes('T08')) return 'pallet';
+  if (meta.itemType === 'box' || code.includes('BOX_')) return 'box';
+  if ((meta.type as string)?.includes?.('FT') || code.includes('REEFER')) return 'container';
+  if (typeName === 'RACK') return 'rack';
+  return 'generic';
+}
+
+// 카테고리 → 한국어 라벨
+const CATEGORY_LABELS: Record<ObjectCategory, string> = {
+  rack: '랙', pallet: '팔레트', loadedPallet: '적재 팔레트', box: '제품 박스',
+  container: '컨테이너', aisle: '통로', floor: '바닥', wall: '벽', door: '출입문', generic: '오브젝트',
+};
+
+// 카테고리 → 배지 색상
+const CATEGORY_BADGE: Record<ObjectCategory, { bg: string; color: string }> = {
+  rack: { bg: 'rgba(245,158,11,0.15)', color: '#F59E0B' },
+  pallet: { bg: 'rgba(139,105,20,0.15)', color: '#B8956A' },
+  loadedPallet: { bg: 'rgba(139,105,20,0.15)', color: '#B8956A' },
+  box: { bg: 'rgba(180,140,90,0.15)', color: '#D4A44A' },
+  container: { bg: 'rgba(59,130,246,0.15)', color: '#3B82F6' },
+  aisle: { bg: 'rgba(107,114,128,0.15)', color: '#6B7280' },
+  floor: { bg: 'rgba(148,163,184,0.15)', color: '#94A3B8' },
+  wall: { bg: 'rgba(120,130,150,0.15)', color: '#788296' },
+  door: { bg: 'rgba(63,185,80,0.15)', color: '#3FB950' },
+  generic: { bg: 'rgba(45,125,210,0.15)', color: '#2D7DD2' },
+};
+
 /**
- * 타입별 오브젝트 편집 패널 — 더블클릭 시 우측 슬라이드인
- * 랙/팔레트/박스/컨테이너 각각 다른 필드 표시
+ * 타입별 오브젝트 편집 패널
+ * 각 오브젝트 타입에 맞는 전용 필드 표시 + 실시간 프리뷰
  */
-export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose }: ObjectEditorProps) {
+export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDelete, onClose }: ObjectEditorProps) {
   const typeName = object.type.name;
   const meta = (object.metadata ?? {}) as Record<string, unknown>;
+  const code = object.code?.toUpperCase() ?? '';
+  const category = getObjectCategory(typeName, meta, code);
 
   // 공통 필드
   const [name, setName] = useState(object.name);
@@ -81,34 +123,41 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
     setContainerDest((m.destination as string) ?? '');
   }, [object.id]);
 
-  // 적용
-  const handleApply = useCallback(() => {
+  // 현재 상태로 업데이트 객체 생성
+  const buildUpdated = useCallback((): SpatialObject => {
     const updatedMeta = { ...meta };
 
-    // 타입별 메타데이터 업데이트
-    if (typeName === 'RACK') {
-      updatedMeta.levels = rackLevels;
-      updatedMeta.levelHeight = rackLevelHeight;
-      updatedMeta.loadPerLevel = rackLoadPerLevel;
-    } else if (typeName === 'BIN' && meta.itemType === 'pallet') {
-      updatedMeta.boxCount = palletBoxCount;
-      updatedMeta.maxLoad = palletMaxLoad;
-      updatedMeta.inDate = palletInDate;
-      updatedMeta.outDate = palletOutDate;
-    } else if (typeName === 'BIN' && meta.itemType === 'box') {
-      updatedMeta.skuCode = boxSku;
-      updatedMeta.quantity = boxQty;
-      updatedMeta.weight = boxWeight;
-      updatedMeta.inDate = boxInDate;
-      updatedMeta.expiryDate = boxExpiry;
-    } else {
-      // 컨테이너 등 나머지
-      updatedMeta.palletCount = containerPalletCount;
-      updatedMeta.origin = containerOrigin;
-      updatedMeta.destination = containerDest;
+    // 타입별 메타데이터만 업데이트 (다른 타입 필드는 건드리지 않음)
+    switch (category) {
+      case 'rack':
+        updatedMeta.levels = rackLevels;
+        updatedMeta.levelHeight = rackLevelHeight;
+        updatedMeta.loadPerLevel = rackLoadPerLevel;
+        break;
+      case 'pallet':
+      case 'loadedPallet':
+        updatedMeta.boxCount = palletBoxCount;
+        updatedMeta.maxLoad = palletMaxLoad;
+        updatedMeta.inDate = palletInDate;
+        updatedMeta.outDate = palletOutDate;
+        break;
+      case 'box':
+        updatedMeta.skuCode = boxSku;
+        updatedMeta.quantity = boxQty;
+        updatedMeta.weight = boxWeight;
+        updatedMeta.inDate = boxInDate;
+        updatedMeta.expiryDate = boxExpiry;
+        break;
+      case 'container':
+        updatedMeta.palletCount = containerPalletCount;
+        updatedMeta.origin = containerOrigin;
+        updatedMeta.destination = containerDest;
+        break;
+      // floor, wall, door, aisle, generic — 공통 필드만 업데이트 (메타데이터 변경 없음)
+      default: break;
     }
 
-    onUpdate({
+    return {
       ...object,
       name,
       scaleX, scaleY, scaleZ,
@@ -116,8 +165,26 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
       rotationY: rotationY * (Math.PI / 180),
       opacity,
       metadata: updatedMeta,
-    });
-  }, [object, name, scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, opacity, meta, typeName, rackLevels, rackLevelHeight, rackLoadPerLevel, palletBoxCount, palletMaxLoad, palletInDate, palletOutDate, boxSku, boxQty, boxWeight, boxInDate, boxExpiry, containerPalletCount, containerOrigin, containerDest, onUpdate]);
+    };
+  }, [object, name, scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, opacity, meta, category, rackLevels, rackLevelHeight, rackLoadPerLevel, palletBoxCount, palletMaxLoad, palletInDate, palletOutDate, boxSku, boxQty, boxWeight, boxInDate, boxExpiry, containerPalletCount, containerOrigin, containerDest]);
+
+  // 실시간 프리뷰 (디바운스 50ms)
+  const previewTimer = useRef<ReturnType<typeof setTimeout>>();
+  const emitPreview = useCallback(() => {
+    if (!onPreview) return;
+    clearTimeout(previewTimer.current);
+    previewTimer.current = setTimeout(() => {
+      onPreview(buildUpdated());
+    }, 50);
+  }, [onPreview, buildUpdated]);
+
+  // 크기/위치 변경 시 실시간 프리뷰
+  useEffect(() => { emitPreview(); }, [scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, rackLevels, rackLevelHeight, rackLoadPerLevel, opacity]);
+
+  // 적용 (DB 저장)
+  const handleApply = useCallback(() => {
+    onUpdate(buildUpdated());
+  }, [buildUpdated, onUpdate]);
 
   // 리셋
   const handleReset = useCallback(() => {
@@ -130,14 +197,20 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
     setPositionZ(object.positionZ);
     setRotationY(object.rotationY * (180 / Math.PI));
     setOpacity(1.0);
-  }, [object]);
+    emitPreview();
+  }, [object, emitPreview]);
 
-  // 타입 라벨
-  const typeLabel = typeName === 'RACK' ? '랙'
-    : meta.itemType === 'pallet' ? '팔레트'
-    : meta.itemType === 'box' ? '박스'
-    : typeName === 'AISLE' ? '통로'
-    : object.type.label;
+  const badge = CATEGORY_BADGE[category];
+
+  // 크기 라벨 (타입별)
+  const sizeLabels = category === 'floor'
+    ? { x: '가로', y: '', z: '세로' }
+    : category === 'wall'
+    ? { x: '너비', y: '높이', z: '두께' }
+    : { x: 'W', y: 'H', z: 'D' };
+
+  // 바닥은 높이 편집 불필요
+  const showHeight = category !== 'floor';
 
   return (
     <div style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -145,8 +218,8 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{typeLabel} 편집</h3>
-            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(45,125,210,0.15)', color: '#2D7DD2' }}>{typeName}</span>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{CATEGORY_LABELS[category]} 편집</h3>
+            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: badge.bg, color: badge.color }}>{typeName}</span>
           </div>
           <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
@@ -164,9 +237,9 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
         {/* 크기 */}
         <FieldRow label="크기 (m)">
           <div style={{ display: 'flex', gap: 6 }}>
-            <NumField label="W" value={scaleX} onChange={setScaleX} />
-            <NumField label="H" value={scaleY} onChange={setScaleY} />
-            <NumField label="D" value={scaleZ} onChange={setScaleZ} />
+            <NumField label={sizeLabels.x} value={scaleX} onChange={setScaleX} min={0.1} />
+            {showHeight && <NumField label={sizeLabels.y} value={scaleY} onChange={setScaleY} min={0.1} />}
+            <NumField label={sizeLabels.z} value={scaleZ} onChange={setScaleZ} min={0.1} />
           </div>
         </FieldRow>
 
@@ -184,11 +257,23 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
           <NumField label="Y" value={rotationY} onChange={setRotationY} />
         </FieldRow>
 
+        {/* 투명도 (바닥/벽/문만) */}
+        {(category === 'floor' || category === 'wall' || category === 'door') && (
+          <FieldRow label="투명도">
+            <input
+              type="range" min={0} max={1} step={0.05} value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: '#2D7DD2' }}
+            />
+            <span style={{ fontSize: 10, color: '#484F58', textAlign: 'center', display: 'block' }}>{Math.round(opacity * 100)}%</span>
+          </FieldRow>
+        )}
+
         {/* 구분선 */}
         <div style={{ height: 1, background: '#2A2F38' }} />
 
         {/* === 랙 전용 필드 === */}
-        {typeName === 'RACK' && (
+        {category === 'rack' && (
           <>
             <FieldRow label="층 수">
               <NumField label="단" value={rackLevels} onChange={(v) => setRackLevels(Math.max(1, Math.round(v)))} step={1} min={1} max={10} />
@@ -203,7 +288,7 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
         )}
 
         {/* === 팔레트 전용 필드 === */}
-        {meta.itemType === 'pallet' && (
+        {(category === 'pallet' || category === 'loadedPallet') && (
           <>
             <FieldRow label="적재 박스 수">
               <NumField label="개" value={palletBoxCount} onChange={(v) => setPalletBoxCount(Math.max(0, Math.round(v)))} step={1} min={0} />
@@ -221,7 +306,7 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
         )}
 
         {/* === 박스 전용 필드 === */}
-        {meta.itemType === 'box' && (
+        {category === 'box' && (
           <>
             <FieldRow label="SKU 코드">
               <TextInput value={boxSku} onChange={setBoxSku} />
@@ -242,7 +327,7 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
         )}
 
         {/* === 컨테이너 전용 필드 === */}
-        {typeName !== 'RACK' && !meta.itemType && (meta.type as string)?.includes?.('FT') && (
+        {category === 'container' && (
           <>
             <FieldRow label="내부 팔레트 수">
               <NumField label="개" value={containerPalletCount} onChange={(v) => setContainerPalletCount(Math.max(0, Math.round(v)))} step={1} min={0} />
@@ -256,12 +341,62 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
           </>
         )}
 
+        {/* === 통로 전용 정보 === */}
+        {category === 'aisle' && (
+          <>
+            <FieldRow label="통로 타입">
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+                {(meta.aisleType as string) ?? '일반 통로'}
+              </div>
+            </FieldRow>
+          </>
+        )}
+
+        {/* === 바닥 전용 정보 === */}
+        {category === 'floor' && (
+          <>
+            <FieldRow label="바닥 스타일">
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+                {(meta.floorStyle as string) ?? 'EPOXY_GRAY'}
+              </div>
+            </FieldRow>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+              가장자리/모서리 핸들을 드래그하여 크기를 조절할 수 있습니다.
+            </div>
+          </>
+        )}
+
+        {/* === 벽 전용 정보 === */}
+        {category === 'wall' && (
+          <>
+            <FieldRow label="벽 스타일">
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+                {(meta.wallStyle as string) ?? 'SANDWICH_PANEL'}
+              </div>
+            </FieldRow>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+              가장자리/모서리 핸들을 드래그하여 크기를 조절할 수 있습니다.
+            </div>
+          </>
+        )}
+
+        {/* === 출입문 전용 정보 === */}
+        {category === 'door' && (
+          <>
+            <FieldRow label="문 스타일">
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+                {(meta.doorStyle as string) ?? 'ROLLING_SHUTTER'}
+              </div>
+            </FieldRow>
+          </>
+        )}
+
         {/* 적용 버튼 */}
         <button
           onClick={handleApply}
           style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: '#2D7DD2', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}
         >
-          <Save size={14} /> 적용
+          <Save size={14} /> 저장
         </button>
 
         <div style={{ height: 1, background: '#2A2F38' }} />
