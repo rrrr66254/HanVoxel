@@ -80,7 +80,9 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  const allObjects = [...objects, ...placedObjects];
+  // 템플릿 객체가 placedObjects에 override된 경우 중복 제거
+  const placedIds = new Set(placedObjects.map((o) => o.id));
+  const allObjects = [...objects.filter((o) => !placedIds.has(o.id)), ...placedObjects];
   const selectedObject = allObjects.find((o) => o.id === selectedId) ?? null;
   const editingObject = allObjects.find((o) => o.id === editingId) ?? null;
 
@@ -168,10 +170,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     [placingPreset, currentSiteId],
   );
 
-  // 치수 편집 적용
+  // 치수 편집 적용 — placedObjects에 있으면 업데이트, 없으면 템플릿 객체를 override로 추가
   const handleUpdateObject = useCallback(async (updated: SpatialObject) => {
     setSaving(true);
-    setPlacedObjects((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setPlacedObjects((prev) => {
+      const exists = prev.some((o) => o.id === updated.id);
+      if (exists) {
+        return prev.map((o) => (o.id === updated.id ? updated : o));
+      }
+      // 템플릿 객체 → placedObjects에 override로 추가
+      return [...prev, updated];
+    });
     await updateSpatialObject(updated.id, {
       name: updated.name,
       positionX: updated.positionX, positionY: updated.positionY, positionZ: updated.positionZ,
@@ -258,12 +267,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     });
   }, []);
 
-  // 객체 선택
+  // 객체 선택 — 모든 객체를 DimensionEditor로 편집 가능
   const handleSelect = useCallback((obj: SpatialObject) => {
     setSelectedId(obj.id);
-    if (obj.metadata && typeof obj.metadata === 'object' && 'presetId' in obj.metadata) {
-      setEditingId(obj.id);
-    }
+    setEditingId(obj.id);
     // 랙 선택 시 상세 패널 표시
     if (obj.type.name === 'RACK') {
       setSelectedRackId(obj.id);

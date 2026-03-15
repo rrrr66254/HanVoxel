@@ -176,6 +176,8 @@ export function EpoxyFloor({ warehouseName = 'HANVOXEL' }: { warehouseName?: str
           map={texture}
           metalness={0.15}
           roughness={0.7}
+          transparent={false}
+          depthWrite={true}
         />
       </mesh>
 
