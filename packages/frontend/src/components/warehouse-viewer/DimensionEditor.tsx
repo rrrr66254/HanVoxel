@@ -81,17 +81,11 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 70,
-        right: 16,
-        width: 280,
-        background: '#161B22',
-        border: '1px solid #2D7DD2',
-        borderRadius: 12,
+        width: '100%',
+        height: '100%',
+        background: '#1A1D24',
         color: '#E6EDF3',
-        boxShadow: '0 0 20px rgba(45,125,210,0.15), 0 8px 32px rgba(0,0,0,0.5)',
-        zIndex: 20,
-        overflow: 'hidden',
+        overflow: 'auto',
       }}
     >
       {/* 헤더 */}

@@ -1,0 +1,172 @@
+import {
+  Grid3x3,
+  Magnet,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Keyboard,
+} from 'lucide-react';
+import { useState } from 'react';
+
+interface EditorBottomBarProps {
+  cursorPos: { x: number; y: number; z: number };
+  gridVisible: boolean;
+  onToggleGrid: () => void;
+  snapEnabled: boolean;
+  onSnapToggle: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetView: () => void;
+}
+
+/**
+ * 하단 바 — 오늘의집 스타일
+ * [그리드] [스냅] | X Y Z 좌표 | [키보드] | [줌-][줌+] [리셋]
+ */
+export function EditorBottomBar({
+  cursorPos,
+  gridVisible,
+  onToggleGrid,
+  snapEnabled,
+  onSnapToggle,
+  onZoomIn,
+  onZoomOut,
+  onResetView,
+}: EditorBottomBarProps) {
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  return (
+    <div className="relative flex h-9 items-center border-t border-[#2A2F38] bg-[#1A1D24] px-3 text-[11px] select-none">
+      {/* 좌측 — 토글 */}
+      <div className="flex items-center gap-1">
+        <BottomToggle
+          icon={<Grid3x3 size={13} />}
+          label="그리드"
+          active={gridVisible}
+          onClick={onToggleGrid}
+        />
+        <BottomToggle
+          icon={<Magnet size={13} />}
+          label="스냅"
+          active={snapEnabled}
+          onClick={onSnapToggle}
+        />
+      </div>
+
+      {/* 구분선 */}
+      <div className="mx-3 h-4 w-px bg-[#2A2F38]" />
+
+      {/* 중앙 — 좌표 */}
+      <div className="flex items-center gap-3 font-mono text-[11px]">
+        <span className="text-gray-500">
+          <span className="font-semibold text-red-400">X</span>{' '}
+          <span className="text-gray-400">{cursorPos.x.toFixed(1)}</span>
+        </span>
+        <span className="text-gray-500">
+          <span className="font-semibold text-green-400">Y</span>{' '}
+          <span className="text-gray-400">{cursorPos.y.toFixed(1)}</span>
+        </span>
+        <span className="text-gray-500">
+          <span className="font-semibold text-blue-400">Z</span>{' '}
+          <span className="text-gray-400">{cursorPos.z.toFixed(1)}</span>
+        </span>
+      </div>
+
+      {/* 우측 — 단축키 + 줌 */}
+      <div className="ml-auto flex items-center gap-1">
+        {/* 단축키 버튼 */}
+        <button
+          onClick={() => setShowShortcuts((v) => !v)}
+          className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
+            showShortcuts
+              ? 'bg-blue-600/20 text-blue-400'
+              : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+          }`}
+          title="단축키"
+        >
+          <Keyboard size={13} />
+        </button>
+
+        <div className="mx-1.5 h-4 w-px bg-[#2A2F38]" />
+
+        {/* 줌 */}
+        <button
+          onClick={onZoomOut}
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          title="줌 아웃"
+        >
+          <ZoomOut size={13} />
+        </button>
+        <button
+          onClick={onZoomIn}
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          title="줌 인"
+        >
+          <ZoomIn size={13} />
+        </button>
+        <button
+          onClick={onResetView}
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          title="뷰 초기화"
+        >
+          <Maximize2 size={13} />
+        </button>
+      </div>
+
+      {/* 단축키 패널 */}
+      {showShortcuts && (
+        <div className="absolute bottom-10 right-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24] p-3 shadow-xl">
+          <h4 className="mb-2 text-xs font-semibold text-white">단축키</h4>
+          <div className="space-y-1 text-[11px]">
+            <ShortcutRow keys="W A S D" desc="카메라 이동" />
+            <ShortcutRow keys="Q / E" desc="카메라 상/하" />
+            <ShortcutRow keys="Shift" desc="3배속" />
+            <ShortcutRow keys="← → ↑ ↓" desc="카메라 회전" />
+            <ShortcutRow keys="V" desc="선택 도구" />
+            <ShortcutRow keys="G" desc="이동 도구" />
+            <ShortcutRow keys="R" desc="회전 도구" />
+            <ShortcutRow keys="Del" desc="삭제" />
+            <ShortcutRow keys="ESC" desc="취소" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 하단 토글 버튼
+function BottomToggle({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors ${
+        active
+          ? 'bg-blue-600/15 text-blue-400'
+          : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// 단축키 행
+function ShortcutRow({ keys, desc }: { keys: string; desc: string }) {
+  return (
+    <div className="flex justify-between gap-6">
+      <span className="font-mono text-gray-400">{keys}</span>
+      <span className="text-gray-500">{desc}</span>
+    </div>
+  );
+}
