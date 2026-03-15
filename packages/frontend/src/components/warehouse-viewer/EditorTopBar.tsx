@@ -14,6 +14,7 @@ import {
 
 type ToolMode = 'select' | 'move' | 'rotate' | 'delete';
 type ViewMode = 'perspective' | 'top' | 'front';
+type EditLayerMode = 'structure' | 'objects';
 
 interface EditorTopBarProps {
   activeTool: ToolMode;
@@ -23,6 +24,8 @@ interface EditorTopBarProps {
   onTopView2D: () => void;
   saving: boolean;
   objectCount: number;
+  editLayer?: EditLayerMode;
+  onEditLayerChange?: (layer: EditLayerMode) => void;
 }
 
 /**
@@ -37,6 +40,8 @@ export function EditorTopBar({
   onTopView2D,
   saving,
   objectCount,
+  editLayer = 'objects',
+  onEditLayerChange,
 }: EditorTopBarProps) {
   return (
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
@@ -135,28 +140,62 @@ export function EditorTopBar({
       </div>
 
       {/* 우측 영역 — 상태 정보 */}
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-3">
         {/* 객체 수 */}
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <span className="font-mono font-bold text-blue-400">{objectCount}</span>
           <span>객체</span>
         </div>
 
-        {/* 저장 상태 */}
-        {saving && (
-          <div className="flex items-center gap-1.5 text-[11px] text-amber-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
-            저장 중...
-          </div>
-        )}
+        {/* 구분선 */}
+        <div className="h-6 w-px bg-[#2A2F38]" />
 
-        {/* 저장 버튼 */}
+        {/* 편집 레이어 모드 스위치 */}
+        <div className="flex items-center rounded-lg border border-[#2A2F38] bg-[#0D1117] p-0.5">
+          <button
+            onClick={() => onEditLayerChange?.('structure')}
+            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              editLayer === 'structure'
+                ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/10'
+                : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+            }`}
+            title="구조물 편집 모드 (바닥/벽/통로/구역)"
+          >
+            <Layers size={12} />
+            구조물
+          </button>
+          <button
+            onClick={() => onEditLayerChange?.('objects')}
+            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              editLayer === 'objects'
+                ? 'bg-blue-500/20 text-blue-400 shadow-sm shadow-blue-500/10'
+                : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+            }`}
+            title="오브젝트 편집 모드 (랙/팔레트/컨테이너)"
+          >
+            <Box size={12} />
+            오브젝트
+          </button>
+        </div>
+
+        {/* 구분선 */}
+        <div className="h-6 w-px bg-[#2A2F38]" />
+
+        {/* 저장 버튼 (프리미엄 스타일) */}
         <button
-          className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-          title="저장"
+          className={`group relative flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold text-white transition-all ${
+            saving
+              ? 'bg-amber-600/80 shadow-md shadow-amber-500/20'
+              : 'bg-gradient-to-r from-blue-600 to-blue-500 shadow-md shadow-blue-500/25 hover:from-blue-500 hover:to-blue-400 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.97]'
+          }`}
+          title="저장 (Ctrl+S)"
+          disabled={saving}
         >
-          <Save size={13} />
-          저장
+          <Save size={14} className={saving ? 'animate-spin' : 'transition-transform group-hover:scale-110'} />
+          {saving ? '저장 중...' : '저장'}
+          {!saving && (
+            <span className="absolute inset-0 rounded-lg bg-white/5 opacity-0 transition-opacity group-hover:opacity-100" />
+          )}
         </button>
       </div>
     </div>

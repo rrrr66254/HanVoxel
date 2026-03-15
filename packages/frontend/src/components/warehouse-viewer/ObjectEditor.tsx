@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { X, Save, Trash2, Bookmark, RotateCcw } from 'lucide-react';
+import { X, Save, Trash2, Bookmark, RotateCcw, Palette } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 interface ObjectEditorProps {
@@ -93,6 +93,18 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
   const [containerPalletCount, setContainerPalletCount] = useState<number>((meta.palletCount as number) ?? 0);
   const [containerOrigin, setContainerOrigin] = useState<string>((meta.origin as string) ?? '');
   const [containerDest, setContainerDest] = useState<string>((meta.destination as string) ?? '');
+  const [containerCbm, setContainerCbm] = useState<number>((meta.cbm as number) ?? 0);
+  const [containerMaxLoad, setContainerMaxLoad] = useState<number>((meta.maxLoad as number) ?? 0);
+  const [containerType, setContainerType] = useState<string>((meta.type as string) ?? '');
+
+  // 색상 편집 (공통)
+  const [objectColor, setObjectColor] = useState<string>(object.color ?? '#6b7280');
+
+  // 통로 전용
+  const [aisleType, setAisleType] = useState<string>((meta.aisleType as string) ?? '');
+
+  // 구역 전용
+  const [zoneType, setZoneType] = useState<string>((meta.zoneType as string) ?? '');
 
   // 객체가 변경되면 상태 리셋
   useEffect(() => {
@@ -121,6 +133,12 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
     setContainerPalletCount((m.palletCount as number) ?? 0);
     setContainerOrigin((m.origin as string) ?? '');
     setContainerDest((m.destination as string) ?? '');
+    setContainerCbm((m.cbm as number) ?? 0);
+    setContainerMaxLoad((m.maxLoad as number) ?? 0);
+    setContainerType((m.type as string) ?? '');
+    setObjectColor(object.color ?? '#6b7280');
+    setAisleType((m.aisleType as string) ?? '');
+    setZoneType((m.zoneType as string) ?? '');
   }, [object.id]);
 
   // 현재 상태로 업데이트 객체 생성
@@ -152,8 +170,14 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         updatedMeta.palletCount = containerPalletCount;
         updatedMeta.origin = containerOrigin;
         updatedMeta.destination = containerDest;
+        updatedMeta.cbm = containerCbm;
+        updatedMeta.maxLoad = containerMaxLoad;
+        updatedMeta.type = containerType;
         break;
-      // floor, wall, door, aisle, generic — 공통 필드만 업데이트 (메타데이터 변경 없음)
+      case 'aisle':
+        updatedMeta.aisleType = aisleType;
+        break;
+      // floor, wall, door, generic — 공통 필드만 업데이트 (메타데이터 변경 없음)
       default: break;
     }
 
@@ -164,9 +188,10 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
       positionX, positionY, positionZ,
       rotationY: rotationY * (Math.PI / 180),
       opacity,
+      color: objectColor,
       metadata: updatedMeta,
     };
-  }, [object, name, scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, opacity, meta, category, rackLevels, rackLevelHeight, rackLoadPerLevel, palletBoxCount, palletMaxLoad, palletInDate, palletOutDate, boxSku, boxQty, boxWeight, boxInDate, boxExpiry, containerPalletCount, containerOrigin, containerDest]);
+  }, [object, name, scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, opacity, objectColor, meta, category, rackLevels, rackLevelHeight, rackLoadPerLevel, palletBoxCount, palletMaxLoad, palletInDate, palletOutDate, boxSku, boxQty, boxWeight, boxInDate, boxExpiry, containerPalletCount, containerOrigin, containerDest, containerCbm, containerMaxLoad, containerType, aisleType]);
 
   // 실시간 프리뷰 (디바운스 50ms)
   const previewTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -179,7 +204,7 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
   }, [onPreview, buildUpdated]);
 
   // 크기/위치 변경 시 실시간 프리뷰
-  useEffect(() => { emitPreview(); }, [scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, rackLevels, rackLevelHeight, rackLoadPerLevel, opacity]);
+  useEffect(() => { emitPreview(); }, [scaleX, scaleY, scaleZ, positionX, positionY, positionZ, rotationY, rackLevels, rackLevelHeight, rackLoadPerLevel, opacity, objectColor]);
 
   // 적용 (DB 저장)
   const handleApply = useCallback(() => {
@@ -197,6 +222,7 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
     setPositionZ(object.positionZ);
     setRotationY(object.rotationY * (180 / Math.PI));
     setOpacity(1.0);
+    setObjectColor(object.color ?? '#6b7280');
     emitPreview();
   }, [object, emitPreview]);
 
@@ -257,8 +283,32 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
           <NumField label="Y" value={rotationY} onChange={setRotationY} />
         </FieldRow>
 
-        {/* 투명도 (바닥/벽/문만) */}
-        {(category === 'floor' || category === 'wall' || category === 'door') && (
+        {/* 색상 (통로/구역/컨테이너) */}
+        {(category === 'aisle' || category === 'generic' || category === 'container') && (
+          <FieldRow label="색상">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="color"
+                  value={objectColor}
+                  onChange={(e) => setObjectColor(e.target.value)}
+                  style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
+                />
+              </div>
+              <input
+                type="text"
+                value={objectColor}
+                onChange={(e) => setObjectColor(e.target.value)}
+                style={{ flex: 1, borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'monospace' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+              />
+            </div>
+          </FieldRow>
+        )}
+
+        {/* 투명도 (바닥/벽/문/통로/구역) */}
+        {(category === 'floor' || category === 'wall' || category === 'door' || category === 'aisle' || category === 'generic') && (
           <FieldRow label="투명도">
             <input
               type="range" min={0} max={1} step={0.05} value={opacity}
@@ -329,6 +379,28 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         {/* === 컨테이너 전용 필드 === */}
         {category === 'container' && (
           <>
+            <FieldRow label="컨테이너 타입">
+              <select
+                value={containerType}
+                onChange={(e) => setContainerType(e.target.value)}
+                style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+              >
+                <option value="DRY_20FT">Dry 20ft</option>
+                <option value="DRY_40FT">Dry 40ft</option>
+                <option value="HC_40FT">High Cube 40ft</option>
+                <option value="HC_45FT">High Cube 45ft</option>
+                <option value="REEFER_20FT">Reefer 20ft</option>
+                <option value="REEFER_40FT">Reefer 40ft</option>
+              </select>
+            </FieldRow>
+            <FieldRow label="용량 (CBM)">
+              <NumField label="CBM" value={containerCbm} onChange={setContainerCbm} step={1} min={0} />
+            </FieldRow>
+            <FieldRow label="최대 화물 중량 (kg)">
+              <NumField label="kg" value={containerMaxLoad} onChange={setContainerMaxLoad} step={100} min={0} />
+            </FieldRow>
             <FieldRow label="내부 팔레트 수">
               <NumField label="개" value={containerPalletCount} onChange={(v) => setContainerPalletCount(Math.max(0, Math.round(v)))} step={1} min={0} />
             </FieldRow>
@@ -341,14 +413,32 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
           </>
         )}
 
-        {/* === 통로 전용 정보 === */}
+        {/* === 통로 전용 필드 === */}
         {category === 'aisle' && (
           <>
             <FieldRow label="통로 타입">
-              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
-                {(meta.aisleType as string) ?? '일반 통로'}
-              </div>
+              <select
+                value={aisleType}
+                onChange={(e) => setAisleType(e.target.value)}
+                style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+              >
+                <option value="">일반 통로</option>
+                <option value="MAIN">주 통로</option>
+                <option value="PEDESTRIAN">보행 전용</option>
+                <option value="EMERGENCY">비상구 통로</option>
+                <option value="COUNTERBALANCE_3T">카운터밸런스 지게차</option>
+                <option value="REACH_TRUCK">리치트럭</option>
+                <option value="ORDER_PICKER">오더피커</option>
+                <option value="ELECTRIC_HAND">전동 핸드 팔레트</option>
+                <option value="AGV_FORKLIFT">AGV (무인지게차)</option>
+                <option value="AGV_AMR">AGV (소형 AMR)</option>
+              </select>
             </FieldRow>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+              가장자리 핸들을 드래그하여 통로 크기를 조절할 수 있습니다.
+            </div>
           </>
         )}
 

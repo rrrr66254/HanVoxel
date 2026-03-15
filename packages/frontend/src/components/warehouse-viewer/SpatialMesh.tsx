@@ -58,8 +58,10 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
   const meta = object.metadata as Record<string, unknown> | null;
 
   // 편집 레이어에 따라 인터랙션 가능 여부 결정
+  // 구조물: 바닥, 벽, 출입문, 통로, 구역/안전구역
   const isStructure = typeName === 'FLOOR' || typeName === 'WALL' ||
-    !!(meta?.floorStyle) || !!(meta?.wallStyle);
+    typeName === 'AISLE' || typeName === 'ZONE' || typeName === 'SAFETY_ZONE' ||
+    !!(meta?.floorStyle) || !!(meta?.wallStyle) || !!(meta?.doorStyle) || !!(meta?.aisleType);
   const isInteractable = editLayer === 'structure' ? isStructure : !isStructure;
 
   // 색상 결정
@@ -188,6 +190,8 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           height={object.scaleY}
           isSelected={isSelected}
           isHovered={hovered}
+          isReefer={!!(meta?.type && typeof meta.type === 'string' && meta.type.includes('REEFER'))}
+          containerColor={object.color ?? undefined}
         />
         {hovered && (
           <Html distanceFactor={20} position={[0, object.scaleY + 0.5, 0]} style={{ pointerEvents: 'none' }}>
@@ -332,7 +336,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
       >
         <AisleModel
@@ -340,10 +344,14 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           length={object.scaleZ}
           color={aisleColor}
           isSelected={isSelected}
-          isHovered={hovered}
+          isHovered={hovered && isInteractable}
           isEmergency={isEmergency}
         />
-        {hovered && (
+        {/* 리사이즈 핸들 — 선택된 통로만 표시 */}
+        {isSelected && isInteractable && onResize && (
+          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+        )}
+        {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{
               background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
@@ -470,7 +478,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; } }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
         // @ts-expect-error castShadow on group propagates to children
         castShadow
@@ -481,9 +489,9 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           thickness={object.scaleZ}
           style={doorStyle}
           isSelected={isSelected}
-          isHovered={hovered}
+          isHovered={hovered && isInteractable}
         />
-        {hovered && (
+        {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, object.scaleY + 0.3, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{
               background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
@@ -520,54 +528,66 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
   const isWorkstation = typeName === 'WORKSTATION';
 
   return (
-    <mesh
-      ref={groupRef as never}
-      position={[object.positionX, object.positionY, object.positionZ]}
-      rotation={[object.rotationX, object.rotationY, object.rotationZ]}
-      scale={[object.scaleX, object.scaleY, object.scaleZ]}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onContextMenu={handleContextMenu}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        setHovered(true);
-        document.body.style.cursor = 'pointer';
-      }}
-      onPointerOut={() => {
-        setHovered(false);
-        document.body.style.cursor = 'default';
-      }}
-      castShadow={isWorkstation}
-      receiveShadow
-    >
-      {renderGeometry()}
-      <meshStandardMaterial
-        color={isSelected ? '#2D7DD2' : hovered ? '#5BA3E0' : baseColor}
-        transparent={object.opacity < 1 || isZone}
-        opacity={isZone ? 0.08 : object.opacity}
-        wireframe={isZone}
-        metalness={isWorkstation ? 0.4 : 0.1}
-        roughness={isWorkstation ? 0.6 : 0.8}
-      />
+    <group>
+      <mesh
+        ref={groupRef as never}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        scale={[object.scaleX, object.scaleY, object.scaleZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          if (isInteractable) { setHovered(true); document.body.style.cursor = 'pointer'; }
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+        castShadow={isWorkstation}
+        receiveShadow
+      >
+        {renderGeometry()}
+        <meshStandardMaterial
+          color={isSelected ? '#2D7DD2' : (hovered && isInteractable) ? '#5BA3E0' : baseColor}
+          transparent={object.opacity < 1 || isZone}
+          opacity={isZone ? 0.15 : object.opacity}
+          wireframe={false}
+          metalness={isWorkstation ? 0.4 : 0.1}
+          roughness={isWorkstation ? 0.6 : 0.8}
+        />
 
-      {/* 호버 시 라벨 표시 */}
-      {hovered && (
-        <Html distanceFactor={15} style={{ pointerEvents: 'none' }}>
-          <div style={{
-            background: '#161B22',
-            border: '1px solid #30363D',
-            borderRadius: 8,
-            padding: '6px 10px',
-            whiteSpace: 'nowrap',
-            fontSize: 11,
-            color: '#E6EDF3',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          }}>
-            <span style={{ fontWeight: 700 }}>{object.name}</span>
-            <span style={{ color: '#8B949E', marginLeft: 6 }}>({object.type.label})</span>
-          </div>
-        </Html>
+        {/* 호버 시 라벨 표시 */}
+        {hovered && isInteractable && (
+          <Html distanceFactor={15} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22',
+              border: '1px solid #30363D',
+              borderRadius: 8,
+              padding: '6px 10px',
+              whiteSpace: 'nowrap',
+              fontSize: 11,
+              color: '#E6EDF3',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>({object.type.label})</span>
+              {isZone && (
+                <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                  {object.scaleX}m × {object.scaleZ}m
+                </div>
+              )}
+            </div>
+          </Html>
+        )}
+      </mesh>
+      {/* 리사이즈 핸들 — 선택된 구역만 표시 */}
+      {isZone && isSelected && isInteractable && onResize && (
+        <group position={[object.positionX, object.positionY, object.positionZ]}>
+          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+        </group>
       )}
-    </mesh>
+    </group>
   );
 }
