@@ -10,6 +10,7 @@ from app.schemas.trade import (
     TradeQueryRequest,
 )
 from app.services.trade.trade_aggregator import TradeAggregator
+from app.services.trade.nightly_prefetch import run_manual_batch
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/trade", tags=["trade-intelligence"])
@@ -50,4 +51,17 @@ async def get_comtrade_quota():
         return ComtradeQuotaResponse(**status)
     except Exception as e:
         logger.error(f"Comtrade 할당량 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prefetch/run")
+async def trigger_manual_prefetch():
+    """수동 야간 배치 실행 (테스트·디버깅용)"""
+    try:
+        result = await run_manual_batch(
+            redis_client=None, db_pool=None, aggregator=_aggregator
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        logger.error(f"수동 배치 실행 실패: {e}")
         raise HTTPException(status_code=500, detail=str(e))
