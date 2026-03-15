@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
@@ -521,6 +521,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             }}
           >
             <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} panSpeed={0.5} rotateSpeed={0.5} zoomSpeed={1.2} />
+            <DynamicRotateSpeed controlsRef={controlsRef} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
             {/* 네이티브 더블클릭 핸들러 (R3F 내부 컴포넌트) */}
             <NativeDoubleClickHandler
@@ -657,6 +658,31 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       <EditorBottomBar cursorPos={cursorPos} gridVisible={gridVisible} onToggleGrid={() => setGridVisible((v) => !v)} snapEnabled={snapEnabled} onSnapToggle={() => setSnapEnabled((v) => !v)} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} onResetView={handleResetView} />
     </div>
   );
+}
+
+// ============================================================
+// 카메라 거리 기반 동적 회전 속도 조절
+// ============================================================
+
+function DynamicRotateSpeed({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    // 카메라-타겟 거리 계산
+    const dist = camera.position.distanceTo(controls.target);
+
+    // 거리에 비례하여 회전 속도 조절 (가까울수록 느리게)
+    // 거리 5~120m → rotateSpeed 0.1~0.5 (로그 스케일)
+    const minSpeed = 0.08;
+    const maxSpeed = 0.5;
+    const speed = minSpeed + (maxSpeed - minSpeed) * Math.min(1, Math.log(dist / 5 + 1) / Math.log(25));
+    controls.rotateSpeed = speed;
+  });
+
+  return null;
 }
 
 // ============================================================

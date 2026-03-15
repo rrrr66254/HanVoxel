@@ -11,6 +11,8 @@ import { FloorTileModel } from './FloorTileModel';
 import { WallPanelModel } from './WallPanelModel';
 import { DoorModel } from './DoorModel';
 import type { DoorStyle } from './DoorModel';
+import { PalletModel } from './PalletModel';
+import { ProductBoxModel } from './ProductBoxModel';
 import { checkCollision } from '../../utils/collision';
 
 interface GhostMeshProps {
@@ -50,6 +52,9 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
   const isFloor = extra.floorStyle !== undefined || preset.code?.includes('FLOOR');
   const isWall = extra.wallStyle !== undefined || preset.code?.includes('WALL');
   const isDoor = extra.doorStyle !== undefined || preset.code?.includes('DOOR');
+  const isPallet = preset.code?.includes('PALLET') || preset.code?.includes('T11') || preset.code?.includes('T12') || preset.code?.includes('T08');
+  const isLoadedPallet = preset.code?.includes('LOADED');
+  const isProductBox = preset.code?.includes('BOX_');
   const w = preset.width || KR_STANDARD.w;
   const d = preset.depth || KR_STANDARD.d;
   const h = preset.height || KR_STANDARD.h;
@@ -204,6 +209,42 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
         />
         <mesh position={[0, h / 2, 0]}>
           <boxGeometry args={[w + 0.1, h + 0.1, thickness + 0.1]} />
+          <meshStandardMaterial color={glowColor} transparent opacity={0.2} depthWrite={false} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 팔레트 고스트
+  if (isPallet || isLoadedPallet) {
+    return (
+      <group ref={groupRef} position={[0, h / 2, 0]}>
+        <group position={[0, -h / 2, 0]}>
+          <PalletModel width={w} depth={d} height={isLoadedPallet ? 0.144 : h} />
+          {isLoadedPallet && (
+            <group position={[0, 0.144, 0]}>
+              <ProductBoxModel width={w * 0.9} depth={d * 0.9} height={h - 0.144} />
+            </group>
+          )}
+        </group>
+        <mesh>
+          <boxGeometry args={[w + 0.1, h + 0.1, d + 0.1]} />
+          <meshStandardMaterial color={glowColor} transparent opacity={0.2} depthWrite={false} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // 제품 박스 고스트
+  if (isProductBox) {
+    const boxColor = (extra.color as string) ?? '#6b7280';
+    return (
+      <group ref={groupRef} position={[0, h / 2, 0]}>
+        <group position={[0, -h / 2, 0]}>
+          <ProductBoxModel width={w} depth={d} height={h} color={boxColor} />
+        </group>
+        <mesh>
+          <boxGeometry args={[w + 0.1, h + 0.1, d + 0.1]} />
           <meshStandardMaterial color={glowColor} transparent opacity={0.2} depthWrite={false} />
         </mesh>
       </group>

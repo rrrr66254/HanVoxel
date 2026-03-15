@@ -10,6 +10,7 @@ import { FloorTileModel } from './FloorTileModel';
 import { WallPanelModel } from './WallPanelModel';
 import { DoorModel } from './DoorModel';
 import type { DoorStyle } from './DoorModel';
+import { ProductBoxModel } from './ProductBoxModel';
 
 interface SpatialMeshProps {
   object: SpatialObject;
@@ -191,6 +192,111 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
               <span style={{ color: '#8B949E', marginLeft: 6 }}>{String(meta?.type)}</span>
               <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
                 {meta?.cbm} CBM · 최대 {meta?.maxLoad} kg
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 팔레트/적재 팔레트 모델 렌더링
+  const itemType = meta?.itemType as string | undefined;
+  const isPallet = (typeName === 'BIN' && itemType === 'pallet') ||
+    object.code?.includes('PALLET') || object.code?.includes('T11') || object.code?.includes('T12') || object.code?.includes('T08');
+  const isLoadedPallet = object.code?.includes('LOADED');
+
+  if (isPallet || isLoadedPallet) {
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
+      >
+        {/* 팔레트 */}
+        <PalletModel
+          width={object.scaleX}
+          depth={object.scaleZ}
+          height={isLoadedPallet ? 0.144 : object.scaleY}
+          isSelected={isSelected}
+          isHovered={hovered}
+        />
+        {/* 적재 팔레트인 경우 화물 박스 표시 */}
+        {isLoadedPallet && (
+          <group position={[0, 0.144, 0]}>
+            <ProductBoxModel
+              width={object.scaleX * 0.9}
+              depth={object.scaleZ * 0.9}
+              height={object.scaleY - 0.144}
+              color={object.color ?? '#8B7B60'}
+              isSelected={isSelected}
+              isHovered={hovered}
+            />
+          </group>
+        )}
+        {hovered && (
+          <Html distanceFactor={15} position={[0, object.scaleY + 0.2, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>{isLoadedPallet ? '적재 팔레트' : '팔레트'}</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleZ}m × {object.scaleY}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 제품 박스 모델 렌더링
+  const isProductBox = (typeName === 'BIN' && itemType === 'box') ||
+    object.code?.includes('BOX_');
+
+  if (isProductBox) {
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+        // @ts-expect-error castShadow on group propagates to children
+        castShadow
+      >
+        <ProductBoxModel
+          width={object.scaleX}
+          depth={object.scaleZ}
+          height={object.scaleY}
+          color={object.color ?? '#6b7280'}
+          isSelected={isSelected}
+          isHovered={hovered}
+        />
+        {hovered && (
+          <Html distanceFactor={15} position={[0, object.scaleY + 0.2, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>{object.name}</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>제품 박스</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleZ}m × {object.scaleY}m
               </div>
             </div>
           </Html>
