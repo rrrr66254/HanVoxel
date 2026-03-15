@@ -9,7 +9,7 @@ import { ContainerModel } from './ContainerModel';
 interface SpatialMeshProps {
   object: SpatialObject;
   onSelect?: (object: SpatialObject) => void;
-  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void }) => void;
+  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   isSelected?: boolean;
 }
 
@@ -57,9 +57,15 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
     onSelect?.(object);
   };
 
-  const handleContextMenu = (e: { stopPropagation: () => void }) => {
+  // R3F 이벤트에서 nativeEvent의 clientX/clientY 추출
+  const handleContextMenu = (e: { stopPropagation: () => void; nativeEvent?: MouseEvent }) => {
     e.stopPropagation();
-    onContextMenu?.(object, e);
+    const native = e.nativeEvent;
+    onContextMenu?.(object, {
+      stopPropagation: () => e.stopPropagation(),
+      clientX: native?.clientX ?? 0,
+      clientY: native?.clientY ?? 0,
+    });
   };
 
   // 랙인지 확인 (메타데이터에 levels가 있거나 타입이 RACK)

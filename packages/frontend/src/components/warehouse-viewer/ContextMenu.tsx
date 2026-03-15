@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Edit3, Copy, RotateCw, Move, Palette, Trash2, Maximize, ArrowUp, ArrowRight, Grid3x3 } from 'lucide-react';
+import { Edit3, Copy, RotateCw, Move, Trash2, Maximize, ArrowUp, ArrowRight, Grid3x3 } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 interface ContextMenuProps {
@@ -13,7 +13,6 @@ interface ContextMenuProps {
   onDuplicate?: (object: SpatialObject) => void;
   onRotate90?: (object: SpatialObject) => void;
   onMove?: (object: SpatialObject) => void;
-  onColorChange?: (object: SpatialObject) => void;
   onDelete?: (id: string) => void;
   // 빈 공간 메뉴 액션
   onResetView?: () => void;
@@ -38,7 +37,7 @@ interface MenuItemDef {
  */
 export function ContextMenu({
   object, position, onClose,
-  onEdit, onDuplicate, onRotate90, onMove, onColorChange, onDelete,
+  onEdit, onDuplicate, onRotate90, onMove, onDelete,
   onResetView, onTopView, onFrontView, onToggleGrid, gridVisible = true,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,8 +74,7 @@ export function ContextMenu({
         { icon: <Edit3 size={13} />, label: '편집', onClick: () => { onEdit?.(object); onClose(); } },
         { icon: <Copy size={13} />, label: '복제', onClick: () => { onDuplicate?.(object); onClose(); } },
         { icon: <RotateCw size={13} />, label: '90° 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
-        { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); } },
-        { icon: <Palette size={13} />, label: '색상 변경', onClick: () => { onColorChange?.(object); onClose(); }, dividerAfter: true },
+        { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); }, dividerAfter: true },
         { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: '#F85149' },
       ]
     : [
