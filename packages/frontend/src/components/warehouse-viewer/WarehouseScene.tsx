@@ -3,8 +3,17 @@ import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { SpatialMesh } from './SpatialMesh';
 import { GhostMesh } from './GhostMesh';
+import { ZoneRenderer, ZoneDrawer } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import type { SpatialObject } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
+
+// 창고 외벽 크기 (mock-warehouse 기준: 60m × 45m × 8m)
+const WALL_W = 60;
+const WALL_D = 45;
+const WALL_H = 8;
+const WALL_CENTER_X = 15;
+const WALL_CENTER_Z = 20;
 
 interface WarehouseSceneProps {
   objects: SpatialObject[];
@@ -12,6 +21,12 @@ interface WarehouseSceneProps {
   onSelect: (object: SpatialObject) => void;
   placingPreset?: SpatialPreset | null;
   onPlace?: (position: [number, number, number]) => void;
+  // Zone 시스템
+  zones?: ZoneConfig[];
+  drawingZoneType?: ZoneType | null;
+  onZoneDrawComplete?: (zone: Omit<ZoneConfig, 'id' | 'name'>) => void;
+  onZoneDrawCancel?: () => void;
+  onSelectZone?: (zone: ZoneConfig) => void;
 }
 
 /**
@@ -21,7 +36,10 @@ interface WarehouseSceneProps {
  * - 그림자: castShadow / receiveShadow 활성화
  * - 안개: FogExp2
  */
-export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, onPlace }: WarehouseSceneProps) {
+export function WarehouseScene({
+  objects, selectedId, onSelect, placingPreset, onPlace,
+  zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
+}: WarehouseSceneProps) {
   const floorRef = useRef<THREE.Mesh>(null);
 
   return (
@@ -92,6 +110,47 @@ export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, o
         position={[15, 0, 20]}
       />
 
+      {/* 창고 외벽 (반투명) */}
+      {/* 좌측 벽 */}
+      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+        <planeGeometry args={[WALL_D, WALL_H]} />
+        <meshStandardMaterial color="#4A5568" transparent opacity={0.12} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 우측 벽 */}
+      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]}>
+        <planeGeometry args={[WALL_D, WALL_H]} />
+        <meshStandardMaterial color="#4A5568" transparent opacity={0.12} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 뒷벽 */}
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[WALL_W, WALL_H]} />
+        <meshStandardMaterial color="#4A5568" transparent opacity={0.12} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 앞벽 (도크 쪽 — 더 투명) */}
+      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[WALL_W, WALL_H]} />
+        <meshStandardMaterial color="#4A5568" transparent opacity={0.08} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 지붕 */}
+      <mesh position={[WALL_CENTER_X, WALL_H, WALL_CENTER_Z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[WALL_W, WALL_D]} />
+        <meshStandardMaterial color="#5A6577" transparent opacity={0.06} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 지붕 엣지 라인 (4개) */}
+      {[
+        [[WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2], [WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2]],
+        [[WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2], [WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2]],
+        [[WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2], [WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2]],
+        [[WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2], [WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2]],
+      ].map((pts, i) => {
+        const geo = new THREE.BufferGeometry().setFromPoints(
+          pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+        );
+        return <lineSegments key={`roof-edge-${i}`} geometry={geo}>
+          <lineBasicMaterial color="#5A6577" opacity={0.3} transparent />
+        </lineSegments>;
+      })}
+
       {/* 공간 객체 렌더링 */}
       {objects.map((obj) => (
         <SpatialMesh
@@ -102,9 +161,23 @@ export function WarehouseScene({ objects, selectedId, onSelect, placingPreset, o
         />
       ))}
 
+      {/* Zone 렌더링 */}
+      {zones.length > 0 && (
+        <ZoneRenderer zones={zones} onSelectZone={onSelectZone} />
+      )}
+
+      {/* Zone 드로잉 모드 */}
+      {drawingZoneType && onZoneDrawComplete && onZoneDrawCancel && (
+        <ZoneDrawer
+          zoneType={drawingZoneType}
+          onComplete={onZoneDrawComplete}
+          onCancel={onZoneDrawCancel}
+        />
+      )}
+
       {/* 배치 모드 고스트 메시 */}
       {placingPreset && onPlace && (
-        <GhostMesh preset={placingPreset} onPlace={onPlace} />
+        <GhostMesh preset={placingPreset} onPlace={onPlace} existingObjects={objects} />
       )}
     </>
   );

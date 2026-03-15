@@ -23,10 +23,15 @@ import './index.css';
 
 type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark';
 
-// 데모용 트라이얼 상태
+// 관리자 모드 — 환경변수로 제어 (VITE_ADMIN_MODE=true)
+const ADMIN_MODE = import.meta.env.VITE_ADMIN_MODE === 'true';
+
+// 데모용 트라이얼 상태 (관리자 모드 시 Enterprise)
 const DEMO_TRIAL = {
-  planType: 'STARTER',
-  trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+  planType: ADMIN_MODE ? 'ENTERPRISE' : 'STARTER',
+  trialEndsAt: ADMIN_MODE
+    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
 };
 
 function App() {
