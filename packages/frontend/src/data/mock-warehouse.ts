@@ -239,30 +239,11 @@ function createContainer(index: number, x: number): SpatialObject {
 // ============================================================
 
 export const MOCK_WAREHOUSE: SpatialObject[] = [
-  // --- 바닥 (에폭시 코팅 타일) ---
-  // 보관 구역 바닥 (회색 에폭시)
-  obj('floor-storage', TYPES.FLOOR, '보관 구역 바닥', 'FLOOR-STORAGE',
-    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [ROW_WIDTH + 8, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 4],
+  // --- 바닥 (에폭시 코팅 — 건물 전체 커버) ---
+  obj('floor-main', TYPES.FLOOR, '창고 바닥', 'FLOOR-MAIN',
+    [BUILDING_W / 2, 0.005, BUILDING_D / 2],
+    [BUILDING_W + 2, 0.01, BUILDING_D + 2],
     { metadata: { floorStyle: 'EPOXY_GRAY' } },
-  ),
-  // 도크 구역 바닥 (콘크리트)
-  obj('floor-dock', TYPES.FLOOR, '도크 구역 바닥', 'FLOOR-DOCK',
-    [BUILDING_W / 2, 0.01, DOCK_Z + DOCK_DEPTH / 2],
-    [BUILDING_W - 2, 0.02, DOCK_DEPTH],
-    { metadata: { floorStyle: 'CONCRETE' } },
-  ),
-  // 스테이징 구역 바닥 (녹색 에폭시)
-  obj('floor-staging', TYPES.FLOOR, '스테이징 구역 바닥', 'FLOOR-STAGING',
-    [BUILDING_W / 2, 0.01, STAGING_Z + STAGING_DEPTH / 2],
-    [BUILDING_W - 4, 0.02, STAGING_DEPTH],
-    { metadata: { floorStyle: 'EPOXY_GREEN' } },
-  ),
-  // 주 통로 바닥 (미끄럼방지)
-  obj('floor-main-aisle', TYPES.FLOOR, '주 통로 바닥', 'FLOOR-MAIN-AISLE',
-    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [MAIN_AISLE_WIDTH, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 2],
-    { metadata: { floorStyle: 'ANTI_SLIP' } },
   ),
 
   // --- 벽 (샌드위치 패널) ---
@@ -289,6 +270,36 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     [BUILDING_W / 2, BUILDING_H / 2, 0],
     [BUILDING_W, BUILDING_H, 0.2],
     { metadata: { wallStyle: 'CONCRETE_WALL' } },
+  ),
+
+  // --- 출입문 ---
+  // 앞벽 롤링 셔터 (도크 출입구 × 3)
+  obj('door-dock-1', TYPES.WALL, '도크 셔터 1', 'DOOR-DOCK-1',
+    [BUILDING_W / 2 - 8, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'DOCK_LEVELER' } },
+  ),
+  obj('door-dock-2', TYPES.WALL, '도크 셔터 2', 'DOOR-DOCK-2',
+    [BUILDING_W / 2, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'ROLLING_SHUTTER' } },
+  ),
+  obj('door-dock-3', TYPES.WALL, '도크 셔터 3', 'DOOR-DOCK-3',
+    [BUILDING_W / 2 + 8, 0, 0.05],
+    [4.0, 4.5, 0.15],
+    { metadata: { doorStyle: 'DOCK_LEVELER' } },
+  ),
+  // 좌측 직원 출입문
+  obj('door-staff', TYPES.WALL, '직원 출입문', 'DOOR-STAFF',
+    [0.05, 0, BUILDING_D / 2],
+    [2.0, 2.5, 0.1],
+    { rotationY: Math.PI / 2, metadata: { doorStyle: 'SWING_DOUBLE' } },
+  ),
+  // 뒷벽 비상문
+  obj('door-emergency', TYPES.WALL, '비상 출입문', 'DOOR-EMERGENCY',
+    [BUILDING_W / 2, 0, BUILDING_D - 0.05],
+    [2.0, 2.5, 0.1],
+    { metadata: { doorStyle: 'SWING_DOUBLE' } },
   ),
 
   // --- 도크 영역 (DRY_40FT × 3기) ---

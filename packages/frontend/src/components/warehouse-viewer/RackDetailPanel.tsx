@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { X, RotateCcw, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { X, RotateCcw, Trash2, ChevronDown, ChevronRight, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 import type { BinOccupancy } from './BinPlacement';
 
@@ -100,13 +100,42 @@ export function RackDetailPanel({
     });
   }, [presetCode, levelHeight, levels, meta, rack, onUpdateRack]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+
   // 층 클릭 토글
   const toggleLevel = (idx: number) => {
     setExpandedLevel((prev) => (prev === idx ? null : idx));
   };
 
+  // 층 이동 (위/아래)
+  const navigateLevel = useCallback((direction: 'up' | 'down') => {
+    setExpandedLevel((prev) => {
+      if (prev === null) return direction === 'up' ? levels - 1 : 0;
+      const next = direction === 'up' ? prev + 1 : prev - 1;
+      if (next < 0 || next >= levels) return prev;
+      return next;
+    });
+  }, [levels]);
+
+  // 키보드 단축키: 위/아래 화살표로 층 이동, ESC로 닫기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp') { e.preventDefault(); navigateLevel('up'); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); navigateLevel('down'); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigateLevel]);
+
+  // 확장된 층 변경 시 스크롤
+  useEffect(() => {
+    if (expandedLevel === null) return;
+    const el = document.getElementById(`rack-level-${expandedLevel}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [expandedLevel]);
+
   return (
-    <div style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div ref={panelRef} style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
@@ -154,6 +183,48 @@ export function RackDetailPanel({
 
         {/* 층별 현황 */}
         <Section title="층별 현황">
+          {/* 층 빠른 이동 바 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+            <button
+              onClick={() => navigateLevel('down')}
+              disabled={expandedLevel === null || expandedLevel <= 0}
+              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid #30363D', background: 'transparent', color: expandedLevel !== null && expandedLevel > 0 ? '#8B949E' : '#30363D', cursor: expandedLevel !== null && expandedLevel > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            >
+              <ArrowDown size={12} />
+            </button>
+            <div style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'center' }}>
+              {Array.from({ length: levels }, (_, i) => {
+                const levelIdx = i;
+                const isOccupied = rackOccupancy.some((o) => o.level === levelIdx);
+                const isActive = expandedLevel === levelIdx;
+                return (
+                  <button
+                    key={levelIdx}
+                    onClick={() => setExpandedLevel(isActive ? null : levelIdx)}
+                    style={{
+                      minWidth: 28, height: 22, borderRadius: 4, fontSize: 9, fontWeight: 700,
+                      border: isActive ? '1px solid #2D7DD2' : '1px solid #21262D',
+                      background: isActive ? '#2D7DD2' : isOccupied ? 'rgba(63,185,80,0.15)' : '#12151A',
+                      color: isActive ? '#fff' : isOccupied ? '#3FB950' : '#484F58',
+                      cursor: 'pointer', fontFamily: 'monospace',
+                    }}
+                  >
+                    L{levelIdx + 1}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => navigateLevel('up')}
+              disabled={expandedLevel === null || expandedLevel >= levels - 1}
+              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid #30363D', background: 'transparent', color: expandedLevel !== null && expandedLevel < levels - 1 ? '#8B949E' : '#30363D', cursor: expandedLevel !== null && expandedLevel < levels - 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            >
+              <ArrowUp size={12} />
+            </button>
+          </div>
+          <div style={{ fontSize: 9, color: '#484F58', textAlign: 'center', marginBottom: 8 }}>
+            ↑↓ 화살표 키로 층 이동
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {Array.from({ length: levels }, (_, i) => {
               const levelIdx = levels - 1 - i; // 위에서 아래 순서
@@ -163,7 +234,7 @@ export function RackDetailPanel({
               const minH = item ? item.height + 0.1 : 0.3;
 
               return (
-                <div key={levelIdx} style={{ borderRadius: 8, border: `1px solid ${item ? 'rgba(63,185,80,0.2)' : '#21262D'}`, background: item ? 'rgba(63,185,80,0.05)' : '#12151A', overflow: 'hidden' }}>
+                <div key={levelIdx} id={`rack-level-${levelIdx}`} style={{ borderRadius: 8, border: `1px solid ${isExpanded ? '#2D7DD2' : item ? 'rgba(63,185,80,0.2)' : '#21262D'}`, background: isExpanded ? 'rgba(45,125,210,0.05)' : item ? 'rgba(63,185,80,0.05)' : '#12151A', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}>
                   {/* 층 헤더 */}
                   <button
                     onClick={() => toggleLevel(levelIdx)}

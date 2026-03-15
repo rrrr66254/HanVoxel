@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Square,
   PanelTop,
+  DoorOpen,
 } from 'lucide-react';
 import { PresetCard } from '../preset-catalog/PresetCard';
 import { getPresetCategories, getSpatialPresets } from '../../api/preset-api';
@@ -95,6 +96,7 @@ export function EditorLeftSidebar({
     if (label.includes('통로')) return <Route size={16} />;
     if (label.includes('바닥')) return <Square size={16} />;
     if (label.includes('벽')) return <PanelTop size={16} />;
+    if (label.includes('출입문') || label.includes('문')) return <DoorOpen size={16} />;
     return <Package size={16} />;
   };
 

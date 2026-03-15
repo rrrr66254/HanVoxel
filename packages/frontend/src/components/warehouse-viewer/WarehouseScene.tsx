@@ -127,77 +127,7 @@ export function WarehouseScene({
         position={[WALL_CENTER_X, 0.005, WALL_CENTER_Z]}
       />}
 
-      {/* 창고 외벽 4면 — 철판 + wireframe (opacity 높여 가시성 개선) */}
-      {/* 좌측 벽 */}
-      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[WALL_D, WALL_H]} />
-        <meshStandardMaterial color="#1E3A5F" transparent opacity={0.55} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
-      </mesh>
-      <mesh position={[WALL_CENTER_X - WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[WALL_D, WALL_H]} />
-        <meshStandardMaterial color="#3A8FE0" wireframe transparent opacity={0.2} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 우측 벽 */}
-      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[WALL_D, WALL_H]} />
-        <meshStandardMaterial color="#1E3A5F" transparent opacity={0.55} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
-      </mesh>
-      <mesh position={[WALL_CENTER_X + WALL_W / 2, WALL_H / 2, WALL_CENTER_Z]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[WALL_D, WALL_H]} />
-        <meshStandardMaterial color="#3A8FE0" wireframe transparent opacity={0.2} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 뒷벽 */}
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]}>
-        <planeGeometry args={[WALL_W, WALL_H]} />
-        <meshStandardMaterial color="#1E3A5F" transparent opacity={0.55} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
-      </mesh>
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z + WALL_D / 2]}>
-        <planeGeometry args={[WALL_W, WALL_H]} />
-        <meshStandardMaterial color="#3A8FE0" wireframe transparent opacity={0.2} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 앞벽 (도크) — 약간 더 투명 */}
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]}>
-        <planeGeometry args={[WALL_W, WALL_H]} />
-        <meshStandardMaterial color="#1E3A5F" transparent opacity={0.4} side={THREE.DoubleSide} metalness={0.3} roughness={0.7} />
-      </mesh>
-      <mesh position={[WALL_CENTER_X, WALL_H / 2, WALL_CENTER_Z - WALL_D / 2]}>
-        <planeGeometry args={[WALL_W, WALL_H]} />
-        <meshStandardMaterial color="#3A8FE0" wireframe transparent opacity={0.15} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 천장 */}
-      <mesh position={[WALL_CENTER_X, WALL_H, WALL_CENTER_Z]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[WALL_W, WALL_D]} />
-        <meshStandardMaterial color="#0D1117" transparent opacity={0.25} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* 벽 상단 노란 안전선 stripe */}
-      {safetyLineGeo.map((line, i) => (
-        <mesh key={`safety-${i}`} position={line.pos}>
-          <boxGeometry args={line.size} />
-          <meshStandardMaterial color="#F0B429" emissive="#F0B429" emissiveIntensity={0.3} />
-        </mesh>
-      ))}
-
-      {/* 지붕 엣지 라인 (4개) */}
-      {[
-        [[WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2], [WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2]],
-        [[WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2], [WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2]],
-        [[WALL_CENTER_X + WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2], [WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2]],
-        [[WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z + WALL_D / 2], [WALL_CENTER_X - WALL_W / 2, WALL_H, WALL_CENTER_Z - WALL_D / 2]],
-      ].map((pts, i) => {
-        const geo = new THREE.BufferGeometry().setFromPoints(
-          pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))
-        );
-        return <lineSegments key={`roof-edge-${i}`} geometry={geo}>
-          <lineBasicMaterial color="#F0B429" opacity={0.5} transparent />
-        </lineSegments>;
-      })}
-
-      {/* 공간 객체 렌더링 */}
+      {/* 공간 객체 렌더링 (벽/바닥은 mock-warehouse의 SpatialObject로 렌더링) */}
       {objects.map((obj) => (
         <SpatialMesh
           key={obj.id}

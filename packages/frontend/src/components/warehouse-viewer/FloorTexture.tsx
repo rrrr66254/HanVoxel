@@ -181,8 +181,7 @@ export function EpoxyFloor({ warehouseName = 'HANVOXEL' }: { warehouseName?: str
         />
       </mesh>
 
-      {/* 안전 경계선 */}
-      <SafetyBoundary />
+      {/* 안전 경계선 제거됨 — WallPanelModel이 벽 렌더링 담당 */}
 
       {/* 창고 이름 라벨 */}
       <WarehouseNameLabel name={warehouseName} />
