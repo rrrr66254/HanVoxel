@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -67,46 +67,57 @@ export function ZoneDrawer({ zoneType, onComplete, onCancel }: ZoneDrawerProps) 
     }
   });
 
-  // 마우스 이벤트
+  // Ref로 최신 상태 추적 (이벤트 핸들러 클로저 문제 방지)
   const canvas = gl.domElement;
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  }, [canvas]);
+  const startPointRef = useRef(startPoint);
+  startPointRef.current = startPoint;
+  const currentPointRef = useRef(currentPoint);
+  currentPointRef.current = currentPoint;
 
-  const onPointerDown = useCallback((e: PointerEvent) => {
-    if (e.button !== 0) return;
-    if (!startPoint) {
-      // 첫 번째 클릭 — 시작점 설정
-      setStartPoint(currentPoint);
-    } else {
-      // 두 번째 클릭 — 구역 확정
-      onComplete({
-        type: zoneType,
-        startX: Math.min(startPoint[0], currentPoint[0]),
-        startZ: Math.min(startPoint[1], currentPoint[1]),
-        endX: Math.max(startPoint[0], currentPoint[0]),
-        endZ: Math.max(startPoint[1], currentPoint[1]),
-        height: 0.1,
-      });
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerdown', onPointerDown);
-    }
-  }, [startPoint, currentPoint, zoneType, onComplete, canvas, onPointerMove]);
+  // 이벤트 바인딩 (useEffect로 cleanup 보장)
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    };
 
-  // ESC 취소
-  const onKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel();
-      document.removeEventListener('keydown', onKeyDown);
-    }
-  }, [onCancel]);
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const sp = startPointRef.current;
+      const cp = currentPointRef.current;
+      if (!sp) {
+        // 첫 번째 클릭 — 시작점 설정
+        setStartPoint(cp);
+      } else {
+        // 두 번째 클릭 — 구역 확정
+        onComplete({
+          type: zoneType,
+          startX: Math.min(sp[0], cp[0]),
+          startZ: Math.min(sp[1], cp[1]),
+          endX: Math.max(sp[0], cp[0]),
+          endZ: Math.max(sp[1], cp[1]),
+          height: 0.1,
+        });
+      }
+    };
 
-  // 이벤트 바인딩
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('pointerdown', onPointerDown);
-  document.addEventListener('keydown', onKeyDown);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [canvas, zoneType, onComplete, onCancel]);
 
   const color = ZONE_COLORS[zoneType];
 

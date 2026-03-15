@@ -80,7 +80,9 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
-  const allObjects = [...objects, ...placedObjects];
+  // 템플릿 객체가 placedObjects에 override된 경우 중복 제거
+  const placedIds = new Set(placedObjects.map((o) => o.id));
+  const allObjects = [...objects.filter((o) => !placedIds.has(o.id)), ...placedObjects];
   const selectedObject = allObjects.find((o) => o.id === selectedId) ?? null;
   const editingObject = allObjects.find((o) => o.id === editingId) ?? null;
 
@@ -168,10 +170,17 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     [placingPreset, currentSiteId],
   );
 
-  // 치수 편집 적용
+  // 치수 편집 적용 — placedObjects에 있으면 업데이트, 없으면 템플릿 객체를 override로 추가
   const handleUpdateObject = useCallback(async (updated: SpatialObject) => {
     setSaving(true);
-    setPlacedObjects((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setPlacedObjects((prev) => {
+      const exists = prev.some((o) => o.id === updated.id);
+      if (exists) {
+        return prev.map((o) => (o.id === updated.id ? updated : o));
+      }
+      // 템플릿 객체 → placedObjects에 override로 추가
+      return [...prev, updated];
+    });
     await updateSpatialObject(updated.id, {
       name: updated.name,
       positionX: updated.positionX, positionY: updated.positionY, positionZ: updated.positionZ,
@@ -258,12 +267,10 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     });
   }, []);
 
-  // 객체 선택
+  // 객체 선택 — 모든 객체를 DimensionEditor로 편집 가능
   const handleSelect = useCallback((obj: SpatialObject) => {
     setSelectedId(obj.id);
-    if (obj.metadata && typeof obj.metadata === 'object' && 'presetId' in obj.metadata) {
-      setEditingId(obj.id);
-    }
+    setEditingId(obj.id);
     // 랙 선택 시 상세 패널 표시
     if (obj.type.name === 'RACK') {
       setSelectedRackId(obj.id);
@@ -337,12 +344,94 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setZones((prev) => [...prev, newZone]);
     setDrawingZoneType(null);
     setShowZoneList(true);
-  }, [zones]);
+    handleViewModeChange('perspective');
+  }, [zones, handleViewModeChange]);
 
   // Zone 삭제
   const handleDeleteZone = useCallback((id: string) => {
     setZones((prev) => prev.filter((z) => z.id !== id));
   }, []);
+
+  // 드래그 앤 드롭으로 프리셋 배치
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('application/hanvoxel-preset')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData('application/hanvoxel-preset');
+    if (!data) return;
+
+    const preset: SpatialPreset = JSON.parse(data);
+
+    // 드롭 위치를 3D 좌표로 변환 (NDC → 바닥 평면 교차)
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const nz = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+    // 근사 좌표 변환 (카메라 기준)
+    const worldX = Math.round(nx * 30 + 15);
+    const worldZ = Math.round(nz * 25 + 20);
+    const posY = (preset.height || 1) / 2;
+
+    const code = `${preset.code}_${Date.now()}`;
+    const localObj: SpatialObject = {
+      id: crypto.randomUUID(),
+      siteId: currentSiteId,
+      typeId: DEFAULT_TYPE_ID,
+      type: { id: DEFAULT_TYPE_ID, name: 'RACK', label: preset.name, description: null, depth: 5 },
+      name: preset.name,
+      code,
+      status: 'ACTIVE',
+      isActive: true,
+      positionX: worldX,
+      positionY: posY,
+      positionZ: worldZ,
+      rotationX: 0, rotationY: 0, rotationZ: 0,
+      scaleX: preset.width || 1,
+      scaleY: preset.height || 1,
+      scaleZ: preset.depth || 1,
+      color: preset.color ?? '#f59e0b',
+      opacity: preset.opacity,
+      visible: true,
+      meshType: (preset.meshType as MeshType) ?? 'box',
+      metadata: { presetId: preset.id, presetCode: preset.code },
+    };
+
+    setPlacedObjects((prev) => [...prev, localObj]);
+    setEditingId(localObj.id);
+    setSelectedId(localObj.id);
+
+    const saved = await createSpatialObject({
+      siteId: currentSiteId,
+      typeId: DEFAULT_TYPE_ID,
+      name: localObj.name,
+      code: localObj.code,
+      positionX: localObj.positionX,
+      positionY: localObj.positionY,
+      positionZ: localObj.positionZ,
+      scaleX: localObj.scaleX,
+      scaleY: localObj.scaleY,
+      scaleZ: localObj.scaleZ,
+      color: localObj.color,
+      opacity: localObj.opacity,
+      meshType: localObj.meshType,
+      metadata: localObj.metadata,
+    });
+
+    if (saved) {
+      setPlacedObjects((prev) =>
+        prev.map((o) =>
+          o.id === localObj.id
+            ? { ...localObj, id: saved.id, siteId: saved.siteId, typeId: saved.typeId }
+            : o,
+        ),
+      );
+      setEditingId(saved.id);
+    }
+  }, [currentSiteId]);
 
   // 2D 탑뷰에서 Zone 추가
   const handleAddZoneFromTopView = useCallback((zone: Omit<ZoneConfig, 'id'>) => {
@@ -368,7 +457,11 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {/* 3D 캔버스 */}
       <Canvas
         camera={{ position: [30, 20, 35], fov: 60, near: 0.1, far: 500 }}
@@ -400,7 +493,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           maxPolarAngle={Math.PI / 2.05}
           enableDamping
           dampingFactor={0.08}
-          enabled={!placingPreset}
+          enabled={!placingPreset && !drawingZoneType}
           rotateSpeed={0.5}
           zoomSpeed={1.2}
         />
@@ -418,7 +511,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
           zones={zones}
           drawingZoneType={drawingZoneType}
           onZoneDrawComplete={handleZoneDrawComplete}
-          onZoneDrawCancel={() => setDrawingZoneType(null)}
+          onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
           gridVisible={gridVisible}
           binOccupancy={binOccupancy}
         />
@@ -596,7 +689,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
             return (
               <button
                 key={type}
-                onClick={() => setDrawingZoneType(type)}
+                onClick={() => { setDrawingZoneType(type); handleViewModeChange('top'); }}
                 style={{
                   padding: '6px 12px',
                   borderRadius: 8,
@@ -676,7 +769,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         >
           클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
           <button
-            onClick={() => setDrawingZoneType(null)}
+            onClick={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
             style={{
               padding: '4px 12px',
               borderRadius: 6,

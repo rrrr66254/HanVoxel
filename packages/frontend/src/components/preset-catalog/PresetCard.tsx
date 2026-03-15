@@ -15,7 +15,7 @@ const REGION_LABEL: Record<string, string> = {
 };
 
 /**
- * 개별 프리셋 규격 카드
+ * 개별 프리셋 규격 카드 — 드래그 앤 드롭 지원
  */
 export function PresetCard({ preset, onSelect }: PresetCardProps) {
   // 치수 포맷 (0인 축은 생략)
@@ -24,8 +24,16 @@ export function PresetCard({ preset, onSelect }: PresetCardProps) {
     .map((v) => `${(v * 1000).toFixed(0)}`)
     .join(' × ');
 
+  // 드래그 시작 — 프리셋 데이터를 dataTransfer에 저장
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/hanvoxel-preset', JSON.stringify(preset));
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       onClick={() => onSelect?.(preset)}
       className={`rounded-lg border border-gray-700 bg-gray-800/80 p-3 transition-colors hover:border-gray-500 ${onSelect ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
     >

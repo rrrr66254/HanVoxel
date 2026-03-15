@@ -1,226 +1,73 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { calculateRoi, generateRoiPdfHtml } from '../../utils/roi-calculator';
 import type { RoiInput } from '../../utils/roi-calculator';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Download, Calculator, TrendingUp, Clock, Target, ArrowLeft, RotateCcw } from 'lucide-react';
+
+// ─── 색상 상수 ───
+const COLORS = {
+  bg: '#0D1117',
+  card: '#161B22',
+  border: '#30363D',
+  focusBorder: '#2D7DD2',
+  textPrimary: '#E6EDF3',
+  textSecondary: '#8B949E',
+  textMuted: '#484F58',
+  green: '#3FB950',
+  greenGradientStart: '#0D4429',
+  greenGradientEnd: '#1B7A3D',
+  blue: '#2D7DD2',
+  purple: '#A371F7',
+  orange: '#D29922',
+  red: '#F85149',
+  chartGrid: '#21262D',
+  barColors: ['#2D7DD2', '#3FB950', '#A371F7'],
+};
 
 interface RoiCalculatorProps {
   onBack: () => void;
 }
 
-const DEFAULT_INPUT: RoiInput = {
-  warehouseArea: 3000,
-  employeeCount: 15,
-  monthlyPickings: 10000,
-  currentErrorRate: 2.5,
-};
+// ─── 애니메이션 카운터 훅 ───
+function useAnimatedValue(target: number, duration = 800): number {
+  const [value, setValue] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
-const fmt = (n: number) => n.toLocaleString('ko-KR');
+  useEffect(() => {
+    startTimeRef.current = null;
 
-/**
- * ROI 계산기 — HanVoxel 도입 효과 분석
- */
-export function RoiCalculator({ onBack }: RoiCalculatorProps) {
-  const [input, setInput] = useState<RoiInput>(DEFAULT_INPUT);
-  const [showResult, setShowResult] = useState(false);
+    const animate = (timestamp: number) => {
+      if (startTimeRef.current === null) {
+        startTimeRef.current = timestamp;
+      }
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic 감속 곡선
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
 
-  const set = (field: keyof RoiInput, raw: string) => {
-    const num = parseFloat(raw);
-    if (!isNaN(num)) setInput((prev) => ({ ...prev, [field]: num }));
-  };
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
 
-  const result = useMemo(() => calculateRoi(input), [input]);
+    rafRef.current = requestAnimationFrame(animate);
 
-  const handlePdfDownload = () => {
-    const html = generateRoiPdfHtml(input, result);
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    // 렌더링 후 인쇄 대화상자 (PDF 저장 가능)
-    setTimeout(() => printWindow.print(), 300);
-  };
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [target, duration]);
 
-  const isValid = input.warehouseArea > 0 && input.employeeCount > 0 && input.monthlyPickings > 0 && input.currentErrorRate > 0;
-
-  return (
-    <div className="min-h-screen bg-gray-950">
-      {/* 헤더 */}
-      <div className="border-b border-gray-800 bg-gray-900/80 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div>
-            <div className="text-lg font-bold text-white">
-              <span className="text-blue-500">Han</span>Voxel
-              <span className="ml-2 text-sm font-normal text-gray-400">ROI 계산기</span>
-            </div>
-          </div>
-          <button
-            onClick={onBack}
-            className="rounded-lg border border-gray-600 px-4 py-2 text-xs text-gray-300 transition-colors hover:bg-gray-800"
-          >
-            돌아가기
-          </button>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        {!showResult ? (
-          /* === 입력 폼 === */
-          <div className="mx-auto max-w-xl space-y-8">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-white">도입 효과 분석</h1>
-              <p className="mt-2 text-sm text-gray-400">
-                현재 창고 운영 정보를 입력하면 HanVoxel 도입 시 예상 절감 효과를 계산합니다
-              </p>
-            </div>
-
-            <InputField
-              label="창고 면적"
-              unit="m²"
-              value={input.warehouseArea}
-              onChange={(v) => set('warehouseArea', v)}
-              hint="창고 총 면적을 입력하세요"
-            />
-            <InputField
-              label="직원 수"
-              unit="명"
-              value={input.employeeCount}
-              onChange={(v) => set('employeeCount', v)}
-              hint="창고 운영 인력 (관리자 + 피킹 + 검수)"
-            />
-            <InputField
-              label="월 피킹 건수"
-              unit="건/월"
-              value={input.monthlyPickings}
-              onChange={(v) => set('monthlyPickings', v)}
-              hint="월 평균 피킹(출고 처리) 건수"
-            />
-            <InputField
-              label="현재 오류율"
-              unit="%"
-              value={input.currentErrorRate}
-              onChange={(v) => set('currentErrorRate', v)}
-              hint="피킹 오류, 오배송, 재고 불일치 비율"
-              step="0.1"
-            />
-
-            <button
-              onClick={() => setShowResult(true)}
-              disabled={!isValid}
-              className="w-full rounded-lg bg-blue-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ROI 분석하기
-            </button>
-          </div>
-        ) : (
-          /* === 결과 표시 === */
-          <div className="space-y-8">
-            {/* 핵심 지표 카드 */}
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-white">분석 결과</h2>
-              <p className="mt-1 text-sm text-gray-400">{fmt(input.warehouseArea)} m² · {input.employeeCount}명 · 월 {fmt(input.monthlyPickings)}건 기준</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <MetricCard
-                label="연간 절감 예상액"
-                value={`${fmt(result.annualTotalSaving)}원`}
-                accent="blue"
-              />
-              <MetricCard
-                label="피킹 효율 개선"
-                value={`+${result.improvedPickingEfficiency.toFixed(0)}%`}
-                accent="green"
-              />
-              <MetricCard
-                label="오류율 감소"
-                value={`${input.currentErrorRate}% → ${result.improvedErrorRate.toFixed(2)}%`}
-                accent="green"
-              />
-              <MetricCard
-                label="투자 회수 기간"
-                value={result.paybackMonths > 0 ? `${result.paybackMonths}개월` : '무료'}
-                accent="purple"
-              />
-            </div>
-
-            {/* 상세 분석 */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* 현재 비용 */}
-              <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-5">
-                <h3 className="mb-4 text-sm font-bold text-gray-300">현재 연간 비용</h3>
-                <DetailRow label="인건비" value={`${fmt(result.currentAnnualLaborCost)}원`} />
-                <DetailRow label="오류 비용 (반품/재작업)" value={`${fmt(result.currentAnnualErrorCost)}원`} />
-                <DetailRow label="총 비용" value={`${fmt(result.currentAnnualTotalCost)}원`} bold />
-              </div>
-
-              {/* 절감 상세 */}
-              <div className="rounded-lg border border-emerald-700/30 bg-emerald-900/10 p-5">
-                <h3 className="mb-4 text-sm font-bold text-emerald-300">연간 절감 상세</h3>
-                <DetailRow label="인건비 절감 (동선 최적화)" value={`${fmt(result.annualLaborSaving)}원`} color="text-emerald-300" />
-                <DetailRow label="오류 비용 절감" value={`${fmt(result.annualErrorSaving)}원`} color="text-emerald-300" />
-                <DetailRow label="공간 절감 (레이아웃 최적화)" value={`${fmt(result.annualSpaceSaving)}원`} color="text-emerald-300" />
-                <DetailRow label="총 절감 예상액" value={`${fmt(result.annualTotalSaving)}원`} bold color="text-emerald-200" />
-              </div>
-            </div>
-
-            {/* ROI 요약 */}
-            <div className="rounded-lg border border-blue-600/30 bg-blue-900/10 p-5">
-              <h3 className="mb-4 text-sm font-bold text-blue-300">투자 대비 수익 (ROI)</h3>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div>
-                  <span className="text-xs text-gray-500">월 구독료</span>
-                  <p className="font-mono text-sm font-bold text-white">
-                    {result.monthlySubscription > 0 ? `${fmt(result.monthlySubscription)}원` : '무료'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">연 구독료</span>
-                  <p className="font-mono text-sm font-bold text-white">
-                    {result.annualSubscription > 0 ? `${fmt(result.annualSubscription)}원` : '무료'}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">순 연간 절감</span>
-                  <p className="font-mono text-sm font-bold text-emerald-300">{fmt(result.netAnnualSaving)}원</p>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500">ROI</span>
-                  <p className="font-mono text-sm font-bold text-blue-300">
-                    {result.roiPercent > 0 ? `${result.roiPercent.toFixed(0)}%` : '-'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 액션 버튼 */}
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={handlePdfDownload}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 11v3h12v-3M8 2v8M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                PDF 다운로드
-              </button>
-              <button
-                onClick={() => setShowResult(false)}
-                className="rounded-lg border border-gray-600 px-6 py-3 text-sm text-gray-300 transition-colors hover:bg-gray-800"
-              >
-                다시 계산
-              </button>
-            </div>
-
-            {/* 면책 조항 */}
-            <p className="text-center text-[11px] text-gray-600">
-              본 분석은 산업 평균 벤치마크 기반 추정치이며, 실제 결과는 운영 환경에 따라 달라질 수 있습니다.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return value;
 }
 
+// ─── 숫자 포맷 ───
+const fmt = (n: number) => n.toLocaleString('ko-KR');
+
+// ─── 입력 필드 컴포넌트 ───
 function InputField({
   label,
   unit,
@@ -236,44 +83,922 @@ function InputField({
   hint: string;
   step?: string;
 }) {
+  const [focused, setFocused] = useState(false);
+
   return (
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-gray-300">{label}</label>
-      <div className="relative">
+    <div style={{ marginBottom: 24 }}>
+      {/* 라벨 (입력 위) */}
+      <label
+        style={{
+          display: 'block',
+          fontSize: 13,
+          fontWeight: 600,
+          color: COLORS.textPrimary,
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </label>
+      {/* 입력 + 단위 */}
+      <div style={{ position: 'relative' }}>
         <input
           type="number"
           step={step}
           min={0}
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-3 pr-16 font-mono text-white outline-none placeholder:text-gray-500 focus:border-blue-500"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: '100%',
+            padding: '12px 60px 12px 16px',
+            fontSize: 15,
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+            color: COLORS.textPrimary,
+            backgroundColor: COLORS.card,
+            border: `1px solid ${focused ? COLORS.focusBorder : COLORS.border}`,
+            borderRadius: 8,
+            outline: 'none',
+            transition: 'border-color 0.2s ease',
+          }}
         />
-        <span className="absolute top-1/2 right-4 -translate-y-1/2 text-xs text-gray-500">{unit}</span>
+        {/* 단위 표시 (오른쪽) */}
+        <span
+          style={{
+            position: 'absolute',
+            right: 16,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: 12,
+            color: COLORS.textMuted,
+            fontWeight: 500,
+            pointerEvents: 'none',
+          }}
+        >
+          {unit}
+        </span>
       </div>
-      <p className="mt-1 text-[11px] text-gray-600">{hint}</p>
+      {/* 힌트 */}
+      <p
+        style={{
+          marginTop: 6,
+          fontSize: 11,
+          color: COLORS.textMuted,
+          lineHeight: 1.4,
+        }}
+      >
+        {hint}
+      </p>
     </div>
   );
 }
 
-function MetricCard({ label, value, accent }: { label: string; value: string; accent: 'blue' | 'green' | 'purple' }) {
-  const colors = {
-    blue: 'border-blue-600/30 bg-blue-900/10 text-blue-300',
-    green: 'border-emerald-600/30 bg-emerald-900/10 text-emerald-300',
-    purple: 'border-purple-600/30 bg-purple-900/10 text-purple-300',
+// ─── KPI 메트릭 카드 ───
+function MetricCard({
+  label,
+  value,
+  changeText,
+  changeDirection,
+  icon,
+  accentColor,
+}: {
+  label: string;
+  value: string;
+  changeText?: string;
+  changeDirection?: 'up' | 'down';
+  icon: React.ReactNode;
+  accentColor: string;
+}) {
+  return (
+    <div
+      style={{
+        backgroundColor: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 10,
+        padding: '20px 16px 16px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* 상단 3px 색상 라인 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: accentColor,
+        }}
+      />
+      {/* 아이콘 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ color: accentColor, opacity: 0.9 }}>{icon}</div>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: COLORS.textSecondary,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      {/* 값 */}
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 700,
+          color: COLORS.textPrimary,
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          lineHeight: 1.2,
+        }}
+      >
+        {value}
+      </div>
+      {/* 변화율 */}
+      {changeText && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 12,
+            fontWeight: 600,
+            color: changeDirection === 'up' ? COLORS.green : COLORS.red,
+          }}
+        >
+          {changeDirection === 'up' ? '▲' : '▼'} {changeText}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 상세 항목 행 ───
+function DetailRow({
+  label,
+  value,
+  bold,
+  color,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: bold ? '14px 0 6px' : '10px 0',
+        borderTop: bold ? `1px solid ${COLORS.border}` : 'none',
+        borderBottom: bold ? 'none' : `1px solid ${COLORS.chartGrid}`,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 13,
+          fontWeight: bold ? 700 : 400,
+          color: bold ? COLORS.textPrimary : COLORS.textSecondary,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: 14,
+          fontWeight: bold ? 700 : 500,
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          color: color ?? COLORS.textPrimary,
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ─── 차트 커스텀 툴팁 ───
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div
+      style={{
+        backgroundColor: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 8,
+        padding: '10px 14px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+      }}
+    >
+      <p style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 4 }}>{label}</p>
+      <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, fontFamily: 'monospace' }}>
+        {fmt(payload[0].value)}원
+      </p>
+    </div>
+  );
+}
+
+// ─── 기본 입력값 ───
+const DEFAULT_INPUT: RoiInput = {
+  warehouseArea: 3000,
+  employeeCount: 15,
+  monthlyPickings: 10000,
+  currentErrorRate: 2.5,
+};
+
+/**
+ * ROI 계산기 — HanVoxel 도입 효과 분석 (다크 테마)
+ */
+export function RoiCalculator({ onBack }: RoiCalculatorProps) {
+  const [input, setInput] = useState<RoiInput>(DEFAULT_INPUT);
+  const [showResult, setShowResult] = useState(false);
+
+  const set = useCallback((field: keyof RoiInput, raw: string) => {
+    const num = parseFloat(raw);
+    if (!isNaN(num)) setInput((prev) => ({ ...prev, [field]: num }));
+  }, []);
+
+  const result = useMemo(() => calculateRoi(input), [input]);
+
+  // 애니메이션 카운터 값
+  const animatedTotalSaving = useAnimatedValue(showResult ? result.annualTotalSaving : 0, 1000);
+  const animatedLaborSaving = useAnimatedValue(showResult ? result.annualLaborSaving : 0, 800);
+  const animatedErrorSaving = useAnimatedValue(showResult ? result.annualErrorSaving : 0, 800);
+  const animatedSpaceSaving = useAnimatedValue(showResult ? result.annualSpaceSaving : 0, 800);
+  const animatedNetSaving = useAnimatedValue(showResult ? result.netAnnualSaving : 0, 900);
+  const animatedRoi = useAnimatedValue(showResult ? Math.round(result.roiPercent) : 0, 700);
+  const animatedPayback = useAnimatedValue(showResult ? result.paybackMonths : 0, 600);
+  const animatedEfficiency = useAnimatedValue(showResult ? Math.round(result.improvedPickingEfficiency) : 0, 700);
+
+  // PDF 다운로드
+  const handlePdfDownload = () => {
+    const html = generateRoiPdfHtml(input, result);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    // 렌더링 후 인쇄 대화상자 (PDF 저장 가능)
+    setTimeout(() => printWindow.print(), 300);
   };
-  return (
-    <div className={`rounded-lg border p-4 ${colors[accent]}`}>
-      <div className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">{label}</div>
-      <div className="mt-1 text-lg font-bold">{value}</div>
-    </div>
-  );
-}
 
-function DetailRow({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
+  // 다시 계산
+  const handleReset = () => {
+    setShowResult(false);
+  };
+
+  // 유효성 검사
+  const isValid =
+    input.warehouseArea > 0 &&
+    input.employeeCount > 0 &&
+    input.monthlyPickings > 0 &&
+    input.currentErrorRate > 0;
+
+  // 차트 데이터
+  const chartData = [
+    { name: '인건비 절감', value: result.annualLaborSaving },
+    { name: '오류 비용 절감', value: result.annualErrorSaving },
+    { name: '공간 절감', value: result.annualSpaceSaving },
+  ];
+
   return (
-    <div className={`flex items-center justify-between py-2 ${bold ? 'mt-2 border-t border-gray-600 pt-3' : 'border-b border-gray-700/50'}`}>
-      <span className={`text-xs ${bold ? 'font-bold text-gray-200' : 'text-gray-500'}`}>{label}</span>
-      <span className={`font-mono text-sm ${bold ? 'font-bold' : ''} ${color ?? 'text-gray-300'}`}>{value}</span>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: COLORS.bg,
+        fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      {/* ─── 헤더 ─── */}
+      <div
+        style={{
+          borderBottom: `1px solid ${COLORS.border}`,
+          backgroundColor: 'rgba(22, 27, 34, 0.85)',
+          backdropFilter: 'blur(12px)',
+          padding: '16px 24px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 960,
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* 왼쪽: 뒤로가기 + 로고 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              onClick={onBack}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${COLORS.border}`,
+                backgroundColor: 'transparent',
+                color: COLORS.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.card;
+                e.currentTarget.style.color = COLORS.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = COLORS.textSecondary;
+              }}
+              title="돌아가기"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <span style={{ fontSize: 18, fontWeight: 700, color: COLORS.textPrimary }}>
+                <span style={{ color: COLORS.blue }}>Han</span>Voxel
+              </span>
+              <span
+                style={{
+                  marginLeft: 10,
+                  fontSize: 13,
+                  color: COLORS.textSecondary,
+                  fontWeight: 400,
+                }}
+              >
+                ROI 계산기
+              </span>
+            </div>
+          </div>
+          {/* 오른쪽: Calculator 아이콘 */}
+          <div style={{ color: COLORS.textMuted }}>
+            <Calculator size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 메인 컨텐츠 ─── */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px 64px' }}>
+        {!showResult ? (
+          /* ════════════════════════════════════
+             입력 폼
+             ════════════════════════════════════ */
+          <div style={{ maxWidth: 520, margin: '0 auto' }}>
+            {/* 제목 */}
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <h1
+                style={{
+                  fontSize: 28,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  marginBottom: 8,
+                }}
+              >
+                도입 효과 분석
+              </h1>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: COLORS.textSecondary,
+                  lineHeight: 1.6,
+                }}
+              >
+                현재 창고 운영 정보를 입력하면
+                <br />
+                HanVoxel 도입 시 예상 절감 효과를 계산합니다
+              </p>
+            </div>
+
+            {/* 입력 카드 */}
+            <div
+              style={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '28px 24px',
+                marginBottom: 24,
+              }}
+            >
+              <InputField
+                label="창고 면적"
+                unit="m²"
+                value={input.warehouseArea}
+                onChange={(v) => set('warehouseArea', v)}
+                hint="창고 총 면적을 입력하세요"
+              />
+              <InputField
+                label="직원 수"
+                unit="명"
+                value={input.employeeCount}
+                onChange={(v) => set('employeeCount', v)}
+                hint="창고 운영 인력 (관리자 + 피킹 + 검수)"
+              />
+              <InputField
+                label="월 피킹 건수"
+                unit="건/월"
+                value={input.monthlyPickings}
+                onChange={(v) => set('monthlyPickings', v)}
+                hint="월 평균 피킹(출고 처리) 건수"
+              />
+              <InputField
+                label="현재 오류율"
+                unit="%"
+                value={input.currentErrorRate}
+                onChange={(v) => set('currentErrorRate', v)}
+                hint="피킹 오류, 오배송, 재고 불일치 비율"
+                step="0.1"
+              />
+            </div>
+
+            {/* 분석 버튼 */}
+            <button
+              onClick={() => setShowResult(true)}
+              disabled={!isValid}
+              style={{
+                width: '100%',
+                padding: '14px 0',
+                fontSize: 15,
+                fontWeight: 600,
+                color: '#FFFFFF',
+                backgroundColor: isValid ? COLORS.blue : COLORS.border,
+                border: 'none',
+                borderRadius: 10,
+                cursor: isValid ? 'pointer' : 'not-allowed',
+                opacity: isValid ? 1 : 0.5,
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                if (isValid) e.currentTarget.style.backgroundColor = '#3A8FE0';
+              }}
+              onMouseLeave={(e) => {
+                if (isValid) e.currentTarget.style.backgroundColor = COLORS.blue;
+              }}
+            >
+              <Calculator size={18} />
+              ROI 분석하기
+            </button>
+          </div>
+        ) : (
+          /* ════════════════════════════════════
+             결과 화면
+             ════════════════════════════════════ */
+          <div>
+            {/* 제목 */}
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <h2
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  marginBottom: 6,
+                }}
+              >
+                분석 결과
+              </h2>
+              <p style={{ fontSize: 13, color: COLORS.textSecondary }}>
+                {fmt(input.warehouseArea)} m² · {input.employeeCount}명 · 월{' '}
+                {fmt(input.monthlyPickings)}건 기준
+              </p>
+            </div>
+
+            {/* ─── 연간 절감 예상액 (대형 카드, 그린 그라데이션) ─── */}
+            <div
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.greenGradientStart} 0%, ${COLORS.greenGradientEnd} 100%)`,
+                border: `1px solid rgba(63, 185, 80, 0.3)`,
+                borderRadius: 14,
+                padding: '32px 28px',
+                marginBottom: 28,
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* 배경 장식 원 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -40,
+                  right: -40,
+                  width: 160,
+                  height: 160,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(63, 185, 80, 0.08)',
+                }}
+              />
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'rgba(255,255,255,0.7)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  marginBottom: 8,
+                }}
+              >
+                연간 절감 예상액
+              </p>
+              <p
+                style={{
+                  fontSize: 42,
+                  fontWeight: 800,
+                  color: '#FFFFFF',
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  lineHeight: 1.1,
+                }}
+              >
+                {fmt(animatedTotalSaving)}
+                <span style={{ fontSize: 22, fontWeight: 600, marginLeft: 4 }}>원</span>
+              </p>
+              <p
+                style={{
+                  marginTop: 10,
+                  fontSize: 13,
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
+                월 약 {fmt(Math.round(animatedTotalSaving / 12))}원 절감
+              </p>
+            </div>
+
+            {/* ─── KPI 카드 그리드 ─── */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 14,
+                marginBottom: 28,
+              }}
+            >
+              <MetricCard
+                label="순 연간 절감"
+                value={`${fmt(animatedNetSaving)}원`}
+                changeText="구독료 차감 후"
+                changeDirection="up"
+                icon={<TrendingUp size={16} />}
+                accentColor={COLORS.green}
+              />
+              <MetricCard
+                label="피킹 효율"
+                value={`+${animatedEfficiency}%`}
+                changeText="동선 최적화"
+                changeDirection="up"
+                icon={<Target size={16} />}
+                accentColor={COLORS.blue}
+              />
+              <MetricCard
+                label="오류율 감소"
+                value={`${input.currentErrorRate}% → ${result.improvedErrorRate.toFixed(2)}%`}
+                changeText={`${(input.currentErrorRate - result.improvedErrorRate).toFixed(2)}%p 감소`}
+                changeDirection="down"
+                icon={<Target size={16} />}
+                accentColor={COLORS.orange}
+              />
+              <MetricCard
+                label="투자 회수"
+                value={animatedPayback > 0 ? `${animatedPayback}개월` : '무료'}
+                changeText={`ROI ${animatedRoi}%`}
+                changeDirection="up"
+                icon={<Clock size={16} />}
+                accentColor={COLORS.purple}
+              />
+            </div>
+
+            {/* ─── 절감 항목별 바 차트 ─── */}
+            <div
+              style={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '24px 20px',
+                marginBottom: 28,
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  marginBottom: 20,
+                }}
+              >
+                항목별 연간 절감액
+              </h3>
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 8, right: 20, left: 20, bottom: 8 }}
+                    barCategoryGap="30%"
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={COLORS.chartGrid}
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: COLORS.textSecondary, fontSize: 12 }}
+                      axisLine={{ stroke: COLORS.chartGrid }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: COLORS.textSecondary, fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`}
+                    />
+                    <Tooltip
+                      content={<ChartTooltip />}
+                      cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                    />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={64}>
+                      {chartData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS.barColors[index]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ─── 상세 분석 (2컬럼) ─── */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 16,
+                marginBottom: 28,
+              }}
+            >
+              {/* 현재 연간 비용 */}
+              <div
+                style={{
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '20px 18px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: COLORS.textSecondary,
+                    marginBottom: 16,
+                  }}
+                >
+                  현재 연간 비용
+                </h3>
+                <DetailRow
+                  label="인건비"
+                  value={`${fmt(result.currentAnnualLaborCost)}원`}
+                />
+                <DetailRow
+                  label="오류 비용 (반품/재작업)"
+                  value={`${fmt(result.currentAnnualErrorCost)}원`}
+                />
+                <DetailRow
+                  label="총 비용"
+                  value={`${fmt(result.currentAnnualTotalCost)}원`}
+                  bold
+                />
+              </div>
+
+              {/* 연간 절감 상세 */}
+              <div
+                style={{
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '20px 18px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: COLORS.green,
+                    marginBottom: 16,
+                  }}
+                >
+                  연간 절감 상세
+                </h3>
+                <DetailRow
+                  label="인건비 절감 (동선 최적화)"
+                  value={`${fmt(animatedLaborSaving)}원`}
+                  color={COLORS.green}
+                />
+                <DetailRow
+                  label="오류 비용 절감"
+                  value={`${fmt(animatedErrorSaving)}원`}
+                  color={COLORS.green}
+                />
+                <DetailRow
+                  label="공간 절감 (레이아웃 최적화)"
+                  value={`${fmt(animatedSpaceSaving)}원`}
+                  color={COLORS.green}
+                />
+                <DetailRow
+                  label="총 절감 예상액"
+                  value={`${fmt(animatedTotalSaving)}원`}
+                  bold
+                  color={COLORS.green}
+                />
+              </div>
+            </div>
+
+            {/* ─── ROI 요약 카드 ─── */}
+            <div
+              style={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 12,
+                padding: '20px 18px',
+                marginBottom: 32,
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: COLORS.blue,
+                  marginBottom: 16,
+                }}
+              >
+                투자 대비 수익 (ROI)
+              </h3>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 16,
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>월 구독료</span>
+                  <p
+                    style={{
+                      marginTop: 4,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {result.monthlySubscription > 0
+                      ? `${fmt(result.monthlySubscription)}원`
+                      : '무료'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>연 구독료</span>
+                  <p
+                    style={{
+                      marginTop: 4,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: COLORS.textPrimary,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {result.annualSubscription > 0
+                      ? `${fmt(result.annualSubscription)}원`
+                      : '무료'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>순 연간 절감</span>
+                  <p
+                    style={{
+                      marginTop: 4,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: COLORS.green,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {fmt(animatedNetSaving)}원
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>ROI</span>
+                  <p
+                    style={{
+                      marginTop: 4,
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: COLORS.blue,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {animatedRoi > 0 ? `${animatedRoi}%` : '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ─── 액션 버튼 ─── */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 12,
+                marginBottom: 24,
+              }}
+            >
+              {/* PDF 다운로드 */}
+              <button
+                onClick={handlePdfDownload}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 24px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#FFFFFF',
+                  backgroundColor: COLORS.blue,
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3A8FE0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.blue;
+                }}
+              >
+                <Download size={16} />
+                PDF 다운로드
+              </button>
+              {/* 다시 계산 */}
+              <button
+                onClick={handleReset}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 24px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: COLORS.textSecondary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.card;
+                  e.currentTarget.style.color = COLORS.textPrimary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = COLORS.textSecondary;
+                }}
+              >
+                <RotateCcw size={16} />
+                다시 계산
+              </button>
+            </div>
+
+            {/* ─── 면책 조항 ─── */}
+            <p
+              style={{
+                textAlign: 'center',
+                fontSize: 11,
+                color: COLORS.textMuted,
+                lineHeight: 1.5,
+              }}
+            >
+              본 분석은 산업 평균 벤치마크 기반 추정치이며, 실제 결과는 운영 환경에 따라
+              달라질 수 있습니다.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

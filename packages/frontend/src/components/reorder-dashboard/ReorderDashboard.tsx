@@ -1,17 +1,51 @@
 /**
- * HanVoxel — 자동 발주 추천 대시보드
+ * HanVoxel — 자동 발주 추천 대시보드 (다크 테마)
  *
  * 탭:
- *   1. 추천 목록 — 긴급도별 발주 추천 + 수락/무시 액션
- *   2. 수요 예측 — SKU별 수요 예측 차트
+ *   1. 발주 추천 — 긴급도별 발주 추천 + 수락/무시 액션
+ *   2. 수요 예측 — SKU별 수요 예측 recharts 차트
  *   3. 리드타임 — 공급업체별 리드타임 통계
  *
  * API 미연결 시 mock 데이터 fallback
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  ShoppingCart,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  Package,
+  Check,
+  X,
+  ArrowLeft,
+} from 'lucide-react';
 import type { ReorderRecommendation, ReorderSummary } from '../../api/reorder-api';
 import * as reorderApi from '../../api/reorder-api';
+
+// --- 디자인 토큰 ---
+
+const COLORS = {
+  bg: '#0D1117',
+  card: '#161B22',
+  border: '#30363D',
+  text: '#C9D1D9',
+  textMuted: '#8B949E',
+  textDim: '#484F58',
+  grid: '#21262D',
+  accent: '#58A6FF',
+} as const;
 
 // --- Mock 데이터 ---
 
@@ -65,20 +99,154 @@ const MOCK_SUMMARY: ReorderSummary = {
   autoOrderedLast30d: 7,
 };
 
-// --- 긴급도 배지 ---
+// --- 긴급도 스타일 ---
 
-const URGENCY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  CRITICAL: { bg: 'bg-red-900/30 border-red-700/50', text: 'text-red-300', label: '긴급' },
-  HIGH: { bg: 'bg-orange-900/30 border-orange-700/50', text: 'text-orange-300', label: '높음' },
-  MEDIUM: { bg: 'bg-yellow-900/30 border-yellow-700/50', text: 'text-yellow-300', label: '보통' },
-  LOW: { bg: 'bg-green-900/30 border-green-700/50', text: 'text-green-300', label: '낮음' },
+interface UrgencyStyle {
+  border: string;
+  shadow: string;
+  badge: string;
+  badgeText: string;
+  label: string;
+  dot: string;
+}
+
+const URGENCY_STYLES: Record<string, UrgencyStyle> = {
+  CRITICAL: {
+    border: 'border-[#F85149]',
+    shadow: '0 0 20px rgba(248,81,73,0.3)',
+    badge: 'bg-[#F85149]/15',
+    badgeText: 'text-[#F85149]',
+    label: '긴급',
+    dot: 'bg-[#F85149]',
+  },
+  HIGH: {
+    border: 'border-[#D29922]',
+    shadow: '0 0 12px rgba(210,153,34,0.2)',
+    badge: 'bg-[#D29922]/15',
+    badgeText: 'text-[#D29922]',
+    label: '높음',
+    dot: 'bg-[#D29922]',
+  },
+  MEDIUM: {
+    border: 'border-[#E3B341]',
+    shadow: '0 0 8px rgba(227,179,65,0.15)',
+    badge: 'bg-[#E3B341]/15',
+    badgeText: 'text-[#E3B341]',
+    label: '보통',
+    dot: 'bg-[#E3B341]',
+  },
+  LOW: {
+    border: 'border-[#8B949E]',
+    shadow: 'none',
+    badge: 'bg-[#8B949E]/15',
+    badgeText: 'text-[#8B949E]',
+    label: '낮음',
+    dot: 'bg-[#8B949E]',
+  },
 };
+
+// --- 애니메이션 카운터 훅 ---
+
+function useAnimatedCounter(target: number, duration = 800): number {
+  const [value, setValue] = useState(0);
+  const prevTarget = useRef(0);
+
+  useEffect(() => {
+    const start = prevTarget.current;
+    prevTarget.current = target;
+    const diff = target - start;
+    if (diff === 0) {
+      setValue(target);
+      return;
+    }
+
+    const startTime = performance.now();
+    let raf: number;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(start + diff * eased));
+      if (progress < 1) {
+        raf = requestAnimationFrame(animate);
+      }
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return value;
+}
+
+// --- KPI 카드 ---
+
+interface KpiCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: string;
+  trend?: { value: number; up: boolean } | null;
+}
+
+function KpiCard({ icon, label, value, color, trend }: KpiCardProps) {
+  const animatedValue = useAnimatedCounter(value);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-lg"
+      style={{
+        backgroundColor: COLORS.card,
+        border: `1px solid ${COLORS.border}`,
+      }}
+    >
+      {/* 상단 3px 컬러 라인 */}
+      <div className="h-[3px] w-full" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <span style={{ color }}>{icon}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs" style={{ color: COLORS.textMuted }}>
+            {label}
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold text-white">
+              {animatedValue.toLocaleString()}
+            </span>
+            {trend && (
+              <span
+                className="text-xs font-medium"
+                style={{ color: trend.up ? '#F85149' : '#3FB950' }}
+              >
+                {trend.up ? '▲' : '▼'} {Math.abs(trend.value)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- 메인 대시보드 ---
 
 interface ReorderDashboardProps {
   onBack: () => void;
 }
 
 type TabType = 'recommendations' | 'forecast' | 'leadtime';
+
+const TAB_CONFIG: ReadonlyArray<{ key: TabType; label: string; icon: React.ReactNode }> = [
+  { key: 'recommendations', label: '발주 추천', icon: <ShoppingCart size={14} /> },
+  { key: 'forecast', label: '수요 예측', icon: <TrendingUp size={14} /> },
+  { key: 'leadtime', label: '리드타임', icon: <Clock size={14} /> },
+];
 
 export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
   const [tab, setTab] = useState<TabType>('recommendations');
@@ -151,22 +319,27 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
   }, [recommendations, filter]);
 
   return (
-    <div className="flex h-screen flex-col bg-gray-950">
+    <div className="flex h-screen flex-col" style={{ backgroundColor: COLORS.bg }}>
       {/* 헤더 */}
-      <header className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
+      <header
+        className="flex items-center justify-between px-6 py-4"
+        style={{ borderBottom: `1px solid ${COLORS.border}` }}
+      >
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-400 hover:text-white"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
+            style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}
           >
-            ← 뒤로
+            <ArrowLeft size={14} />
+            뒤로
           </button>
           <div>
             <h1 className="text-lg font-bold text-white">자동 발주 추천</h1>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: COLORS.textDim }}>
               ML 수요 예측 + 리드타임 학습 기반 자동 발주
               {useMock && (
-                <span className="ml-2 rounded bg-yellow-900/30 px-1.5 py-0.5 text-yellow-400">
+                <span className="ml-2 inline-block rounded bg-[#D29922]/15 px-1.5 py-0.5 text-[#D29922]">
                   DEMO
                 </span>
               )}
@@ -174,39 +347,47 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
           </div>
         </div>
 
-        {/* 요약 통계 */}
-        <div className="flex gap-4">
-          <div className="text-center">
-            <div className="text-lg font-bold text-red-400">{summary.urgentCount}</div>
-            <div className="text-xs text-gray-500">긴급 대기</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-amber-400">{summary.pendingCount}</div>
-            <div className="text-xs text-gray-500">전체 대기</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-green-400">{summary.autoOrderedLast30d}</div>
-            <div className="text-xs text-gray-500">자동발주(30일)</div>
-          </div>
+        {/* KPI 카드 */}
+        <div className="flex gap-3">
+          <KpiCard
+            icon={<AlertTriangle size={16} />}
+            label="긴급 대기"
+            value={summary.urgentCount}
+            color="#F85149"
+            trend={{ value: 1, up: true }}
+          />
+          <KpiCard
+            icon={<Package size={16} />}
+            label="전체 대기"
+            value={summary.pendingCount}
+            color="#D29922"
+          />
+          <KpiCard
+            icon={<ShoppingCart size={16} />}
+            label="자동발주(30일)"
+            value={summary.autoOrderedLast30d}
+            color="#3FB950"
+            trend={{ value: 2, up: false }}
+          />
         </div>
       </header>
 
       {/* 탭 */}
-      <div className="flex gap-1 border-b border-gray-800 px-6">
-        {([
-          ['recommendations', '발주 추천'],
-          ['forecast', '수요 예측'],
-          ['leadtime', '리드타임'],
-        ] as const).map(([key, label]) => (
+      <div
+        className="flex gap-1 px-6"
+        style={{ borderBottom: `1px solid ${COLORS.border}` }}
+      >
+        {TAB_CONFIG.map(({ key, label, icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2.5 text-sm transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors ${
               tab === key
-                ? 'border-b-2 border-indigo-500 text-white'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'border-b-2 border-[#58A6FF] text-white'
+                : 'text-[#8B949E] hover:text-[#C9D1D9]'
             }`}
           >
+            {icon}
             {label}
           </button>
         ))}
@@ -254,34 +435,46 @@ function RecommendationsTab({
       {/* 필터 + 생성 버튼 */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((f) => (
-            <button
-              key={f}
-              onClick={() => onFilterChange(f)}
-              className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${
-                filter === f
-                  ? 'bg-indigo-600 text-white'
-                  : 'border border-gray-700 text-gray-400 hover:text-white'
-              }`}
-            >
-              {f === 'ALL' ? '전체' : URGENCY_STYLES[f]?.label ?? f}
-            </button>
-          ))}
+          {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((f) => {
+            const isActive = filter === f;
+            const style = f !== 'ALL' ? URGENCY_STYLES[f] : null;
+            return (
+              <button
+                key={f}
+                onClick={() => onFilterChange(f)}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-[#58A6FF]/15 text-[#58A6FF]'
+                    : 'text-[#8B949E] hover:text-[#C9D1D9] hover:bg-white/5'
+                }`}
+                style={{
+                  border: `1px solid ${isActive ? '#58A6FF' : COLORS.border}`,
+                }}
+              >
+                {style && (
+                  <span className={`inline-block h-2 w-2 rounded-full ${style.dot}`} />
+                )}
+                {f === 'ALL' ? '전체' : style?.label ?? f}
+              </button>
+            );
+          })}
         </div>
         <button
           onClick={onGenerate}
           disabled={loading}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+          className="rounded-lg bg-[#238636] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2EA043] disabled:opacity-50"
         >
           {loading ? '분석 중...' : '추천 새로고침'}
         </button>
       </div>
 
-      {/* 추천 카드 목록 */}
+      {/* 추천 카드 목록 또는 빈 상태 */}
       {items.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
-          발주 추천 항목이 없습니다
-        </div>
+        <EmptyState
+          icon={<Package size={48} />}
+          message="발주 추천 항목이 없습니다"
+          sub="현재 필터 조건에 해당하는 추천이 없습니다."
+        />
       ) : (
         <div className="space-y-3">
           {items.map((rec) => (
@@ -293,6 +486,32 @@ function RecommendationsTab({
             />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// === 빈 상태 컴포넌트 ===
+
+function EmptyState({
+  icon,
+  message,
+  sub,
+}: {
+  icon: React.ReactNode;
+  message: string;
+  sub?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <div style={{ color: COLORS.textDim }}>{icon}</div>
+      <p className="mt-4 text-sm font-medium" style={{ color: COLORS.textMuted }}>
+        {message}
+      </p>
+      {sub && (
+        <p className="mt-1 text-xs" style={{ color: COLORS.textDim }}>
+          {sub}
+        </p>
       )}
     </div>
   );
@@ -310,35 +529,57 @@ function RecommendationCard({
   const urgStyle = URGENCY_STYLES[rec.urgency] ?? URGENCY_STYLES.LOW;
   const isPending = rec.status === 'PENDING';
 
-  // 재고 잔량 바
+  // 재고 잔량 바 비율
   const maxQty = Math.max(rec.currentQty, rec.safetyStock, rec.reorderQty);
   const currentPct = (rec.currentQty / maxQty) * 100;
   const safetyPct = (rec.safetyStock / maxQty) * 100;
 
+  // 소진 타임라인 비율 (최대 30일 기준)
+  const timelinePct = rec.daysUntilOut !== null ? Math.min((rec.daysUntilOut / 30) * 100, 100) : 0;
+  const timelineColor =
+    rec.daysUntilOut !== null && rec.daysUntilOut <= 3
+      ? '#F85149'
+      : rec.daysUntilOut !== null && rec.daysUntilOut <= 7
+        ? '#D29922'
+        : '#3FB950';
+
   return (
-    <div className={`rounded-xl border p-4 ${urgStyle.bg}`}>
+    <div
+      className={`rounded-xl border p-5 transition-all hover:translate-y-[-1px] ${urgStyle.border}`}
+      style={{
+        backgroundColor: COLORS.card,
+        boxShadow: urgStyle.shadow,
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {/* 헤더 */}
-          <div className="flex items-center gap-2">
-            <span className={`rounded px-2 py-0.5 text-xs font-medium ${urgStyle.text}`}>
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`rounded-md px-2 py-0.5 text-xs font-bold ${urgStyle.badge} ${urgStyle.badgeText}`}
+            >
               {urgStyle.label}
             </span>
             <span className="font-mono text-sm font-bold text-white">{rec.sku}</span>
-            <span className="text-sm text-gray-300">{rec.itemName}</span>
+            <span className="text-sm" style={{ color: COLORS.text }}>
+              {rec.itemName}
+            </span>
             {rec.status !== 'PENDING' && (
-              <span className={`rounded px-2 py-0.5 text-xs ${
-                rec.status === 'AUTO_ORDERED'
-                  ? 'bg-blue-900/30 text-blue-300'
-                  : 'bg-gray-700 text-gray-400'
-              }`}>
+              <span
+                className="rounded-md px-2 py-0.5 text-xs"
+                style={{
+                  backgroundColor:
+                    rec.status === 'AUTO_ORDERED' ? 'rgba(56,139,253,0.15)' : 'rgba(139,148,158,0.15)',
+                  color: rec.status === 'AUTO_ORDERED' ? '#58A6FF' : '#8B949E',
+                }}
+              >
                 {rec.status === 'AUTO_ORDERED' ? '발주 완료' : '무시됨'}
               </span>
             )}
           </div>
 
           {/* 핵심 메시지 */}
-          <p className="mt-2 text-sm text-gray-200">
+          <p className="mt-2.5 text-sm" style={{ color: COLORS.text }}>
             {rec.daysUntilOut !== null && rec.daysUntilOut <= 0
               ? '재고가 이미 소진되었습니다!'
               : `${rec.daysUntilOut ?? '?'}일 후 재고 소진 예정`}
@@ -347,44 +588,82 @@ function RecommendationCard({
             )}
           </p>
 
+          {/* 소진 타임라인 시각화 */}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-xs font-medium" style={{ color: COLORS.textMuted }}>
+              소진 타임라인
+            </span>
+            <div
+              className="relative h-2 flex-1 overflow-hidden rounded-full"
+              style={{ backgroundColor: COLORS.grid }}
+            >
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${timelinePct}%`,
+                  backgroundColor: timelineColor,
+                  boxShadow: `0 0 6px ${timelineColor}40`,
+                }}
+              />
+              {/* 현재 위치 마커 */}
+              <div
+                className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-white"
+                style={{
+                  left: `${Math.max(timelinePct - 1, 0)}%`,
+                  backgroundColor: timelineColor,
+                }}
+              />
+            </div>
+            <span className="whitespace-nowrap text-xs font-bold" style={{ color: timelineColor }}>
+              {rec.daysUntilOut ?? '-'}일
+            </span>
+          </div>
+
           {/* 수량 정보 */}
-          <div className="mt-3 grid grid-cols-4 gap-3 text-xs">
+          <div className="mt-3 grid grid-cols-4 gap-4 text-xs">
             <div>
-              <div className="text-gray-500">현재 재고</div>
-              <div className="font-bold text-white">{rec.currentQty.toLocaleString()}개</div>
+              <div style={{ color: COLORS.textDim }}>현재 재고</div>
+              <div className="mt-0.5 font-bold text-white">{rec.currentQty.toLocaleString()}개</div>
             </div>
             <div>
-              <div className="text-gray-500">안전 재고</div>
-              <div className="font-bold text-yellow-300">{rec.safetyStock.toLocaleString()}개</div>
+              <div style={{ color: COLORS.textDim }}>안전 재고</div>
+              <div className="mt-0.5 font-bold text-[#E3B341]">
+                {rec.safetyStock.toLocaleString()}개
+              </div>
             </div>
             <div>
-              <div className="text-gray-500">추천 발주량</div>
-              <div className="font-bold text-indigo-300">{rec.reorderQty.toLocaleString()}개</div>
+              <div style={{ color: COLORS.textDim }}>추천 발주량</div>
+              <div className="mt-0.5 font-bold text-[#58A6FF]">
+                {rec.reorderQty.toLocaleString()}개
+              </div>
             </div>
             <div>
-              <div className="text-gray-500">소진 예정일</div>
-              <div className="font-bold text-white">{rec.stockoutDate ?? '-'}</div>
+              <div style={{ color: COLORS.textDim }}>소진 예정일</div>
+              <div className="mt-0.5 font-bold text-white">{rec.stockoutDate ?? '-'}</div>
             </div>
           </div>
 
           {/* 재고 바 */}
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 h-2 overflow-hidden rounded-full bg-gray-700">
+          <div className="mt-2.5 flex items-center gap-2">
+            <div
+              className="h-1.5 flex-1 overflow-hidden rounded-full"
+              style={{ backgroundColor: COLORS.grid }}
+            >
               <div
                 className={`h-full rounded-full transition-all ${
-                  currentPct < safetyPct ? 'bg-red-500' : 'bg-green-500'
+                  currentPct < safetyPct ? 'bg-[#F85149]' : 'bg-[#3FB950]'
                 }`}
                 style={{ width: `${Math.min(currentPct, 100)}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500 whitespace-nowrap">
+            <span className="whitespace-nowrap text-xs" style={{ color: COLORS.textDim }}>
               {Math.round(currentPct)}% / 안전선 {Math.round(safetyPct)}%
             </span>
           </div>
 
           {/* 예측 정보 */}
           {rec.forecastMeta && (
-            <div className="mt-2 flex gap-3 text-xs text-gray-500">
+            <div className="mt-2 flex gap-3 text-xs" style={{ color: COLORS.textDim }}>
               <span>모델: {rec.forecastMeta.model}</span>
               <span>일평균: {rec.forecastMeta.dailyAvg}개</span>
               {rec.forecastMeta.mape !== null && (
@@ -394,19 +673,25 @@ function RecommendationCard({
           )}
         </div>
 
-        {/* 액션 버튼 */}
+        {/* 액션 버튼 — Accept=녹색, Ignore=회색 아웃라인 */}
         {isPending && (
-          <div className="ml-4 flex flex-col gap-2">
+          <div className="ml-5 flex flex-col gap-2">
             <button
               onClick={() => onAccept(rec.id)}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500"
+              className="flex items-center gap-1.5 rounded-lg bg-[#238636] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#2EA043]"
             >
-              발주 수락
+              <Check size={13} />
+              수락
             </button>
             <button
               onClick={() => onDismiss(rec.id)}
-              className="rounded-lg border border-gray-600 px-4 py-2 text-xs text-gray-400 hover:text-white"
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium transition-colors hover:bg-white/5"
+              style={{
+                border: `1px solid ${COLORS.border}`,
+                color: COLORS.textMuted,
+              }}
             >
+              <X size={13} />
               무시
             </button>
           </div>
@@ -420,97 +705,204 @@ function RecommendationCard({
 
 function ForecastTab() {
   // Mock 수요 예측 차트 데이터
-  const mockDays = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i + 1);
-    const base = 15 + Math.sin(i * 0.3) * 5;
-    return {
-      date: d.toISOString().slice(5, 10),
-      qty: Math.max(0, Math.round(base + (Math.random() - 0.5) * 4)),
-    };
-  });
+  const mockDays = useMemo(
+    () =>
+      Array.from({ length: 30 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() + i + 1);
+        const base = 15 + Math.sin(i * 0.3) * 5;
+        return {
+          date: d.toISOString().slice(5, 10),
+          forecast: Math.max(0, Math.round(base + (Math.random() - 0.5) * 4)),
+          actual: i < 7 ? Math.max(0, Math.round(base + (Math.random() - 0.5) * 6)) : undefined,
+        };
+      }),
+    []
+  );
 
-  const maxQty = Math.max(...mockDays.map((d) => d.qty));
-  const chartH = 120;
+  // 커스텀 툴팁
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number; dataKey: string; color: string }>;
+    label?: string;
+  }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div
+        className="rounded-lg px-3 py-2 text-xs shadow-xl"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <div className="mb-1 font-medium text-white">{label}</div>
+        {payload.map((entry) => (
+          <div key={entry.dataKey} className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span style={{ color: COLORS.textMuted }}>
+              {entry.dataKey === 'forecast' ? '예측' : '실제'}:
+            </span>
+            <span className="font-bold text-white">{entry.value}개</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">SKU-2891 가솔린 엔진 밸브 — 30일 수요 예측</h3>
-          <span className="rounded bg-indigo-900/30 px-2 py-1 text-xs text-indigo-300">LINEAR 모델 | MAPE 12.3%</span>
+      {/* 수요 예측 라인 차트 */}
+      <div
+        className="rounded-xl p-5"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-white">
+              SKU-2891 가솔린 엔진 밸브 — 30일 수요 예측
+            </h3>
+            <p className="mt-0.5 text-xs" style={{ color: COLORS.textDim }}>
+              실제 소비량과 예측치 비교
+            </p>
+          </div>
+          <span
+            className="rounded-md px-2.5 py-1 text-xs font-medium"
+            style={{
+              backgroundColor: 'rgba(88,166,255,0.1)',
+              color: '#58A6FF',
+              border: '1px solid rgba(88,166,255,0.2)',
+            }}
+          >
+            LINEAR 모델 | MAPE 12.3%
+          </span>
         </div>
 
-        {/* SVG 바 차트 */}
-        <svg viewBox={`0 0 600 ${chartH + 30}`} className="w-full" preserveAspectRatio="xMidYMid meet">
-          {mockDays.map((d, i) => {
-            const barW = 600 / mockDays.length - 2;
-            const barH = maxQty > 0 ? (d.qty / maxQty) * chartH : 0;
-            const x = i * (600 / mockDays.length) + 1;
-            return (
-              <g key={i}>
-                <rect
-                  x={x}
-                  y={chartH - barH}
-                  width={barW}
-                  height={barH}
-                  fill="#6366f1"
-                  opacity={0.7}
-                  rx={1}
-                />
-                {i % 5 === 0 && (
-                  <text
-                    x={x + barW / 2}
-                    y={chartH + 15}
-                    textAnchor="middle"
-                    fontSize="8"
-                    fill="#6b7280"
-                  >
-                    {d.date}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-          {/* 평균선 */}
-          <line
-            x1={0}
-            y1={chartH - (15 / maxQty) * chartH}
-            x2={600}
-            y2={chartH - (15 / maxQty) * chartH}
-            stroke="#f59e0b"
-            strokeDasharray="4"
-            strokeWidth={1}
-          />
-        </svg>
+        {/* recharts 라인 차트 */}
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={mockDays}>
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
+            <XAxis
+              dataKey="date"
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+              interval={4}
+            />
+            <YAxis
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+              width={35}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Line
+              type="monotone"
+              dataKey="forecast"
+              stroke="#58A6FF"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: '#58A6FF', stroke: COLORS.card, strokeWidth: 2 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="actual"
+              stroke="#3FB950"
+              strokeWidth={2}
+              strokeDasharray="4 4"
+              dot={{ r: 3, fill: '#3FB950', stroke: COLORS.card, strokeWidth: 2 }}
+              connectNulls={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
 
-        <div className="mt-3 grid grid-cols-4 gap-3 text-center text-xs">
+        {/* 요약 통계 */}
+        <div className="mt-4 grid grid-cols-4 gap-4 text-center text-xs">
           <div>
-            <div className="text-gray-500">일평균 예측</div>
-            <div className="font-bold text-indigo-300">15개</div>
+            <div style={{ color: COLORS.textDim }}>일평균 예측</div>
+            <div className="mt-1 text-base font-bold text-[#58A6FF]">15개</div>
           </div>
           <div>
-            <div className="text-gray-500">30일 합계</div>
-            <div className="font-bold text-white">450개</div>
+            <div style={{ color: COLORS.textDim }}>30일 합계</div>
+            <div className="mt-1 text-base font-bold text-white">450개</div>
           </div>
           <div>
-            <div className="text-gray-500">현재 재고</div>
-            <div className="font-bold text-red-300">45개</div>
+            <div style={{ color: COLORS.textDim }}>현재 재고</div>
+            <div className="mt-1 text-base font-bold text-[#F85149]">45개</div>
           </div>
           <div>
-            <div className="text-gray-500">소진 예상일</div>
-            <div className="font-bold text-red-300">3일 후</div>
+            <div style={{ color: COLORS.textDim }}>소진 예상일</div>
+            <div className="mt-1 text-base font-bold text-[#F85149]">3일 후</div>
           </div>
         </div>
       </div>
 
       {/* 모델 비교 */}
-      <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-white">예측 모델 비교</h3>
-        <div className="overflow-x-auto">
+      <div
+        className="rounded-xl p-5"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <h3 className="mb-4 text-sm font-semibold text-white">예측 모델 비교</h3>
+
+        {/* recharts 바 차트 — 모델별 MAPE 비교 */}
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart
+            data={[
+              { model: 'MOVING_AVG', d7: 105, d14: 210, d30: 450, mape: 18.2 },
+              { model: 'LINEAR', d7: 112, d14: 224, d30: 450, mape: 12.3 },
+              { model: 'PROPHET', d7: 108, d14: 218, d30: 462, mape: 9.8 },
+            ]}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
+            <XAxis
+              dataKey="model"
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+            />
+            <YAxis
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+              width={35}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 8,
+                fontSize: 12,
+                color: COLORS.text,
+              }}
+              labelStyle={{ color: 'white', fontWeight: 600 }}
+            />
+            <Bar dataKey="d7" name="7일 예측" fill="#58A6FF" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="d14" name="14일 예측" fill="#388BFD50" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="d30" name="30일 예측" fill="#388BFD25" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+
+        {/* 테이블 */}
+        <div className="mt-4 overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
+              <tr style={{ borderBottom: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}>
                 <th className="px-3 py-2 text-left">모델</th>
                 <th className="px-3 py-2 text-right">7일 예측</th>
                 <th className="px-3 py-2 text-right">14일 예측</th>
@@ -525,17 +917,29 @@ function ForecastTab() {
                 { model: 'LINEAR', d7: 112, d14: 224, d30: 450, mape: 12.3, best: true },
                 { model: 'PROPHET', d7: 108, d14: 218, d30: 462, mape: 9.8, best: false },
               ].map((row) => (
-                <tr key={row.model} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                  <td className="px-3 py-2 font-mono text-indigo-300">{row.model}</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{row.d7}</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{row.d14}</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{row.d30}</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{row.mape}%</td>
-                  <td className="px-3 py-2 text-center">
+                <tr
+                  key={row.model}
+                  className="transition-colors hover:bg-white/[0.03]"
+                  style={{ borderBottom: `1px solid ${COLORS.grid}` }}
+                >
+                  <td className="px-3 py-2.5 font-mono text-[#58A6FF]">{row.model}</td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
+                    {row.d7}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
+                    {row.d14}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
+                    {row.d30}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
+                    {row.mape}%
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
                     {row.best ? (
-                      <span className="text-yellow-400">★</span>
+                      <span className="text-[#E3B341]">★</span>
                     ) : (
-                      <span className="text-gray-600">-</span>
+                      <span style={{ color: COLORS.textDim }}>-</span>
                     )}
                   </td>
                 </tr>
@@ -570,60 +974,161 @@ function LeadTimeTab() {
     },
   ];
 
+  // 리드타임 바 차트 데이터
+  const barData = mockStats.map((s) => ({
+    name: s.partner,
+    avg: s.avgDays,
+    min: s.minDays,
+    max: s.maxDays,
+  }));
+
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-white">공급업체 리드타임 통계</h3>
+      {/* 리드타임 바 차트 */}
+      <div
+        className="rounded-xl p-5"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <h3 className="mb-4 text-sm font-semibold text-white">공급업체 리드타임 비교</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={barData} layout="vertical">
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} horizontal={false} />
+            <XAxis
+              type="number"
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+              unit="일"
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke={COLORS.textMuted}
+              fontSize={11}
+              tickLine={false}
+              axisLine={{ stroke: COLORS.border }}
+              width={80}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: 8,
+                fontSize: 12,
+                color: COLORS.text,
+              }}
+              labelStyle={{ color: 'white', fontWeight: 600 }}
+            />
+            <Bar dataKey="avg" name="평균" fill="#58A6FF" radius={[0, 4, 4, 0]} barSize={16} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 공급업체 리드타임 통계 카드 */}
+      <div
+        className="rounded-xl p-5"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <h3 className="mb-4 text-sm font-semibold text-white">공급업체 리드타임 통계</h3>
         <div className="space-y-3">
-          {mockStats.map((s) => (
-            <div key={s.partner} className="rounded-lg border border-gray-700 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-white">{s.partner}</span>
-                  <span className="text-xs text-gray-500">{s.samples}건 학습</span>
+          {mockStats.map((s) => {
+            const reliabilityColor =
+              s.reliability >= 80 ? '#3FB950' : s.reliability >= 60 ? '#D29922' : '#F85149';
+
+            return (
+              <div
+                key={s.partner}
+                className="rounded-lg p-4 transition-colors hover:bg-white/[0.02]"
+                style={{ border: `1px solid ${COLORS.border}` }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: `${COLORS.accent}15` }}
+                    >
+                      <Clock size={14} style={{ color: COLORS.accent }} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-white">{s.partner}</span>
+                      <div className="text-xs" style={{ color: COLORS.textDim }}>
+                        {s.samples}건 학습
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-5 text-xs">
+                    <span style={{ color: COLORS.textMuted }}>
+                      {s.minDays}~{s.maxDays}일
+                    </span>
+                    <span className="text-sm font-bold text-[#58A6FF]">평균 {s.avgDays}일</span>
+                    <span
+                      className="flex items-center gap-0.5 font-medium"
+                      style={{
+                        color: s.trend < 0 ? '#3FB950' : s.trend > 0 ? '#F85149' : COLORS.textDim,
+                      }}
+                    >
+                      {s.trend > 0 ? '▲' : s.trend < 0 ? '▼' : '—'}
+                      {Math.abs(s.trend).toFixed(1)}일
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-gray-400">
-                    {s.minDays}~{s.maxDays}일
+                {/* 신뢰도 바 */}
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs" style={{ color: COLORS.textDim }}>
+                    신뢰도
                   </span>
-                  <span className="font-bold text-indigo-300">평균 {s.avgDays}일</span>
-                  <span className={s.trend < 0 ? 'text-green-400' : s.trend > 0 ? 'text-red-400' : 'text-gray-500'}>
-                    {s.trend > 0 ? '▲' : s.trend < 0 ? '▼' : '—'}
-                    {Math.abs(s.trend).toFixed(1)}일
-                  </span>
-                </div>
-              </div>
-              {/* 신뢰도 바 */}
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-gray-500">신뢰도</span>
-                <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-700">
                   <div
-                    className={`h-full rounded-full ${
-                      s.reliability >= 80 ? 'bg-green-500' : s.reliability >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
-                    style={{ width: `${s.reliability}%` }}
-                  />
+                    className="h-1.5 flex-1 overflow-hidden rounded-full"
+                    style={{ backgroundColor: COLORS.grid }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${s.reliability}%`,
+                        backgroundColor: reliabilityColor,
+                        boxShadow: `0 0 6px ${reliabilityColor}40`,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: reliabilityColor }}
+                  >
+                    {s.reliability}%
+                  </span>
                 </div>
-                <span className="text-xs text-gray-400">{s.reliability}%</span>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* 리드타임 히스토리 */}
-      <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-white">최근 발주-입고 이력</h3>
+      <div
+        className="rounded-xl p-5"
+        style={{
+          backgroundColor: COLORS.card,
+          border: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <h3 className="mb-4 text-sm font-semibold text-white">최근 발주-입고 이력</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400">
-                <th className="px-3 py-2 text-left">공급업체</th>
-                <th className="px-3 py-2 text-left">SKU</th>
-                <th className="px-3 py-2 text-right">발주일</th>
-                <th className="px-3 py-2 text-right">입고일</th>
-                <th className="px-3 py-2 text-right">소요일</th>
-                <th className="px-3 py-2 text-right">수량</th>
+              <tr style={{ borderBottom: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}>
+                <th className="px-3 py-2.5 text-left">공급업체</th>
+                <th className="px-3 py-2.5 text-left">SKU</th>
+                <th className="px-3 py-2.5 text-right">발주일</th>
+                <th className="px-3 py-2.5 text-right">입고일</th>
+                <th className="px-3 py-2.5 text-right">소요일</th>
+                <th className="px-3 py-2.5 text-right">수량</th>
               </tr>
             </thead>
             <tbody>
@@ -634,13 +1139,25 @@ function LeadTimeTab() {
                 { partner: '만도', sku: 'SKU-5501', ordered: '03-05', received: '03-09', days: 4, qty: 400 },
                 { partner: '현대모비스', sku: 'SKU-0887', ordered: '02-28', received: '03-05', days: 5, qty: 600 },
               ].map((r, i) => (
-                <tr key={i} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                  <td className="px-3 py-2 text-gray-300">{r.partner}</td>
-                  <td className="px-3 py-2 font-mono text-indigo-300">{r.sku}</td>
-                  <td className="px-3 py-2 text-right text-gray-400">{r.ordered}</td>
-                  <td className="px-3 py-2 text-right text-gray-400">{r.received}</td>
-                  <td className="px-3 py-2 text-right font-bold text-white">{r.days}일</td>
-                  <td className="px-3 py-2 text-right text-gray-300">{r.qty}</td>
+                <tr
+                  key={i}
+                  className="transition-colors hover:bg-white/[0.03]"
+                  style={{ borderBottom: `1px solid ${COLORS.grid}` }}
+                >
+                  <td className="px-3 py-2.5" style={{ color: COLORS.text }}>
+                    {r.partner}
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-[#58A6FF]">{r.sku}</td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.textMuted }}>
+                    {r.ordered}
+                  </td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.textMuted }}>
+                    {r.received}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-bold text-white">{r.days}일</td>
+                  <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
+                    {r.qty.toLocaleString()}
+                  </td>
                 </tr>
               ))}
             </tbody>

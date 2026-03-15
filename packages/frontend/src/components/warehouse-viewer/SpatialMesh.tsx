@@ -57,6 +57,11 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
     onSelect?.(object);
   };
 
+  const handleContextMenu = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    onContextMenu?.(object, e);
+  };
+
   // 랙인지 확인 (메타데이터에 levels가 있거나 타입이 RACK)
   const isRack = typeName === 'RACK' && meta?.levels;
   // 컨테이너인지 확인 (메타데이터에 DRY 또는 REEFER 타입)
@@ -75,6 +80,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
         position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
         rotation={[object.rotationX, object.rotationY, object.rotationZ]}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         onPointerOver={(e) => {
           e.stopPropagation();
           setHovered(true);
@@ -128,6 +134,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
         position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
         rotation={[object.rotationX, object.rotationY, object.rotationZ]}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         onPointerOver={(e) => {
           e.stopPropagation();
           setHovered(true);
@@ -195,6 +202,7 @@ export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: Spa
       rotation={[object.rotationX, object.rotationY, object.rotationZ]}
       scale={[object.scaleX, object.scaleY, object.scaleZ]}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
