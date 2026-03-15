@@ -7,14 +7,14 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "postinstall": "prisma generate --schema=../../database/prisma/schema.prisma"
+    "postinstall": "echo 'skip prisma generate — using file: reference to database'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
-    "@prisma/client": "^7.5.0",
+    "@prisma/client": "file:../../database/node_modules/@prisma/client",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "stripe": "^20.4.1"
