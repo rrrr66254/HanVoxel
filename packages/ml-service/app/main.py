@@ -9,6 +9,7 @@ from app.routers.qc import router as qc_router
 from app.routers.picking import router as picking_router
 from app.routers.trade import router as trade_router
 from app.routers.reorder import router as reorder_router
+from app.routers.benchmark import router as benchmark_router
 
 app = FastAPI(
     title="HanVoxel ML Service",
@@ -30,6 +31,7 @@ app.include_router(qc_router, prefix="/api/v1")
 app.include_router(picking_router, prefix="/api/v1")
 app.include_router(trade_router, prefix="/api/v1")
 app.include_router(reorder_router, prefix="/api/v1")
+app.include_router(benchmark_router, prefix="/api/v1")
 
 
 @app.get("/")

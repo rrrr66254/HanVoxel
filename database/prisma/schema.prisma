@@ -23,6 +23,12 @@ model Company {
   code      String   @unique @db.VarChar(50)
   isActive  Boolean  @default(true) @map("is_active")
 
+  // --- 업종/규모 (벤치마크용) ---
+  /// 업종 (AUTO_PARTS, FOOD_BEVERAGE, ELECTRONICS, PHARMA, CHEMICAL, GENERAL, COLD_CHAIN)
+  industry     String?  @db.VarChar(50)
+  /// 회사 규모 (SMALL: ~50명, MEDIUM: 50~300명, LARGE: 300명~)
+  companySize  String?  @map("company_size") @db.VarChar(20)
+
   // --- SaaS 과금 ---
   /// 현재 플랜 (STARTER, GROWTH, ENTERPRISE)
   planType     String    @default("STARTER") @map("plan_type") @db.VarChar(20)
@@ -1252,4 +1258,106 @@ model ErpFieldMapping {
   @@unique([connectorId, entityType, sourceField])
   @@index([connectorId])
   @@map("erp_field_mappings")
+}
+
+// ============================================================
+// Phase 3 Step 5 — 업계 벤치마크
+// ============================================================
+
+/// 업계 벤치마크 스냅샷 (월별 익명 집계)
+model BenchmarkSnapshot {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 집계 기간 (YYYY-MM)
+  period       String   @db.VarChar(7)
+  /// 업종 (AUTO_PARTS, FOOD_BEVERAGE, ELECTRONICS 등)
+  industry     String   @db.VarChar(50)
+  /// 회사 규모 (SMALL, MEDIUM, LARGE)
+  companySize  String   @map("company_size") @db.VarChar(20)
+  /// 참여 회사 수 (익명성 보장: 최소 5 이상)
+  participantCount Int  @map("participant_count")
+
+  // ── 핵심 KPI 평균 ──
+  /// 피킹 정확도 (%) 평균
+  avgPickingAccuracy  Float @default(0) @map("avg_picking_accuracy")
+  /// 재고회전율 (회/년) 평균
+  avgInventoryTurnover Float @default(0) @map("avg_inventory_turnover")
+  /// 공간활용률 (%) 평균
+  avgSpaceUtilization Float @default(0) @map("avg_space_utilization")
+  /// 납기준수율 (%) 평균
+  avgOnTimeDelivery   Float @default(0) @map("avg_on_time_delivery")
+  /// 입고처리 시간 (시간) 평균
+  avgReceivingTime    Float @default(0) @map("avg_receiving_time")
+  /// 주문처리 시간 (시간) 평균
+  avgOrderCycleTime   Float @default(0) @map("avg_order_cycle_time")
+
+  // ── 분포 (백분위) ──
+  /// 각 KPI의 P25, P50, P75, P90 값 (JSON)
+  percentiles  Json @default("{}") @db.JsonB
+
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([period, industry, companySize])
+  @@index([industry])
+  @@index([period])
+  @@map("benchmark_snapshots")
+}
+
+/// 개별 회사 벤치마크 지표 (월별)
+model CompanyBenchmark {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  /// 집계 기간 (YYYY-MM)
+  period      String   @db.VarChar(7)
+  /// 업종
+  industry    String   @db.VarChar(50)
+  /// 회사 규모
+  companySize String   @map("company_size") @db.VarChar(20)
+
+  // ── 내 지표 ──
+  pickingAccuracy     Float @default(0) @map("picking_accuracy")
+  inventoryTurnover   Float @default(0) @map("inventory_turnover")
+  spaceUtilization    Float @default(0) @map("space_utilization")
+  onTimeDelivery      Float @default(0) @map("on_time_delivery")
+  receivingTime       Float @default(0) @map("receiving_time")
+  orderCycleTime      Float @default(0) @map("order_cycle_time")
+
+  // ── 업계 대비 순위 ──
+  /// 업계 상위 퍼센트 (JSON: { pickingAccuracy: 15, ... })
+  percentileRanks Json @default("{}") @map("percentile_ranks") @db.JsonB
+  /// 종합 점수 (100점 만점)
+  overallScore    Float @default(0) @map("overall_score")
+
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([companyId, siteId, period])
+  @@index([companyId])
+  @@index([period, industry])
+  @@map("company_benchmarks")
+}
+
+/// 벤치마크 리포트 (PDF 생성 이력)
+model BenchmarkReport {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  siteId     String   @map("site_id") @db.Uuid
+  /// 리포트 기간 (YYYY-MM)
+  period     String   @db.VarChar(7)
+  /// 리포트 제목
+  title      String   @db.VarChar(200)
+  /// 리포트 JSON 데이터 (PDF 생성 원본)
+  reportData Json     @map("report_data") @db.JsonB
+  /// 개선 권고 사항 (JSON 배열)
+  recommendations Json @default("[]") @db.JsonB
+  /// PDF 파일 경로 (S3 또는 로컬)
+  pdfUrl     String?  @map("pdf_url") @db.VarChar(500)
+  /// 생성 상태 (PENDING, GENERATED, FAILED)
+  status     String   @default("PENDING") @db.VarChar(20)
+
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([companyId, period])
+  @@map("benchmark_reports")
 }

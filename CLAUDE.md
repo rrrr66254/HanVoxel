@@ -17,8 +17,8 @@
 ## 🎯 현재 개발 상태
 
 ```
-현재 Phase: Phase 3 — Intelligence Layer
-현재 Step:  Step 5 (업계 벤치마크 기능)
+현재 Phase: Phase 4 — AI & Portal Layer
+현재 Step:  Step 1 (Simulation 엔진)
 ```
 
 ### 전체 진행 현황
@@ -38,14 +38,14 @@
    ✅ Step 4: 모바일 피킹 앱 + FIFO/FEFO/NEAREST 정책 엔진 (PWA)
    ✅ Step 5: SaaS 정식 과금 (Stripe Checkout + Webhook + 플랜 제한 미들웨어)
 
-🔄 Phase 3 — Intelligence Layer
+✅ Phase 3 — Intelligence Layer
    ✅ Step 1: 물류 특화 경량 ERP (거래처/전표/원가/마진/더존·영림원 커넥터)
    ✅ Step 2: HS 코드 기반 글로벌 무역 인텔리전스 (4개 API 수집 + 야간배치 + 대시보드)
    ✅ Step 3: 자동 발주 추천 엔진 (ML 수요예측 + 리드타임 학습 + 발주서 자동생성)
    ✅ Step 4: 더존/영림원 커넥터 정식 출시 (OAuth2/API_KEY 인증 + 필드매핑 + 모니터링 대시보드)
-   ⬜ Step 5: 업계 벤치마크 기능
+   ✅ Step 5: 업계 벤치마크 기능 (익명집계 + 레이더차트 + 순위 + 리포트 + 개선권고)
 
-⬜ Phase 4 — AI & Portal Layer
+🔄 Phase 4 — AI & Portal Layer
 ⬜ Phase 5 — Platform & Global
 ```
 
@@ -145,12 +145,14 @@ sla_targets, sla_metrics, sla_violations
 suppliers, qc_inspections, qc_defect_items
 picking_orders, picking_lines
 
-# Phase 3 (진행 중)
+# Phase 3
 erp_vendors, erp_customers, erp_vouchers, erp_cost_ledger
 hs_code_watch, hs_code_master, hs_code_coverage
 trade_data_cache, hs_search_log, prefetch_batch_log
 sku_daily_usage, supplier_lead_times
 demand_forecasts, reorder_recommendations
+erp_connector_configs, erp_sync_logs, erp_field_mappings
+benchmark_snapshots, company_benchmarks, benchmark_reports
 ```
 
 ---

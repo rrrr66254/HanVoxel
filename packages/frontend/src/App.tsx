@@ -13,13 +13,14 @@ import { ErpDashboard } from './components/erp-dashboard';
 import { TradeDashboard } from './components/trade-intelligence';
 import { ReorderDashboard } from './components/reorder-dashboard';
 import { ConnectorDashboard } from './components/connector-dashboard';
+import { BenchmarkDashboard } from './components/benchmark-dashboard';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -50,6 +51,10 @@ function App() {
   };
 
   const openUpgrade = () => setUpgradeOpen(true);
+
+  if (mode === 'benchmark') {
+    return <BenchmarkDashboard onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'connector') {
     return <ConnectorDashboard onBack={() => setMode('viewer')} />;
@@ -209,6 +214,12 @@ function App() {
           className="rounded-lg border border-rose-700/50 bg-rose-900/30 px-4 py-2 text-xs text-rose-300 backdrop-blur transition-colors hover:bg-rose-900/50"
         >
           ERP 커넥터
+        </button>
+        <button
+          onClick={() => setMode('benchmark')}
+          className="rounded-lg border border-pink-700/50 bg-pink-900/30 px-4 py-2 text-xs text-pink-300 backdrop-blur transition-colors hover:bg-pink-900/50"
+        >
+          업계 벤치마크
         </button>
       </div>
     </div>
