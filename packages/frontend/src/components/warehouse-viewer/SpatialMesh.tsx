@@ -85,6 +85,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
   if (isRack) {
     const levels = (meta?.levels as number) ?? 3;
     const levelHeight = (meta?.levelHeight as number) ?? 1.5;
+    const levelHeights = meta?.levelHeights as number[] | undefined;
 
     return (
       <group
@@ -112,6 +113,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           depth={object.scaleZ}
           levels={levels}
           levelHeight={levelHeight}
+          levelHeights={levelHeights}
           isSelected={isSelected}
           isHovered={hovered}
         />

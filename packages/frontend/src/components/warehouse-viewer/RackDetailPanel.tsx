@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { X, RotateCcw, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, RotateCcw, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 import type { BinOccupancy } from './BinPlacement';
 
@@ -23,7 +23,6 @@ interface RackDetailPanelProps {
   occupancy: BinOccupancy[];
   onClose: () => void;
   onUpdateRack: (updated: SpatialObject) => void;
-  onAddBinItem?: (rackId: string, level: number) => void;
   onRemoveBinItem?: (rackId: string, level: number) => void;
 }
 
@@ -64,38 +63,42 @@ export function RackDetailPanel({
     return '#3FB950';
   };
 
-  // 층 높이 변경
+  // 층 높이 변경 → 즉시 3D 반영
   const handleLevelHeightChange = useCallback((levelIdx: number, newHeight: number) => {
-    // 최소 높이: 해당 층 오브젝트 높이 + 0.1m
     const item = rackOccupancy.find((o) => o.level === levelIdx);
     const minHeight = item ? item.height + 0.1 : 0.3;
     const clampedHeight = Math.max(minHeight, Math.min(3.0, newHeight));
 
-    setLevelHeights((prev) => {
-      const updated = [...prev];
-      updated[levelIdx] = clampedHeight;
-      return updated;
-    });
-  }, [rackOccupancy]);
+    const updated = [...levelHeights];
+    updated[levelIdx] = clampedHeight;
+    setLevelHeights(updated);
 
-  // 높이 변경 적용 → 3D 업데이트
-  const handleApplyHeights = useCallback(() => {
-    const totalHeight = levelHeights.reduce((sum, h) => sum + h, 0);
-    const updatedMeta = { ...meta, levelHeights, levelHeight: levelHeights[0] };
+    // 즉시 3D에 반영
+    const totalHeight = updated.reduce((sum, h) => sum + h, 0);
+    const updatedMeta = { ...meta, levelHeights: updated, levelHeight: updated[0] };
     onUpdateRack({
       ...rack,
       scaleY: totalHeight,
       positionY: totalHeight / 2,
       metadata: updatedMeta,
     });
-  }, [rack, levelHeights, meta, onUpdateRack]);
+  }, [rackOccupancy, levelHeights, meta, rack, onUpdateRack]);
 
-  // warehouse-standards.md 기준값으로 리셋
+  // warehouse-standards.md 기준값으로 리셋 + 즉시 3D 반영
   const handleResetHeights = useCallback(() => {
     const defaultH = DEFAULT_LEVEL_HEIGHTS[presetCode] ?? levelHeight;
     const resetHeights = Array.from({ length: levels }, () => defaultH);
     setLevelHeights(resetHeights);
-  }, [presetCode, levelHeight, levels]);
+
+    const totalHeight = resetHeights.reduce((sum, h) => sum + h, 0);
+    const updatedMeta = { ...meta, levelHeights: resetHeights, levelHeight: defaultH };
+    onUpdateRack({
+      ...rack,
+      scaleY: totalHeight,
+      positionY: totalHeight / 2,
+      metadata: updatedMeta,
+    });
+  }, [presetCode, levelHeight, levels, meta, rack, onUpdateRack]);
 
   // 층 클릭 토글
   const toggleLevel = (idx: number) => {
@@ -224,16 +227,7 @@ export function RackDetailPanel({
                             </div>
                           )}
                         </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button
-                            onClick={() => onAddBinItem?.(rack.id, levelIdx)}
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px', borderRadius: 6, border: '1px solid rgba(45,125,210,0.3)', background: 'rgba(45,125,210,0.08)', color: '#2D7DD2', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                          >
-                            <Plus size={10} /> 추가
-                          </button>
-                        </div>
-                      )}
+                      ) : null}
 
                       {/* 비우기 버튼 */}
                       {item && (
@@ -252,21 +246,13 @@ export function RackDetailPanel({
           </div>
         </Section>
 
-        {/* 높이 조절 액션 */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            onClick={handleApplyHeights}
-            style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: '#2D7DD2', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            높이 적용
-          </button>
-          <button
-            onClick={handleResetHeights}
-            style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}
-          >
-            <RotateCcw size={12} /> 리셋
-          </button>
-        </div>
+        {/* 리셋 버튼 */}
+        <button
+          onClick={handleResetHeights}
+          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit' }}
+        >
+          <RotateCcw size={12} /> 기본값 리셋
+        </button>
       </div>
     </div>
   );

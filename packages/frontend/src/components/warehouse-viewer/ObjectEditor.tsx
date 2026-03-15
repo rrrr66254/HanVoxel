@@ -184,11 +184,6 @@ export function ObjectEditor({ object, onUpdate, onSavePreset, onDelete, onClose
           <NumField label="Y" value={rotationY} onChange={setRotationY} />
         </FieldRow>
 
-        {/* 투명도 */}
-        <FieldRow label="투명도">
-          <NumField label="값" value={opacity} onChange={setOpacity} step={0.1} min={0} max={1} />
-        </FieldRow>
-
         {/* 구분선 */}
         <div style={{ height: 1, background: '#2A2F38' }} />
 
