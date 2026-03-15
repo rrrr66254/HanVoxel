@@ -18,7 +18,7 @@
 
 ```
 현재 Phase: Phase 3 — Intelligence Layer
-현재 Step:  Step 3 (자동 발주 추천 엔진)
+현재 Step:  Step 4 (더존/영림원 커넥터 정식 출시)
 ```
 
 ### 전체 진행 현황
@@ -41,8 +41,8 @@
 🔄 Phase 3 — Intelligence Layer
    ✅ Step 1: 물류 특화 경량 ERP (거래처/전표/원가/마진/더존·영림원 커넥터)
    ✅ Step 2: HS 코드 기반 글로벌 무역 인텔리전스 (4개 API 수집 + 야간배치 + 대시보드)
-   🔄 Step 3: 자동 발주 추천 엔진
-   ⬜ Step 4: 더존/영림원 커넥터 정식 출시
+   ✅ Step 3: 자동 발주 추천 엔진 (ML 수요예측 + 리드타임 학습 + 발주서 자동생성)
+   🔄 Step 4: 더존/영림원 커넥터 정식 출시
    ⬜ Step 5: 업계 벤치마크 기능
 
 ⬜ Phase 4 — AI & Portal Layer
@@ -149,6 +149,8 @@ picking_orders, picking_lines
 erp_vendors, erp_customers, erp_vouchers, erp_cost_ledger
 hs_code_watch, hs_code_master, hs_code_coverage
 trade_data_cache, hs_search_log, prefetch_batch_log
+sku_daily_usage, supplier_lead_times
+demand_forecasts, reorder_recommendations
 ```
 
 ---

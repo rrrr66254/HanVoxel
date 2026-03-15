@@ -808,6 +808,7 @@ model Partner {
 
   company     Company   @relation(fields: [companyId], references: [id])
   vouchers    Voucher[]
+  leadTimes   SupplierLeadTime[]
 
   @@unique([companyId, code])
   @@index([companyId, type])
@@ -1035,4 +1036,121 @@ model PrefetchBatchLog {
 
   @@index([runAt])
   @@map("prefetch_batch_log")
+}
+
+// ============================================================
+// Phase 3 Step 3 — 자동 발주 추천 엔진
+// ============================================================
+
+/// SKU별 출고 이력 (수요 예측용 일별 집계)
+model SkuDailyUsage {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  sku       String   @db.VarChar(50)
+  /// 날짜
+  usageDate DateTime @map("usage_date") @db.Date
+  /// 출고 수량
+  qtyUsed   Int      @map("qty_used")
+  /// 입고 수량 (리드타임 계산용)
+  qtyReceived Int    @default(0) @map("qty_received")
+
+  @@unique([siteId, sku, usageDate])
+  @@index([siteId, sku])
+  @@index([usageDate])
+  @@map("sku_daily_usage")
+}
+
+/// 공급업체 리드타임 학습 기록
+model SupplierLeadTime {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  /// 공급업체 ID (Partner)
+  partnerId   String   @map("partner_id") @db.Uuid
+  sku         String   @db.VarChar(50)
+  /// 발주일
+  orderDate   DateTime @map("order_date") @db.Date
+  /// 입고 완료일
+  receivedDate DateTime? @map("received_date") @db.Date
+  /// 실제 리드타임 (영업일 기준)
+  actualDays  Int?     @map("actual_days")
+  /// 발주 수량
+  orderQty    Int      @map("order_qty")
+  /// 발주 전표 번호
+  voucherNo   String?  @map("voucher_no") @db.VarChar(30)
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  partner     Partner  @relation(fields: [partnerId], references: [id])
+
+  @@index([siteId, sku])
+  @@index([partnerId])
+  @@index([orderDate])
+  @@map("supplier_lead_times")
+}
+
+/// 수요 예측 결과
+model DemandForecast {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  sku         String   @db.VarChar(50)
+  /// 예측 기간 (7, 14, 30일)
+  horizon     Int
+  /// 예측 일별 수요량 (JSON 배열: [{date, qty}])
+  dailyForecast Json  @map("daily_forecast") @db.JsonB
+  /// 예측 합계 수량
+  totalForecast Int   @map("total_forecast")
+  /// 예측 모델 (LINEAR, PROPHET, MOVING_AVG)
+  model       String   @db.VarChar(20)
+  /// 예측 정확도 (MAPE, %)
+  mape        Float?
+  /// 예측 생성 시각
+  forecastedAt DateTime @default(now()) @map("forecasted_at") @db.Timestamptz
+
+  @@index([siteId, sku])
+  @@index([forecastedAt])
+  @@map("demand_forecasts")
+}
+
+/// 발주 추천
+model ReorderRecommendation {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId        String   @map("site_id") @db.Uuid
+  sku           String   @db.VarChar(50)
+  itemName      String   @map("item_name") @db.VarChar(200)
+  /// 현재 재고 수량
+  currentQty    Int      @map("current_qty")
+  /// 안전 재고 수량
+  safetyStock   Int      @map("safety_stock")
+  /// 예상 소진일
+  stockoutDate  DateTime? @map("stockout_date") @db.Date
+  /// 소진까지 남은 일수
+  daysUntilOut  Int?     @map("days_until_out")
+  /// 추천 발주량
+  reorderQty    Int      @map("reorder_qty")
+  /// 추천 공급업체 ID
+  partnerId     String?  @map("partner_id") @db.Uuid
+  /// 추천 공급업체명
+  partnerName   String?  @map("partner_name") @db.VarChar(200)
+  /// 공급업체 평균 리드타임
+  avgLeadDays   Int?     @map("avg_lead_days")
+  /// 추천 발주일 ("지금 발주하면 납기 맞춤")
+  orderByDate   DateTime? @map("order_by_date") @db.Date
+  /// 긴급도 (LOW, MEDIUM, HIGH, CRITICAL)
+  urgency       String   @db.VarChar(20)
+  /// 추천 상태 (PENDING, ACCEPTED, DISMISSED, AUTO_ORDERED)
+  status        String   @default("PENDING") @db.VarChar(20)
+  /// 자동 생성된 전표 ID
+  voucherId     String?  @map("voucher_id") @db.Uuid
+  /// 예측 기반 정보 (JSON)
+  forecastMeta  Json?    @map("forecast_meta") @db.JsonB
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([siteId, urgency])
+  @@index([siteId, sku])
+  @@index([status])
+  @@index([stockoutDate])
+  @@map("reorder_recommendations")
 }

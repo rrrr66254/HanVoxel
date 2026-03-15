@@ -11,13 +11,14 @@ import { UpgradeModal } from './components/upgrade-modal';
 import { SubscriptionDashboard } from './components/subscription-dashboard';
 import { ErpDashboard } from './components/erp-dashboard';
 import { TradeDashboard } from './components/trade-intelligence';
+import { ReorderDashboard } from './components/reorder-dashboard';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder';
 
 // 데모용 트라이얼 상태 (실제 운영 시 API에서 가져옴)
 const DEMO_TRIAL = {
@@ -48,6 +49,10 @@ function App() {
   };
 
   const openUpgrade = () => setUpgradeOpen(true);
+
+  if (mode === 'reorder') {
+    return <ReorderDashboard onBack={() => setMode('viewer')} />;
+  }
 
   if (mode === 'trade') {
     return <TradeDashboard onBack={() => setMode('viewer')} />;
@@ -187,6 +192,12 @@ function App() {
           className="rounded-lg border border-teal-700/50 bg-teal-900/30 px-4 py-2 text-xs text-teal-300 backdrop-blur transition-colors hover:bg-teal-900/50"
         >
           무역 인텔리전스
+        </button>
+        <button
+          onClick={() => setMode('reorder')}
+          className="rounded-lg border border-indigo-700/50 bg-indigo-900/30 px-4 py-2 text-xs text-indigo-300 backdrop-blur transition-colors hover:bg-indigo-900/50"
+        >
+          자동 발주
         </button>
       </div>
     </div>
