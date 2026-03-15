@@ -239,30 +239,11 @@ function createContainer(index: number, x: number): SpatialObject {
 // ============================================================
 
 export const MOCK_WAREHOUSE: SpatialObject[] = [
-  // --- 바닥 (에폭시 코팅 타일) ---
-  // 보관 구역 바닥 (회색 에폭시)
-  obj('floor-storage', TYPES.FLOOR, '보관 구역 바닥', 'FLOOR-STORAGE',
-    [STORAGE_ORIGIN_X + ROW_WIDTH / 2, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [ROW_WIDTH + 8, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 4],
+  // --- 바닥 (에폭시 코팅 — 건물 전체 커버) ---
+  obj('floor-main', TYPES.FLOOR, '창고 바닥', 'FLOOR-MAIN',
+    [BUILDING_W / 2, 0.005, BUILDING_D / 2],
+    [BUILDING_W + 2, 0.01, BUILDING_D + 2],
     { metadata: { floorStyle: 'EPOXY_GRAY' } },
-  ),
-  // 도크 구역 바닥 (콘크리트)
-  obj('floor-dock', TYPES.FLOOR, '도크 구역 바닥', 'FLOOR-DOCK',
-    [BUILDING_W / 2, 0.01, DOCK_Z + DOCK_DEPTH / 2],
-    [BUILDING_W - 2, 0.02, DOCK_DEPTH],
-    { metadata: { floorStyle: 'CONCRETE' } },
-  ),
-  // 스테이징 구역 바닥 (녹색 에폭시)
-  obj('floor-staging', TYPES.FLOOR, '스테이징 구역 바닥', 'FLOOR-STAGING',
-    [BUILDING_W / 2, 0.01, STAGING_Z + STAGING_DEPTH / 2],
-    [BUILDING_W - 4, 0.02, STAGING_DEPTH],
-    { metadata: { floorStyle: 'EPOXY_GREEN' } },
-  ),
-  // 주 통로 바닥 (미끄럼방지)
-  obj('floor-main-aisle', TYPES.FLOOR, '주 통로 바닥', 'FLOOR-MAIN-AISLE',
-    [STORAGE_ORIGIN_X + ROW_WIDTH + MAIN_AISLE_WIDTH / 2 + 0.5, 0.01, STORAGE_ORIGIN_Z + RACK_ROW_PITCH],
-    [MAIN_AISLE_WIDTH, 0.02, RACK_ROW_PITCH * 3 + AISLE.reach + 2],
-    { metadata: { floorStyle: 'ANTI_SLIP' } },
   ),
 
   // --- 벽 (샌드위치 패널) ---
