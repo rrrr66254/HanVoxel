@@ -1,4 +1,5 @@
-import { Bell, ChevronRight, User } from 'lucide-react';
+import { Bell, ChevronRight } from 'lucide-react';
+import { ProfileDropdown } from './ProfileDropdown';
 
 // 모드별 한국어 라벨
 const MODE_LABELS: Record<string, string> = {
@@ -14,15 +15,18 @@ const MODE_LABELS: Record<string, string> = {
   reorder: '자동 발주',
   connector: 'ERP 커넥터',
   benchmark: '업계 벤치마크',
+  settings: '설정',
 };
 
 interface HeaderProps {
   activeMode: string;
   alertCount?: number;
   onAlertClick: () => void;
+  isEnterprise?: boolean;
+  onNavigateSettings?: () => void;
 }
 
-export function Header({ activeMode, alertCount = 3, onAlertClick }: HeaderProps) {
+export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise = true, onNavigateSettings }: HeaderProps) {
   return (
     <header
       style={{
@@ -98,43 +102,11 @@ export function Header({ activeMode, alertCount = 3, onAlertClick }: HeaderProps
           )}
         </button>
 
-        {/* 프로필 */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 12px',
-            borderRadius: 8,
-            border: '1px solid #30363D',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#21262D';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2D7DD2, #A371F7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <User size={14} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#E6EDF3' }}>관리자</div>
-            <div style={{ fontSize: 10, color: '#484F58' }}>admin@hanvoxel.com</div>
-          </div>
-        </div>
+        {/* 프로필 드롭다운 */}
+        <ProfileDropdown
+          isEnterprise={isEnterprise}
+          onNavigateSettings={onNavigateSettings}
+        />
       </div>
     </header>
   );

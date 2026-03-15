@@ -9,6 +9,7 @@ import { ContainerModel } from './ContainerModel';
 interface SpatialMeshProps {
   object: SpatialObject;
   onSelect?: (object: SpatialObject) => void;
+  onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void }) => void;
   isSelected?: boolean;
 }
 
@@ -35,7 +36,7 @@ const STATUS_COLORS: Record<string, string> = {
  * 개별 공간 객체를 3D 메시로 렌더링하는 컴포넌트
  * 랙/팔레트/컨테이너는 실제 구조체 모델로 렌더링
  */
-export function SpatialMesh({ object, onSelect, isSelected }: SpatialMeshProps) {
+export function SpatialMesh({ object, onSelect, onContextMenu, isSelected }: SpatialMeshProps) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
 

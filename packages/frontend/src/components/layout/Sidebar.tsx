@@ -186,7 +186,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
       {/* 하단 설정 + 플랜 배지 */}
       <div style={{ borderTop: '1px solid #21262D', padding: '12px' }}>
         <button
-          onClick={onToggleAdmin}
+          onClick={() => onModeChange('settings')}
           style={{
             width: '100%',
             display: 'flex',
