@@ -307,13 +307,13 @@ export function generateWarehouseLayout(
     'ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
     [W / 2 - 3, 0.45, STAGING_Z + 1],
     [2, 0.9, 1.5],
-    { color: '#8b5cf6' },
+    { color: '#8b5cf6', metadata: { equipType: 'PACKING' } },
   ));
   objects.push(obj(
     'ws-inspect', TYPES.WORKSTATION, '검수 작업대', 'WS-QC',
     [W / 2 + 3, 0.45, STAGING_Z + 1],
     [2, 0.9, 1.5],
-    { color: '#8b5cf6' },
+    { color: '#8b5cf6', metadata: { equipType: 'QC_TABLE' } },
   ));
 
   // --- 보관 구역 영역 표시 ---
