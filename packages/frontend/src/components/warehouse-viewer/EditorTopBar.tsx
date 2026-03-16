@@ -47,7 +47,7 @@ export function EditorTopBar({
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
       {/* 로고 */}
       <div className="mr-6 flex items-center gap-2">
-        <img src="/logo_nogb.png" alt="HanVoxel" className="h-9" />
+        <img src="/logo_nogb.png" alt="HanVoxel" className="h-12" />
         <span className="text-[10px] font-normal text-gray-500">3D</span>
       </div>
 
