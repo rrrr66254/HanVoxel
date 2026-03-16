@@ -11,6 +11,16 @@ interface WarehouseWizardProps {
 }
 
 const STEP_LABELS = ['기본 정보', '템플릿 선택', '3D 확인', '저장 완료'];
+const STEP_ICONS = [
+  // 기본 정보
+  'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  // 템플릿 선택
+  'M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5zm-10 9a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-5z',
+  // 3D 확인
+  'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  // 저장 완료
+  'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z',
+];
 
 const DEFAULT_FORM: WizardFormData = {
   warehouseName: '',
@@ -37,58 +47,82 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
     }
   }, [form, selectedTemplate, onComplete]);
 
-  // 3단계는 전체 화면 필요
+  // 3단계(3D 확인)는 전체 화면
   const isFullScreen = step === 2;
 
   return (
     <div className={`flex h-screen w-screen flex-col bg-gray-950 ${isFullScreen ? '' : 'overflow-auto'}`}>
       {/* 상단 스텝 인디케이터 (3단계 제외) */}
       {!isFullScreen && (
-        <div className="border-b border-gray-800 bg-gray-900/80 px-6 py-4 backdrop-blur">
-          <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 800 }}>
+        <div
+          className="shrink-0 px-6 py-3"
+          style={{
+            borderBottom: '1px solid #21262D',
+            background: 'rgba(22,27,34,0.8)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 960 }}>
             {/* 로고 */}
             <div className="text-lg font-bold text-white">
               <span className="text-blue-500">Han</span>Voxel
             </div>
 
             {/* 스텝 바 */}
-            <div className="flex items-center gap-1">
-              {STEP_LABELS.map((label, i) => (
-                <div key={i} className="flex items-center">
-                  <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs ${
-                    i === step
-                      ? 'bg-blue-600 text-white font-semibold'
-                      : i < step
-                        ? 'bg-gray-700 text-gray-300'
-                        : 'text-gray-600'
-                  }`}>
-                    <span
-                      className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-                      style={{
-                        background: i < step ? '#3FB950' : i === step ? '#fff' : '#21262D',
-                        color: i < step ? '#fff' : i === step ? '#2D7DD2' : '#484F58',
-                        boxShadow: i === step ? '0 0 8px rgba(45,125,210,0.4)' : 'none',
-                      }}
-                    >
-                      {i < step ? '✓' : i + 1}
-                    </span>
-                    <span className="hidden sm:inline">{label}</span>
+            <div className="flex items-center gap-0">
+              {STEP_LABELS.map((label, i) => {
+                const isActive = i === step;
+                const isDone = i < step;
+                return (
+                  <div key={i} className="flex items-center">
+                    <div className="flex items-center gap-2 px-3 py-1.5">
+                      {/* 스텝 아이콘/번호 */}
+                      <div
+                        className="flex h-7 w-7 items-center justify-center rounded-lg transition-all"
+                        style={{
+                          background: isDone ? '#3FB950' : isActive ? '#2D7DD2' : '#21262D',
+                          boxShadow: isActive ? '0 0 12px rgba(45,125,210,0.4)' : 'none',
+                        }}
+                      >
+                        {isDone ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isActive ? 'white' : '#484F58'} strokeWidth="2">
+                            <path d={STEP_ICONS[i]} />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* 라벨 */}
+                      <span
+                        className="hidden text-xs font-medium sm:inline"
+                        style={{
+                          color: isDone ? '#3FB950' : isActive ? '#F0F6FC' : '#484F58',
+                        }}
+                      >
+                        {label}
+                      </span>
+                    </div>
+
+                    {/* 연결선 */}
+                    {i < STEP_LABELS.length - 1 && (
+                      <div
+                        className="mx-1 h-px w-8"
+                        style={{ background: isDone ? '#3FB950' : '#21262D' }}
+                      />
+                    )}
                   </div>
-                  {i < STEP_LABELS.length - 1 && (
-                    <div
-                      className="mx-1 h-px w-8"
-                      style={{ background: i < step ? '#3FB950' : '#30363D' }}
-                    />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       )}
 
       {/* 스텝 컨텐츠 */}
-      <div className={isFullScreen ? 'flex-1' : 'flex-1'} style={isFullScreen ? undefined : { padding: '32px' }}>
+      <div className={isFullScreen ? 'flex-1 overflow-hidden' : 'flex-1'} style={isFullScreen ? undefined : { padding: '24px 0' }}>
         {step === 0 && (
           <WizardStep1
             form={form}
