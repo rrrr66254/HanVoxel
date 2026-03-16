@@ -377,13 +377,20 @@ function drawContainer(
   ctx.save();
   ctx.translate(tp1[0], tp1[1]);
   ctx.rotate(angle);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold ${Math.max(8, textLen * 0.28)}px "Arial Black", Arial, sans-serif`;
+  const fontSize = Math.max(8, textLen * 0.28);
+  ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.3)';
   ctx.shadowBlur = 2;
-  ctx.fillText('HanVoxel', textLen / 2, 0);
+  // 복셀 큐브 미니 아이콘
+  const iconS = fontSize * 0.6;
+  const iconX = textLen / 2 - ctx.measureText('HanVoxel').width / 2 - iconS;
+  ctx.fillStyle = '#2D7DD2';
+  ctx.fillRect(iconX, -iconS / 2, iconS * 0.8, iconS * 0.8);
+  // HanVoxel 텍스트 (브랜드 그린)
+  ctx.fillStyle = '#1B7340';
+  ctx.fillText('HanVoxel', textLen / 2 + iconS * 0.3, 0);
   ctx.shadowBlur = 0;
   ctx.restore();
 

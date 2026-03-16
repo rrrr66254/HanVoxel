@@ -79,32 +79,17 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
           borderBottom: '1px solid #21262D',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #2D7DD2, #3FB950)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              fontWeight: 800,
-              color: '#fff',
-              boxShadow: '0 2px 8px rgba(45,125,210,0.3)',
-            }}
-          >
-            H
-          </div>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#E6EDF3', letterSpacing: '-0.3px' }}>
-              HanVoxel
-            </div>
-            <div style={{ fontSize: 10, color: '#484F58', marginTop: 1, letterSpacing: '0.3px' }}>
-              Spatial Digital Twin
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src="/logo-icon.svg"
+            alt="HanVoxel"
+            style={{ width: 32, height: 32 }}
+          />
+          <img
+            src="/logo.svg"
+            alt="HanVoxel"
+            style={{ height: 26 }}
+          />
         </div>
       </div>
 

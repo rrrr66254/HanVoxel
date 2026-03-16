@@ -43,17 +43,32 @@ function createSideTexture(textureWidth: number, textureHeight: number, bgColor:
     ctx.fillRect(i * ribSpacing, 0, ribSpacing, 256);
   }
 
-  // HanVoxel 텍스트
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 72px "Arial Black", Arial, sans-serif';
+  // HanVoxel 로고 텍스트 (브랜드 컬러)
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  // 그림자
   ctx.shadowColor = 'rgba(0,0,0,0.4)';
   ctx.shadowBlur = 6;
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
-  ctx.fillText('HanVoxel', 256, 128);
+  // 복셀 큐브 심볼 (간이 표현)
+  const cx = 200;
+  const cy = 128;
+  ctx.fillStyle = '#2D7DD2';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 20); ctx.lineTo(cx + 18, cy - 10); ctx.lineTo(cx, cy); ctx.lineTo(cx - 18, cy - 10);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1A4F7A';
+  ctx.beginPath();
+  ctx.moveTo(cx - 18, cy - 10); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + 16); ctx.lineTo(cx - 18, cy + 6);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1E6091';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy); ctx.lineTo(cx + 18, cy - 10); ctx.lineTo(cx + 18, cy + 6); ctx.lineTo(cx, cy + 16);
+  ctx.closePath(); ctx.fill();
+  // HanVoxel 텍스트
+  ctx.fillStyle = '#1B7340';
+  ctx.font = 'bold 52px "Arial Black", Arial, sans-serif';
+  ctx.fillText('HanVoxel', 310, 128);
   ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
