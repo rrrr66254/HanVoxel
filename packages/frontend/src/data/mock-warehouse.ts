@@ -219,8 +219,8 @@ function createContainer(index: number, x: number): SpatialObject {
     [x, CONTAINER.h / 2, DOCK_Z + CONTAINER.d / 2],
     [CONTAINER.w, CONTAINER.h, CONTAINER.d],
     {
-      color: '#1d4ed8',
-      opacity: 0.35,
+      color: null,
+      opacity: 1,
       metadata: {
         type: 'DRY_40FT',
         innerWidth: 2.352,
