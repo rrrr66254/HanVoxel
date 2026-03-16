@@ -387,21 +387,21 @@ export const MOCK_WAREHOUSE: SpatialObject[] = [
     { color: '#64748b', opacity: 1, metadata: { standard: 'COUNTERBALANCE_3T', width: AISLE.forklift, aisleType: 'FORKLIFT' } },
   ),
 
-  // --- 작업대 ---
-  obj('ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
-    [BUILDING_W / 2 - 3, 0.45, STAGING_Z + 1],
-    [2, 0.9, 1.5],
-    { color: '#8b5cf6', metadata: { operator: '김물류', task: '피킹', equipType: 'PACKING' } },
-  ),
+  // --- 작업대 (우측벽 쪽 배치 — 주 통로 옆) ---
   obj('ws-inspect', TYPES.WORKSTATION, '검수 작업대', 'WS-QC',
-    [BUILDING_W / 2 + 3, 0.45, STAGING_Z + 1],
-    [2, 0.9, 1.5],
-    { color: '#8b5cf6', metadata: { operator: '이검수', task: '품질검수', equipType: 'QC_TABLE' } },
+    [BUILDING_W - 2, 0.45, STAGING_Z + 1],
+    [1.5, 0.9, 0.8],
+    { metadata: { operator: '이검수', task: '품질검수', equipType: 'QC_TABLE' } },
   ),
   obj('ws-packing', TYPES.WORKSTATION, '포장 작업대', 'WS-PACK',
-    [BUILDING_W / 2, 0.45, STAGING_Z + 3.5],
-    [3, 0.9, 1.5],
-    { color: '#8b5cf6', status: 'MAINTENANCE', metadata: { note: '장비 점검 중', equipType: 'PACKING' } },
+    [BUILDING_W - 2, 0.45, STAGING_Z + 3],
+    [1.8, 0.9, 0.8],
+    { metadata: { equipType: 'PACKING' } },
+  ),
+  obj('ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
+    [BUILDING_W - 2, 0.45, STAGING_Z + 5],
+    [1.5, 0.9, 0.8],
+    { metadata: { operator: '김물류', task: '피킹', equipType: 'PACKING' } },
   ),
 
   // --- 보관 구역 영역 표시 (바닥 레벨) ---
