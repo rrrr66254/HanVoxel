@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { calculateRoi, generateRoiPdfHtml } from '../../utils/roi-calculator';
 import type { RoiInput } from '../../utils/roi-calculator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Download, Calculator, TrendingUp, Clock, Target, ArrowLeft, RotateCcw } from 'lucide-react';
+import { Download, Calculator, TrendingUp, Clock, Target, ArrowLeft, RotateCcw, Info } from 'lucide-react';
 
 // ─── 색상 상수 ───
 const COLORS = {
@@ -43,7 +43,6 @@ function useAnimatedValue(target: number, duration = 800): number {
       }
       const elapsed = timestamp - startTimeRef.current;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutCubic 감속 곡선
       const eased = 1 - Math.pow(1 - progress, 3);
       setValue(Math.round(target * eased));
 
@@ -67,18 +66,18 @@ function useAnimatedValue(target: number, duration = 800): number {
 // ─── 숫자 포맷 ───
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 
-// ─── 입력 필드 컴포넌트 ───
+// ─── 입력 필드 컴포넌트 (문자열 기반 — 전체 삭제 가능) ───
 function InputField({
   label,
   unit,
-  value,
+  rawValue,
   onChange,
   hint,
   step = '1',
 }: {
   label: string;
   unit: string;
-  value: number;
+  rawValue: string;
   onChange: (v: string) => void;
   hint: string;
   step?: string;
@@ -86,8 +85,7 @@ function InputField({
   const [focused, setFocused] = useState(false);
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      {/* 라벨 (입력 위) */}
+    <div style={{ flex: 1, minWidth: 0 }}>
       <label
         style={{
           display: 'block',
@@ -99,13 +97,12 @@ function InputField({
       >
         {label}
       </label>
-      {/* 입력 + 단위 */}
       <div style={{ position: 'relative' }}>
         <input
           type="number"
           step={step}
           min={0}
-          value={value || ''}
+          value={rawValue}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -115,14 +112,13 @@ function InputField({
             fontSize: 15,
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
             color: COLORS.textPrimary,
-            backgroundColor: COLORS.card,
+            backgroundColor: COLORS.bg,
             border: `1px solid ${focused ? COLORS.focusBorder : COLORS.border}`,
             borderRadius: 8,
             outline: 'none',
             transition: 'border-color 0.2s ease',
           }}
         />
-        {/* 단위 표시 (오른쪽) */}
         <span
           style={{
             position: 'absolute',
@@ -138,15 +134,7 @@ function InputField({
           {unit}
         </span>
       </div>
-      {/* 힌트 */}
-      <p
-        style={{
-          marginTop: 6,
-          fontSize: 11,
-          color: COLORS.textMuted,
-          lineHeight: 1.4,
-        }}
-      >
+      <p style={{ marginTop: 6, fontSize: 11, color: COLORS.textMuted, lineHeight: 1.4 }}>
         {hint}
       </p>
     </div>
@@ -180,7 +168,6 @@ function MetricCard({
         overflow: 'hidden',
       }}
     >
-      {/* 상단 3px 색상 라인 */}
       <div
         style={{
           position: 'absolute',
@@ -191,15 +178,7 @@ function MetricCard({
           backgroundColor: accentColor,
         }}
       />
-      {/* 아이콘 */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 12,
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div style={{ color: accentColor, opacity: 0.9 }}>{icon}</div>
         <span
           style={{
@@ -213,7 +192,6 @@ function MetricCard({
           {label}
         </span>
       </div>
-      {/* 값 */}
       <div
         style={{
           fontSize: 22,
@@ -225,7 +203,6 @@ function MetricCard({
       >
         {value}
       </div>
-      {/* 변화율 */}
       {changeText && (
         <div
           style={{
@@ -309,6 +286,36 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
+// ─── 공식 설명 행 ───
+function FormulaRow({ label, formula, description }: { label: string; formula: string; description: string }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, marginBottom: 4 }}>
+        {label}
+      </div>
+      <code
+        style={{
+          display: 'block',
+          fontSize: 12,
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          color: COLORS.blue,
+          backgroundColor: COLORS.bg,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: 6,
+          padding: '8px 12px',
+          marginBottom: 4,
+          lineHeight: 1.5,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}
+      >
+        {formula}
+      </code>
+      <p style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>{description}</p>
+    </div>
+  );
+}
+
 // ─── 기본 입력값 ───
 const DEFAULT_INPUT: RoiInput = {
   warehouseArea: 3000,
@@ -318,15 +325,29 @@ const DEFAULT_INPUT: RoiInput = {
 };
 
 /**
- * ROI 계산기 — HanVoxel 도입 효과 분석 (다크 테마)
+ * ROI 계산기 — HanVoxel 도입 효과 분석 (웹 최적화 레이아웃)
  */
 export function RoiCalculator({ onBack }: RoiCalculatorProps) {
-  const [input, setInput] = useState<RoiInput>(DEFAULT_INPUT);
+  // 문자열 기반 입력 상태 (전체 삭제 가능)
+  const [rawInput, setRawInput] = useState({
+    warehouseArea: String(DEFAULT_INPUT.warehouseArea),
+    employeeCount: String(DEFAULT_INPUT.employeeCount),
+    monthlyPickings: String(DEFAULT_INPUT.monthlyPickings),
+    currentErrorRate: String(DEFAULT_INPUT.currentErrorRate),
+  });
   const [showResult, setShowResult] = useState(false);
+  const [showFormulas, setShowFormulas] = useState(false);
 
-  const set = useCallback((field: keyof RoiInput, raw: string) => {
-    const num = parseFloat(raw);
-    if (!isNaN(num)) setInput((prev) => ({ ...prev, [field]: num }));
+  // 문자열 → 숫자 변환 (빈 문자열은 0)
+  const input: RoiInput = useMemo(() => ({
+    warehouseArea: parseFloat(rawInput.warehouseArea) || 0,
+    employeeCount: parseFloat(rawInput.employeeCount) || 0,
+    monthlyPickings: parseFloat(rawInput.monthlyPickings) || 0,
+    currentErrorRate: parseFloat(rawInput.currentErrorRate) || 0,
+  }), [rawInput]);
+
+  const setField = useCallback((field: keyof RoiInput, value: string) => {
+    setRawInput((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   const result = useMemo(() => calculateRoi(input), [input]);
@@ -348,11 +369,9 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
     if (!printWindow) return;
     printWindow.document.write(html);
     printWindow.document.close();
-    // 렌더링 후 인쇄 대화상자 (PDF 저장 가능)
     setTimeout(() => printWindow.print(), 300);
   };
 
-  // 다시 계산
   const handleReset = () => {
     setShowResult(false);
   };
@@ -393,14 +412,13 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
       >
         <div
           style={{
-            maxWidth: 960,
+            maxWidth: 1200,
             margin: '0 auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          {/* 왼쪽: 뒤로가기 + 로고 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button
               onClick={onBack}
@@ -445,7 +463,6 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
               </span>
             </div>
           </div>
-          {/* 오른쪽: Calculator 아이콘 */}
           <div style={{ color: COLORS.textMuted }}>
             <Calculator size={20} />
           </div>
@@ -453,14 +470,14 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
       </div>
 
       {/* ─── 메인 컨텐츠 ─── */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px 64px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 64px' }}>
         {!showResult ? (
           /* ════════════════════════════════════
-             입력 폼
+             입력 폼 — 2컬럼 웹 레이아웃
              ════════════════════════════════════ */
-          <div style={{ maxWidth: 520, margin: '0 auto' }}>
+          <>
             {/* 제목 */}
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ marginBottom: 36 }}>
               <h1
                 style={{
                   fontSize: 28,
@@ -471,92 +488,215 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
               >
                 도입 효과 분석
               </h1>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: COLORS.textSecondary,
-                  lineHeight: 1.6,
-                }}
-              >
-                현재 창고 운영 정보를 입력하면
-                <br />
-                HanVoxel 도입 시 예상 절감 효과를 계산합니다
+              <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6 }}>
+                현재 창고 운영 정보를 입력하면 HanVoxel 도입 시 예상 절감 효과를 계산합니다
               </p>
             </div>
 
-            {/* 입력 카드 */}
-            <div
-              style={{
-                backgroundColor: COLORS.card,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 12,
-                padding: '28px 24px',
-                marginBottom: 24,
-              }}
-            >
-              <InputField
-                label="창고 면적"
-                unit="m²"
-                value={input.warehouseArea}
-                onChange={(v) => set('warehouseArea', v)}
-                hint="창고 총 면적을 입력하세요"
-              />
-              <InputField
-                label="직원 수"
-                unit="명"
-                value={input.employeeCount}
-                onChange={(v) => set('employeeCount', v)}
-                hint="창고 운영 인력 (관리자 + 피킹 + 검수)"
-              />
-              <InputField
-                label="월 피킹 건수"
-                unit="건/월"
-                value={input.monthlyPickings}
-                onChange={(v) => set('monthlyPickings', v)}
-                hint="월 평균 피킹(출고 처리) 건수"
-              />
-              <InputField
-                label="현재 오류율"
-                unit="%"
-                value={input.currentErrorRate}
-                onChange={(v) => set('currentErrorRate', v)}
-                hint="피킹 오류, 오배송, 재고 불일치 비율"
-                step="0.1"
-              />
-            </div>
+            {/* 2컬럼: 입력 폼 + 계산 공식 설명 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+              {/* 왼쪽: 입력 카드 */}
+              <div
+                style={{
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '28px 28px 20px',
+                }}
+              >
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 24 }}>
+                  창고 운영 정보
+                </h3>
 
-            {/* 분석 버튼 */}
-            <button
-              onClick={() => setShowResult(true)}
-              disabled={!isValid}
-              style={{
-                width: '100%',
-                padding: '14px 0',
-                fontSize: 15,
-                fontWeight: 600,
-                color: '#FFFFFF',
-                backgroundColor: isValid ? COLORS.blue : COLORS.border,
-                border: 'none',
-                borderRadius: 10,
-                cursor: isValid ? 'pointer' : 'not-allowed',
-                opacity: isValid ? 1 : 0.5,
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-              onMouseEnter={(e) => {
-                if (isValid) e.currentTarget.style.backgroundColor = '#3A8FE0';
-              }}
-              onMouseLeave={(e) => {
-                if (isValid) e.currentTarget.style.backgroundColor = COLORS.blue;
-              }}
-            >
-              <Calculator size={18} />
-              ROI 분석하기
-            </button>
-          </div>
+                {/* 2x2 그리드 입력 필드 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 20px' }}>
+                  <InputField
+                    label="창고 면적"
+                    unit="m²"
+                    rawValue={rawInput.warehouseArea}
+                    onChange={(v) => setField('warehouseArea', v)}
+                    hint="창고 총 면적"
+                  />
+                  <InputField
+                    label="직원 수"
+                    unit="명"
+                    rawValue={rawInput.employeeCount}
+                    onChange={(v) => setField('employeeCount', v)}
+                    hint="관리자 + 피킹 + 검수 인력"
+                  />
+                  <InputField
+                    label="월 피킹 건수"
+                    unit="건/월"
+                    rawValue={rawInput.monthlyPickings}
+                    onChange={(v) => setField('monthlyPickings', v)}
+                    hint="월 평균 출고 처리 건수"
+                  />
+                  <InputField
+                    label="현재 오류율"
+                    unit="%"
+                    rawValue={rawInput.currentErrorRate}
+                    onChange={(v) => setField('currentErrorRate', v)}
+                    hint="피킹 오류, 오배송, 불일치 비율"
+                    step="0.1"
+                  />
+                </div>
+
+                {/* 분석 버튼 */}
+                <button
+                  onClick={() => setShowResult(true)}
+                  disabled={!isValid}
+                  style={{
+                    width: '100%',
+                    padding: '14px 0',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: '#FFFFFF',
+                    backgroundColor: isValid ? COLORS.blue : COLORS.border,
+                    border: 'none',
+                    borderRadius: 10,
+                    cursor: isValid ? 'pointer' : 'not-allowed',
+                    opacity: isValid ? 1 : 0.5,
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    marginTop: 24,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isValid) e.currentTarget.style.backgroundColor = '#3A8FE0';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isValid) e.currentTarget.style.backgroundColor = COLORS.blue;
+                  }}
+                >
+                  <Calculator size={18} />
+                  ROI 분석하기
+                </button>
+              </div>
+
+              {/* 오른쪽: 계산 공식 + 벤치마크 기준값 설명 */}
+              <div
+                style={{
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '28px 28px 20px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                  <Info size={16} style={{ color: COLORS.blue }} />
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary }}>
+                    계산 공식 안내
+                  </h3>
+                </div>
+
+                {/* 산업 벤치마크 기준값 */}
+                <div
+                  style={{
+                    backgroundColor: COLORS.bg,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 8,
+                    padding: '14px 16px',
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.orange, marginBottom: 8 }}>
+                    산업 평균 벤치마크 기준값
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: 12 }}>
+                    <span style={{ color: COLORS.textSecondary }}>월 평균 인건비</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>350만원/인</span>
+                    <span style={{ color: COLORS.textSecondary }}>오류당 처리비용</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>25,000원/건</span>
+                    <span style={{ color: COLORS.textSecondary }}>m² 월 임대료</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>15,000원/m²</span>
+                    <span style={{ color: COLORS.textSecondary }}>피킹 효율 개선</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>+25%</span>
+                    <span style={{ color: COLORS.textSecondary }}>오류율 감소</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>60%</span>
+                    <span style={{ color: COLORS.textSecondary }}>인건비 절감율</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>15%</span>
+                    <span style={{ color: COLORS.textSecondary }}>공간 절감율</span>
+                    <span style={{ color: COLORS.textPrimary, fontFamily: 'monospace', textAlign: 'right' }}>10%</span>
+                  </div>
+                </div>
+
+                {/* 비용 산출 공식 */}
+                <FormulaRow
+                  label="현재 연간 인건비"
+                  formula="직원 수 x 350만원 x 12개월"
+                  description="창고 운영 인력의 연간 총 인건비를 산출합니다."
+                />
+                <FormulaRow
+                  label="현재 연간 오류 비용"
+                  formula="월 피킹 건수 x (오류율/100) x 25,000원 x 12개월"
+                  description="반품, 재작업, 고객불만 처리 비용을 포함합니다."
+                />
+
+                <div style={{ height: 1, background: COLORS.border, margin: '8px 0 16px' }} />
+
+                {/* 절감액 공식 */}
+                <FormulaRow
+                  label="인건비 절감 (동선 최적화)"
+                  formula="현재 연간 인건비 x 15%"
+                  description="3D 레이아웃 최적화로 피킹 동선을 단축하여 인건비를 절감합니다."
+                />
+                <FormulaRow
+                  label="오류 비용 절감"
+                  formula="현재 연간 오류 비용 x 60%"
+                  description="바코드 스캔 + 위치 검증으로 오류를 대폭 줄입니다."
+                />
+                <FormulaRow
+                  label="공간 절감 (레이아웃)"
+                  formula="면적 x 10% x 15,000원/m² x 12개월"
+                  description="공간 활용도 최적화로 불필요 임대 면적을 줄입니다."
+                />
+
+                <div style={{ height: 1, background: COLORS.border, margin: '8px 0 16px' }} />
+
+                <FormulaRow
+                  label="ROI (%)"
+                  formula="(총 절감액 - 연 구독료) / 연 구독료 x 100"
+                  description="투자 대비 수익률. 높을수록 투자 효율이 좋습니다."
+                />
+                <FormulaRow
+                  label="투자 회수 기간"
+                  formula="연 구독료 / (총 절감액 / 12개월)"
+                  description="구독 비용을 절감액으로 회수하는 데 걸리는 개월 수입니다."
+                />
+
+                {/* 구독 플랜 기준 */}
+                <div
+                  style={{
+                    backgroundColor: COLORS.bg,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 8,
+                    padding: '14px 16px',
+                    marginTop: 12,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.purple, marginBottom: 8 }}>
+                    구독 플랜 기준
+                  </div>
+                  <div style={{ fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>~1,500m²</span>
+                      <span style={{ color: COLORS.green }}>Starter (무료)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>1,500~5,000m²</span>
+                      <span style={{ color: COLORS.textPrimary }}>Growth (49만원/월)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>5,000m² 초과</span>
+                      <span style={{ color: COLORS.textPrimary }}>Enterprise (149만원/월)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           /* ════════════════════════════════════
              결과 화면
@@ -593,7 +733,6 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
                 overflow: 'hidden',
               }}
             >
-              {/* 배경 장식 원 */}
               <div
                 style={{
                   position: 'absolute',
@@ -683,61 +822,169 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
               />
             </div>
 
-            {/* ─── 절감 항목별 바 차트 ─── */}
-            <div
-              style={{
-                backgroundColor: COLORS.card,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 12,
-                padding: '24px 20px',
-                marginBottom: 28,
-              }}
-            >
-              <h3
+            {/* ─── 절감 항목별 바 차트 + 계산식 토글 ─── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+              {/* 바 차트 */}
+              <div
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: COLORS.textPrimary,
-                  marginBottom: 20,
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '24px 20px',
                 }}
               >
-                항목별 연간 절감액
-              </h3>
-              <div style={{ width: '100%', height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 8, right: 20, left: 20, bottom: 8 }}
-                    barCategoryGap="30%"
+                <h3
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: COLORS.textPrimary,
+                    marginBottom: 20,
+                  }}
+                >
+                  항목별 연간 절감액
+                </h3>
+                <div style={{ width: '100%', height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 8, right: 20, left: 20, bottom: 8 }}
+                      barCategoryGap="30%"
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={COLORS.chartGrid}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: COLORS.textSecondary, fontSize: 12 }}
+                        axisLine={{ stroke: COLORS.chartGrid }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: COLORS.textSecondary, fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`}
+                      />
+                      <Tooltip
+                        content={<ChartTooltip />}
+                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                      />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={64}>
+                        {chartData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.barColors[index]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 계산식 상세 (결과 화면 내) */}
+              <div
+                style={{
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: '24px 20px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 16,
+                  }}
+                >
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary }}>
+                    계산 상세
+                  </h3>
+                  <button
+                    onClick={() => setShowFormulas(!showFormulas)}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: COLORS.blue,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                    }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={COLORS.chartGrid}
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fill: COLORS.textSecondary, fontSize: 12 }}
-                      axisLine={{ stroke: COLORS.chartGrid }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: COLORS.textSecondary, fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`}
-                    />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                    />
-                    <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={64}>
-                      {chartData.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS.barColors[index]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                    {showFormulas ? '계산식 숨기기' : '계산식 보기'}
+                  </button>
+                </div>
+
+                {/* 인건비 절감 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, color: COLORS.textSecondary }}>인건비 절감</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.green, fontFamily: 'monospace' }}>{fmt(result.annualLaborSaving)}원</span>
+                  </div>
+                  {showFormulas && (
+                    <code style={{ fontSize: 11, color: COLORS.blue, fontFamily: 'monospace', display: 'block', padding: '4px 0' }}>
+                      = {input.employeeCount}명 x 350만원 x 12개월 x 15% = {fmt(result.annualLaborSaving)}원
+                    </code>
+                  )}
+                </div>
+
+                {/* 오류 비용 절감 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, color: COLORS.textSecondary }}>오류 비용 절감</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.green, fontFamily: 'monospace' }}>{fmt(result.annualErrorSaving)}원</span>
+                  </div>
+                  {showFormulas && (
+                    <code style={{ fontSize: 11, color: COLORS.blue, fontFamily: 'monospace', display: 'block', padding: '4px 0' }}>
+                      = {fmt(input.monthlyPickings)}건 x {input.currentErrorRate}% x 25,000원 x 12개월 x 60% = {fmt(result.annualErrorSaving)}원
+                    </code>
+                  )}
+                </div>
+
+                {/* 공간 절감 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, color: COLORS.textSecondary }}>공간 절감</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.green, fontFamily: 'monospace' }}>{fmt(result.annualSpaceSaving)}원</span>
+                  </div>
+                  {showFormulas && (
+                    <code style={{ fontSize: 11, color: COLORS.blue, fontFamily: 'monospace', display: 'block', padding: '4px 0' }}>
+                      = {fmt(input.warehouseArea)}m² x 10% x 15,000원 x 12개월 = {fmt(result.annualSpaceSaving)}원
+                    </code>
+                  )}
+                </div>
+
+                <div style={{ height: 1, background: COLORS.border, margin: '8px 0 12px' }} />
+
+                {/* 합계 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary }}>총 절감 예상액</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.green, fontFamily: 'monospace' }}>{fmt(result.annualTotalSaving)}원</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: COLORS.textMuted }}>(-) 연 구독료</span>
+                  <span style={{ fontSize: 12, color: COLORS.textMuted, fontFamily: 'monospace' }}>{result.annualSubscription > 0 ? `${fmt(result.annualSubscription)}원` : '무료'}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>순 연간 절감</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.green, fontFamily: 'monospace' }}>{fmt(result.netAnnualSaving)}원</span>
+                </div>
+
+                {showFormulas && (
+                  <div style={{ marginTop: 8 }}>
+                    <code style={{ fontSize: 11, color: COLORS.blue, fontFamily: 'monospace', display: 'block', padding: '4px 0' }}>
+                      ROI = ({fmt(result.annualTotalSaving)} - {fmt(result.annualSubscription)}) / {fmt(result.annualSubscription)} x 100 = {result.roiPercent.toFixed(0)}%
+                    </code>
+                    <code style={{ fontSize: 11, color: COLORS.blue, fontFamily: 'monospace', display: 'block', padding: '4px 0' }}>
+                      회수기간 = {fmt(result.annualSubscription)} / ({fmt(result.annualTotalSaving)} / 12) = {result.paybackMonths}개월
+                    </code>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -784,7 +1031,7 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
                 />
               </div>
 
-              {/* 연간 절감 상세 */}
+              {/* ROI 요약 */}
               <div
                 style={{
                   backgroundColor: COLORS.card,
@@ -797,122 +1044,79 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: COLORS.green,
+                    color: COLORS.blue,
                     marginBottom: 16,
                   }}
                 >
-                  연간 절감 상세
+                  투자 대비 수익 (ROI)
                 </h3>
-                <DetailRow
-                  label="인건비 절감 (동선 최적화)"
-                  value={`${fmt(animatedLaborSaving)}원`}
-                  color={COLORS.green}
-                />
-                <DetailRow
-                  label="오류 비용 절감"
-                  value={`${fmt(animatedErrorSaving)}원`}
-                  color={COLORS.green}
-                />
-                <DetailRow
-                  label="공간 절감 (레이아웃 최적화)"
-                  value={`${fmt(animatedSpaceSaving)}원`}
-                  color={COLORS.green}
-                />
-                <DetailRow
-                  label="총 절감 예상액"
-                  value={`${fmt(animatedTotalSaving)}원`}
-                  bold
-                  color={COLORS.green}
-                />
-              </div>
-            </div>
-
-            {/* ─── ROI 요약 카드 ─── */}
-            <div
-              style={{
-                backgroundColor: COLORS.card,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 12,
-                padding: '20px 18px',
-                marginBottom: 32,
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: COLORS.blue,
-                  marginBottom: 16,
-                }}
-              >
-                투자 대비 수익 (ROI)
-              </h3>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: 16,
-                }}
-              >
-                <div>
-                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>월 구독료</span>
-                  <p
-                    style={{
-                      marginTop: 4,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: COLORS.textPrimary,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {result.monthlySubscription > 0
-                      ? `${fmt(result.monthlySubscription)}원`
-                      : '무료'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>연 구독료</span>
-                  <p
-                    style={{
-                      marginTop: 4,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: COLORS.textPrimary,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {result.annualSubscription > 0
-                      ? `${fmt(result.annualSubscription)}원`
-                      : '무료'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>순 연간 절감</span>
-                  <p
-                    style={{
-                      marginTop: 4,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: COLORS.green,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {fmt(animatedNetSaving)}원
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>ROI</span>
-                  <p
-                    style={{
-                      marginTop: 4,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: COLORS.blue,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                  >
-                    {animatedRoi > 0 ? `${animatedRoi}%` : '-'}
-                  </p>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>월 구독료</span>
+                    <p
+                      style={{
+                        marginTop: 4,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {result.monthlySubscription > 0
+                        ? `${fmt(result.monthlySubscription)}원`
+                        : '무료'}
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>연 구독료</span>
+                    <p
+                      style={{
+                        marginTop: 4,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: COLORS.textPrimary,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {result.annualSubscription > 0
+                        ? `${fmt(result.annualSubscription)}원`
+                        : '무료'}
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>순 연간 절감</span>
+                    <p
+                      style={{
+                        marginTop: 4,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: COLORS.green,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {fmt(animatedNetSaving)}원
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>ROI</span>
+                    <p
+                      style={{
+                        marginTop: 4,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: COLORS.blue,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {animatedRoi > 0 ? `${animatedRoi}%` : '-'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -926,7 +1130,6 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
                 marginBottom: 24,
               }}
             >
-              {/* PDF 다운로드 */}
               <button
                 onClick={handlePdfDownload}
                 style={{
@@ -953,7 +1156,6 @@ export function RoiCalculator({ onBack }: RoiCalculatorProps) {
                 <Download size={16} />
                 PDF 다운로드
               </button>
-              {/* 다시 계산 */}
               <button
                 onClick={handleReset}
                 style={{

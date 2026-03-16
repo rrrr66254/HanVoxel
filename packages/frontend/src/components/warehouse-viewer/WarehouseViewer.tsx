@@ -758,7 +758,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   if (topViewMode) {
     return (
       <div className="flex h-full w-full flex-col bg-[#0D1117]">
-        <TopViewZoneDrawer zones={zones} onAddZone={handleAddZoneFromTopView} onDeleteZone={handleDeleteZone} onClose={() => setTopViewMode(false)} />
+        <TopViewZoneDrawer zones={zones} objects={allObjects} onAddZone={handleAddZoneFromTopView} onDeleteZone={handleDeleteZone} onClose={() => setTopViewMode(false)} />
       </div>
     );
   }
