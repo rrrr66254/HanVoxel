@@ -82,10 +82,18 @@ export function MoveModeGhost({
     return !collision.collides;
   }, [collision]);
 
-  // 다른 오브젝트 AABB 목록 (이동 대상 제외)
+  // 다른 오브젝트 AABB 목록 (이동 대상 제외, 바닥/통로/구역 제외)
   const otherBoxes = useMemo(() => {
     return allObjects
-      .filter((o) => o.id !== movingObject.id && o.isActive)
+      .filter((o) => {
+        if (o.id === movingObject.id || !o.isActive) return false;
+        // 바닥/통로/구역/안전구역은 충돌 대상에서 제외 (바닥에 깔리는 오브젝트)
+        const typeName = o.type.name;
+        if (typeName === 'FLOOR' || typeName === 'AISLE' || typeName === 'ZONE' || typeName === 'SAFETY_ZONE') return false;
+        const oMeta = o.metadata as Record<string, unknown> | null;
+        if (oMeta?.floorStyle || oMeta?.aisleType) return false;
+        return true;
+      })
       .map((o) => ({
         id: o.id,
         min: new THREE.Vector3(

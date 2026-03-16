@@ -21,6 +21,45 @@ import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
+// 바닥 위치 충돌 검사 (비우기 시 사용)
+function checkFloorCollision(
+  x: number, y: number, z: number,
+  width: number, height: number, depth: number,
+  allObjects: SpatialObject[],
+  excludeId?: string,
+): boolean {
+  const margin = 0.05;
+  const minX = x - width / 2;
+  const maxX = x + width / 2;
+  const minY = y - height / 2;
+  const maxY = y + height / 2;
+  const minZ = z - depth / 2;
+  const maxZ = z + depth / 2;
+
+  for (const obj of allObjects) {
+    if (obj.id === excludeId || !obj.isActive) continue;
+    const tn = obj.type.name;
+    // 바닥/통로/구역 제외
+    if (tn === 'FLOOR' || tn === 'AISLE' || tn === 'ZONE' || tn === 'SAFETY_ZONE') continue;
+    const oMeta = obj.metadata as Record<string, unknown> | null;
+    if (oMeta?.floorStyle || oMeta?.aisleType) continue;
+
+    const oMinX = obj.positionX - obj.scaleX / 2;
+    const oMaxX = obj.positionX + obj.scaleX / 2;
+    const oMinY = obj.positionY - obj.scaleY / 2;
+    const oMaxY = obj.positionY + obj.scaleY / 2;
+    const oMinZ = obj.positionZ - obj.scaleZ / 2;
+    const oMaxZ = obj.positionZ + obj.scaleZ / 2;
+
+    if (minX < oMaxX - margin && maxX > oMinX + margin &&
+        minY < oMaxY - margin && maxY > oMinY + margin &&
+        minZ < oMaxZ - margin && maxZ > oMinZ + margin) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // 프리셋에서 스타일 메타데이터 추출 (통로/바닥/벽)
 function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
   const extra = preset as unknown as Record<string, unknown>;
@@ -494,15 +533,84 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }, []);
 
   const handleRotate90 = useCallback(async (obj: SpatialObject) => {
-    const updatedObj: SpatialObject = { ...obj, rotationY: obj.rotationY + Math.PI / 2 };
+    // 90도 회전 시 폭(X)과 깊이(Z)를 스왑 — 랙에 맞게 방향 전환
+    const updatedObj: SpatialObject = {
+      ...obj,
+      rotationY: obj.rotationY + Math.PI / 2,
+      scaleX: obj.scaleZ,
+      scaleZ: obj.scaleX,
+    };
     setPlacedObjects((prev) => prev.map((o) => (o.id === updatedObj.id ? updatedObj : o)));
-    await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY });
+    await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY, scaleX: updatedObj.scaleX, scaleZ: updatedObj.scaleZ });
   }, []);
 
-  // BIN 아이템 제거
+  // BIN 아이템 제거 — 랙 앞 바닥에 배출 (충돌 시 복귀 + 경고)
   const handleRemoveBinItem = useCallback((rackId: string, level: number) => {
+    const binItem = binOccupancy.find((o) => o.rackId === rackId && o.level === level);
+    if (!binItem) return;
+
+    // 해당 랙 찾기
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    const rack = allObjs.find((o) => o.id === rackId);
+    if (!rack) {
+      setBinOccupancy((prev) => prev.filter((o) => !(o.rackId === rackId && o.level === level)));
+      return;
+    }
+
+    // 랙 앞 바닥 위치 계산 (랙 전면 + 아이템 깊이/2 여유)
+    const frontZ = rack.positionZ - rack.scaleZ / 2 - binItem.depth / 2 - 0.2;
+    const floorX = rack.positionX;
+    const floorY = binItem.height / 2;
+
+    // 충돌 검사 — 바닥 위치에 다른 오브젝트가 있는지 확인
+    const hasCollision = checkFloorCollision(floorX, floorY, frontZ, binItem.width, binItem.height, binItem.depth, allObjs, rackId);
+
+    if (hasCollision) {
+      // 충돌 — 복귀 + 경고
+      handleBlockedToast('랙 앞에 물건이 있습니다. 비우기 전에 앞쪽을 치워주세요.');
+      return;
+    }
+
+    // 충돌 없음 — 바닥에 새 오브젝트 생성
+    const newObj: SpatialObject = {
+      id: crypto.randomUUID(),
+      siteId: currentSiteId,
+      typeId: DEFAULT_TYPE_ID,
+      type: { id: DEFAULT_TYPE_ID, name: 'BIN', label: binItem.itemName, description: null, depth: 5 },
+      name: binItem.itemName,
+      code: `${binItem.presetCode ?? 'BIN'}_${Date.now()}`,
+      status: 'ACTIVE',
+      isActive: true,
+      positionX: floorX,
+      positionY: floorY,
+      positionZ: frontZ,
+      rotationX: 0, rotationY: 0, rotationZ: 0,
+      scaleX: binItem.width,
+      scaleY: binItem.height,
+      scaleZ: binItem.depth,
+      color: binItem.itemColor,
+      opacity: 1,
+      visible: true,
+      meshType: 'box',
+      metadata: {
+        itemType: binItem.itemType,
+        presetCode: binItem.presetCode,
+        ...(binItem.itemMetadata ?? {}),
+      },
+    };
+
+    // BIN에서 제거 + 바닥에 추가
     setBinOccupancy((prev) => prev.filter((o) => !(o.rackId === rackId && o.level === level)));
-  }, []);
+    setPlacedObjects((prev) => [...prev, newObj]);
+
+    // DB에 저장
+    createSpatialObject({
+      siteId: newObj.siteId, typeId: newObj.typeId, name: newObj.name, code: newObj.code,
+      positionX: newObj.positionX, positionY: newObj.positionY, positionZ: newObj.positionZ,
+      scaleX: newObj.scaleX, scaleY: newObj.scaleY, scaleZ: newObj.scaleZ,
+      color: newObj.color, opacity: newObj.opacity, meshType: newObj.meshType, metadata: newObj.metadata,
+    });
+  }, [binOccupancy, objects, placedObjects, currentSiteId]);
 
   // === 뷰 모드 / 줌 ===
   const handleViewModeChange = useCallback((mode: ViewMode) => {

@@ -283,30 +283,6 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
           <NumField label="Y" value={rotationY} onChange={setRotationY} />
         </FieldRow>
 
-        {/* 색상 (통로/구역/컨테이너) */}
-        {(category === 'aisle' || category === 'generic' || category === 'container') && (
-          <FieldRow label="색상">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="color"
-                  value={objectColor}
-                  onChange={(e) => setObjectColor(e.target.value)}
-                  style={{ width: 32, height: 32, border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent' }}
-                />
-              </div>
-              <input
-                type="text"
-                value={objectColor}
-                onChange={(e) => setObjectColor(e.target.value)}
-                style={{ flex: 1, borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'monospace' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
-              />
-            </div>
-          </FieldRow>
-        )}
-
         {/* 투명도 (바닥/벽/문/통로/구역) */}
         {(category === 'floor' || category === 'wall' || category === 'door' || category === 'aisle' || category === 'generic') && (
           <FieldRow label="투명도">
