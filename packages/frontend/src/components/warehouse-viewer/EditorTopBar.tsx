@@ -47,12 +47,9 @@ export function EditorTopBar({
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
       {/* 로고 */}
       <div className="mr-6 flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600">
-          <Box size={14} className="text-white" />
-        </div>
-        <span className="text-sm font-bold tracking-wide text-white">
-          HanVoxel <span className="text-[10px] font-normal text-gray-500">3D</span>
-        </span>
+        <img src="/logo-icon.svg" alt="HanVoxel" className="h-7 w-7" />
+        <img src="/logo.svg" alt="HanVoxel" className="h-5" />
+        <span className="text-[10px] font-normal text-gray-500">3D</span>
       </div>
 
       {/* 구분선 */}

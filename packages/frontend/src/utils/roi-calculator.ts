@@ -134,12 +134,13 @@ export function generateRoiPdfHtml(input: RoiInput, result: RoiResult): string {
   .row-label { color: #64748b; }
   .row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
   .footer { margin-top: 40px; text-align: center; color: #94a3b8; font-size: 11px; }
-  .logo { font-size: 18px; font-weight: 700; }
-  .logo span { color: #2563eb; }
+  .logo { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .logo img { height: 28px; }
+  .logo span { color: #1B7340; }
 </style>
 </head>
 <body>
-  <div class="logo"><span>Han</span>Voxel</div>
+  <div class="logo"><img src="/logo-icon.svg" alt="" /><span>HanVoxel</span></div>
   <h1>ROI 분석 리포트</h1>
   <p class="subtitle">${date} 기준 · Spatial Digital Twin 도입 효과 분석</p>
 
