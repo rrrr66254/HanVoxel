@@ -7,6 +7,7 @@ interface PalletModelProps {
   height: number;  // 팔레트 높이 (m)
   isSelected?: boolean;
   isHovered?: boolean;
+  isPlastic?: boolean;  // 플라스틱 팔레트 여부
 }
 
 // Canvas 기반 나무결 텍스처 생성
@@ -97,7 +98,17 @@ export function PalletModel({
   height,
   isSelected = false,
   isHovered = false,
+  isPlastic = false,
 }: PalletModelProps) {
+  // 플라스틱 팔레트 — 별도 렌더링
+  if (isPlastic) {
+    return (
+      <PlasticPalletModel
+        width={width} depth={depth} height={height}
+        isSelected={isSelected} isHovered={isHovered}
+      />
+    );
+  }
   // 텍스처 메모이제이션
   const woodTexture = useMemo(() => createWoodTexture(false), []);
   const woodDarkTexture = useMemo(() => createWoodTexture(true), []);
@@ -191,6 +202,80 @@ export function PalletModel({
           </mesh>
         )),
       )}
+
+      {/* 선택 하이라이트 */}
+      {isSelected && (
+        <mesh position={[0, height / 2, 0]}>
+          <boxGeometry args={[width + 0.05, height + 0.05, depth + 0.05]} />
+          <meshStandardMaterial color="#2D7DD2" transparent opacity={0.12} depthWrite={false} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+/**
+ * 플라스틱 팔레트 모델
+ * - 매끄러운 표면 (파란색/회색 플라스틱)
+ * - 상판 + 하판 + 리브 지지대
+ * - 구멍 패턴 (경량화)
+ */
+function PlasticPalletModel({
+  width, depth, height,
+  isSelected, isHovered,
+}: Omit<PalletModelProps, 'isPlastic'>) {
+  const plasticMat = useMemo(
+    () => new THREE.MeshStandardMaterial({
+      color: isSelected ? '#6BAED6' : isHovered ? '#4A90D8' : '#3A7BC8',
+      roughness: 0.35,
+      metalness: 0.05,
+    }),
+    [isSelected, isHovered],
+  );
+
+  const plasticDarkMat = useMemo(
+    () => new THREE.MeshStandardMaterial({
+      color: isSelected ? '#4A80B0' : '#2A5A98',
+      roughness: 0.4,
+      metalness: 0.05,
+    }),
+    [isSelected],
+  );
+
+  const topH = 0.025;
+  const bottomH = 0.020;
+  const ribH = height - topH - bottomH;
+  const topY = height - topH / 2;
+
+  // 리브 지지대 (3개 세로)
+  const ribPositions = [-width / 2 + width * 0.15, 0, width / 2 - width * 0.15];
+  const ribThickness = 0.04;
+
+  return (
+    <group>
+      {/* 하판 */}
+      <mesh material={plasticDarkMat} position={[0, bottomH / 2, 0]} castShadow>
+        <boxGeometry args={[width - 0.005, bottomH, depth - 0.005]} />
+      </mesh>
+
+      {/* 리브 지지대 (3개 세로) */}
+      {ribPositions.map((x, i) => (
+        <mesh key={`rib-${i}`} material={plasticDarkMat} position={[x, bottomH + ribH / 2, 0]} castShadow>
+          <boxGeometry args={[ribThickness, ribH, depth - 0.02]} />
+        </mesh>
+      ))}
+
+      {/* 리브 지지대 (3개 가로) */}
+      {[-depth / 2 + depth * 0.15, 0, depth / 2 - depth * 0.15].map((z, i) => (
+        <mesh key={`rib-h-${i}`} material={plasticDarkMat} position={[0, bottomH + ribH / 2, z]} castShadow>
+          <boxGeometry args={[width - 0.02, ribH * 0.7, ribThickness]} />
+        </mesh>
+      ))}
+
+      {/* 상판 */}
+      <mesh material={plasticMat} position={[0, topY, 0]} castShadow>
+        <boxGeometry args={[width - 0.005, topH, depth - 0.005]} />
+      </mesh>
 
       {/* 선택 하이라이트 */}
       {isSelected && (

@@ -116,7 +116,11 @@ export function PresetThumbnail({
         drawRack(ctx, cx, cy, scale, nw, nh, nd, levels ?? 3);
         break;
       case 'PALLET':
-        drawPallet(ctx, cx, cy, scale, nw, nd);
+        if (code.includes('PLASTIC')) {
+          drawPlasticPallet(ctx, cx, cy, scale, nw, nd);
+        } else {
+          drawPallet(ctx, cx, cy, scale, nw, nd);
+        }
         break;
       case 'LOADED_PALLET':
         drawLoadedPallet(ctx, cx, cy, scale, nw, nd, nh);
@@ -246,6 +250,47 @@ function drawPallet(
     const pw = w / 5 - 0.02;
     drawIsoBox(ctx, x, totalH - boardH, -d / 2, pw, boardH, d, cx, cy, scale,
       adjustColor(woodLight, 1.15), adjustColor(woodLight, 0.8), adjustColor(woodLight, 0.9), strokeColor);
+  }
+}
+
+// 플라스틱 팔레트 — 매끄러운 표면 + 구멍 패턴 + 지지대
+function drawPlasticPallet(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, scale: number,
+  w: number, d: number,
+) {
+  const plasticBlue = '#3A7BC8';
+  const plasticDark = '#2A5A98';
+  const totalH = 0.144;
+  const boardH = 0.025;
+  const legH = 0.09;
+  const strokeColor = '#1A3A68';
+
+  // 하판 (단일 플레이트)
+  drawIsoBox(ctx, -w / 2, 0, -d / 2, w, boardH, d, cx, cy, scale,
+    adjustColor(plasticDark, 1.0), adjustColor(plasticDark, 0.75), adjustColor(plasticDark, 0.85), strokeColor);
+
+  // 지지대 리브 3개 (세로 방향)
+  for (let i = 0; i < 3; i++) {
+    const x = -w / 2 + w * (i + 1) / 4 - 0.03;
+    drawIsoBox(ctx, x, boardH, -d / 2 + 0.05, 0.06, legH, d - 0.1, cx, cy, scale,
+      adjustColor(plasticDark, 1.05), adjustColor(plasticDark, 0.7), adjustColor(plasticDark, 0.8), strokeColor);
+  }
+
+  // 상판 (단일 매끄러운 플레이트)
+  drawIsoBox(ctx, -w / 2, totalH - boardH, -d / 2, w, boardH, d, cx, cy, scale,
+    adjustColor(plasticBlue, 1.15), adjustColor(plasticBlue, 0.8), adjustColor(plasticBlue, 0.9), strokeColor);
+
+  // 구멍 패턴 (상면에 어두운 사각형)
+  const holeSize = w * 0.06;
+  const holeGap = w * 0.14;
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 4; col++) {
+      const hx = -w / 2 + w * 0.12 + col * holeGap;
+      const hz = -d / 2 + d * 0.15 + row * (d * 0.28);
+      drawIsoBox(ctx, hx, totalH - boardH + 0.001, hz, holeSize, 0.003, holeSize, cx, cy, scale,
+        adjustColor(plasticBlue, 0.75), adjustColor(plasticBlue, 0.6), adjustColor(plasticBlue, 0.65));
+    }
   }
 }
 

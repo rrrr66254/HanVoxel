@@ -4,6 +4,8 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SpatialObject } from '../../types/spatial';
 import { PalletModel } from './PalletModel';
+import { ProductBoxModel } from './ProductBoxModel';
+import { ContainerModel } from './ContainerModel';
 
 // BIN 적재 상태
 export interface BinOccupancy {
@@ -16,6 +18,8 @@ export interface BinOccupancy {
   width: number;
   depth: number;
   height: number;
+  presetCode?: string;        // 원본 프리셋 코드 (3D 모델 결정용)
+  itemMetadata?: Record<string, unknown>;  // 원본 메타데이터
 }
 
 // 드래그 중인 아이템 정보
@@ -26,6 +30,8 @@ export interface DragItem {
   depth: number;
   height: number;
   color: string;
+  presetCode?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface BinGhostProps {
@@ -143,6 +149,8 @@ export function BinGhostMesh({ dragItem, racks, occupancy, onPlace }: BinGhostPr
       width: dragItem.width,
       depth: dragItem.depth,
       height: dragItem.height,
+      presetCode: dragItem.presetCode,
+      itemMetadata: dragItem.metadata,
     });
   }, [snapTarget, onPlace, dragItem]);
 
@@ -220,15 +228,19 @@ export function BinOccupancyRenderer({
         const baseY = rack.positionY - rack.scaleY / 2;
         const y = baseY + occ.level * levelHeight + 0.15 + occ.height / 2;
 
+        const code = occ.presetCode ?? '';
+        const isPlastic = code.includes('PLASTIC');
+        const isContainer = code.includes('CONTAINER') || code.includes('FT') || code.includes('REEFER');
+        const isReefer = code.includes('REEFER');
+
         return (
           <group key={`bin-${i}`} position={[rack.positionX, y, rack.positionZ]}>
             {occ.itemType === 'pallet' ? (
-              <PalletModel width={occ.width} depth={occ.depth} height={occ.height} />
+              <PalletModel width={occ.width} depth={occ.depth} height={occ.height} isPlastic={isPlastic} />
+            ) : isContainer ? (
+              <ContainerModel width={occ.width} depth={occ.depth} height={occ.height} isReefer={isReefer} />
             ) : (
-              <mesh>
-                <boxGeometry args={[occ.width, occ.height, occ.depth]} />
-                <meshStandardMaterial color={occ.itemColor} metalness={0.1} roughness={0.8} />
-              </mesh>
+              <ProductBoxModel width={occ.width} depth={occ.depth} height={occ.height} color={occ.itemColor} />
             )}
           </group>
         );

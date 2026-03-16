@@ -344,16 +344,19 @@ export function MoveModeGhost({
       // BIN에 유효한 배치
       if (collision.nearBin?.valid && onDropToBin) {
         console.log('[HanVoxel] BIN 배치 확정 ->', collision.nearBin.rackId, 'level:', collision.nearBin.level);
+        const objMeta = movingObject.metadata as Record<string, unknown> | null;
         onDropToBin(movingObject, {
           rackId: collision.nearBin.rackId,
           level: collision.nearBin.level,
           bay: 0,
-          itemType: ((movingObject.metadata as Record<string, unknown>)?.itemType as 'pallet' | 'box') ?? 'box',
+          itemType: (objMeta?.itemType as 'pallet' | 'box') ?? 'box',
           itemName: movingObject.name,
           itemColor: movingObject.color ?? '#3B82F6',
           width: movingObject.scaleX,
           depth: movingObject.scaleZ,
           height: movingObject.scaleY,
+          presetCode: (objMeta?.presetCode as string) ?? movingObject.code ?? '',
+          itemMetadata: objMeta ?? undefined,
         });
         return;
       }

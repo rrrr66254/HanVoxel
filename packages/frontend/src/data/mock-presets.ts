@@ -8,9 +8,12 @@ export const MOCK_CATEGORIES: PresetCategory[] = [
   { id: '10000000-0000-0000-0000-000000000004', name: 'CONTAINER',     label: '컨테이너',    description: 'ISO 표준 해상 컨테이너 규격',         sortOrder: 4 },
   { id: '10000000-0000-0000-0000-000000000005', name: 'AISLE',         label: '통로',        description: '창고 내 통로 너비 기준',              sortOrder: 5 },
   { id: '10000000-0000-0000-0000-000000000006', name: 'PRODUCT_BOX',   label: '제품 박스',   description: '업종별 박스 규격 및 팔레트 적재 기준', sortOrder: 6 },
-  { id: '10000000-0000-0000-0000-000000000007', name: 'FLOOR',         label: '바닥',        description: '공장 바닥 타일 및 마감재',            sortOrder: 7 },
-  { id: '10000000-0000-0000-0000-000000000008', name: 'WALL',          label: '벽',          description: '공장 벽면 패널 및 마감재',            sortOrder: 8 },
-  { id: '10000000-0000-0000-0000-000000000009', name: 'DOOR',          label: '출입문',      description: '창고 출입문 및 로딩 도크 게이트',      sortOrder: 9 },
+  { id: '10000000-0000-0000-0000-000000000007', name: 'EQUIPMENT',     label: '작업 장비',   description: '검수 작업대, 포장대, 충전소 등',      sortOrder: 7 },
+  { id: '10000000-0000-0000-0000-000000000008', name: 'SAFETY',        label: '안전·소방',   description: '소화전, 소화기, 비상구 표시 등',      sortOrder: 8 },
+  { id: '10000000-0000-0000-0000-000000000009', name: 'FACILITY',      label: '시설물',      description: '기둥, 배전반, 분리수거함 등',         sortOrder: 9 },
+  { id: '10000000-0000-0000-0000-000000000010', name: 'FLOOR',         label: '바닥',        description: '공장 바닥 타일 및 마감재',            sortOrder: 10 },
+  { id: '10000000-0000-0000-0000-000000000011', name: 'WALL',          label: '벽',          description: '공장 벽면 패널 및 마감재',            sortOrder: 11 },
+  { id: '10000000-0000-0000-0000-000000000012', name: 'DOOR',          label: '출입문',      description: '창고 출입문 및 로딩 도크 게이트',      sortOrder: 12 },
 ];
 
 const CAT = Object.fromEntries(MOCK_CATEGORIES.map((c) => [c.name, c.id]));
@@ -67,6 +70,29 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.PRODUCT_BOX, 'BOX_CHEMICAL',      '화학·소재 박스',    null,'INTL', 0.55,0.35,0.4,{ qtyPerPallet:8,  kgPerPallet:800, color:'#f97316' }),
   p(CAT.PRODUCT_BOX, 'BOX_GENERAL',       '일반 공산품 박스',  null,'INTL', 0.4,0.3,0.25, { qtyPerPallet:20, kgPerPallet:250, color:'#6b7280' }),
   p(CAT.PRODUCT_BOX, 'BOX_COLD_CHAIN',    '냉장 식품 박스',    null,'INTL', 0.4,0.3,0.25, { qtyPerPallet:20, kgPerPallet:280, color:'#06b6d4' }),
+
+  // === 작업 장비 ===
+  p(CAT.EQUIPMENT, 'EQUIP_QC_TABLE_STANDARD',  '검수 작업대 (표준)',     null,'KR',  1.5,0.8,0.9,  { metadata: { equipType:'QC_TABLE' },  color:'#06b6d4' }),
+  p(CAT.EQUIPMENT, 'EQUIP_QC_TABLE_LARGE',     '검수 작업대 (대형)',     null,'KR',  2.0,1.0,0.9,  { metadata: { equipType:'QC_TABLE' },  color:'#06b6d4' }),
+  p(CAT.EQUIPMENT, 'EQUIP_PACKING_STANDARD',   '포장 작업대 (표준)',     null,'KR',  1.8,0.8,0.9,  { metadata: { equipType:'PACKING' },   color:'#06b6d4' }),
+  p(CAT.EQUIPMENT, 'EQUIP_PACKING_LARGE',      '포장 작업대 (대형)',     null,'KR',  2.4,1.0,0.9,  { metadata: { equipType:'PACKING' },   color:'#06b6d4' }),
+  p(CAT.EQUIPMENT, 'EQUIP_CHARGING_STANDARD',  '충전 스테이션 (소형)',   null,'INTL',2.0,2.0,0.5,  { metadata: { equipType:'CHARGING' },  color:'#06b6d4' }),
+  p(CAT.EQUIPMENT, 'EQUIP_CHARGING_LARGE',     '충전 스테이션 (대형)',   null,'INTL',3.0,3.0,0.6,  { metadata: { equipType:'CHARGING' },  color:'#06b6d4' }),
+
+  // === 안전·소방 ===
+  p(CAT.SAFETY, 'SAFETY_HYDRANT',             '소화전 캐비닛',          null,'KR',  0.6,0.2,0.8,  { metadata: { safetyType:'FIRE_HYDRANT' },     color:'#ef4444' }),
+  p(CAT.SAFETY, 'SAFETY_EXTINGUISHER_SMALL',  '소화기 (소형 3.3kg)',    null,'KR',  0.2,0.2,0.5,  { metadata: { safetyType:'FIRE_EXTINGUISHER' }, color:'#ef4444' }),
+  p(CAT.SAFETY, 'SAFETY_EXTINGUISHER_LARGE',  '소화기 (대형 6.5kg)',    null,'KR',  0.25,0.25,0.65,{ metadata: { safetyType:'FIRE_EXTINGUISHER' }, color:'#ef4444' }),
+  p(CAT.SAFETY, 'SAFETY_EXIT_SIGN',           '비상구 표시등',          null,'KR',  0.4,0.08,0.2, { metadata: { safetyType:'EXIT_SIGN' },         color:'#22c55e' }),
+  p(CAT.SAFETY, 'SAFETY_GUARDRAIL_3M',        '안전 가드레일 (3m)',     null,'KR',  0.1,3.0,1.1,  { metadata: { safetyType:'GUARD_RAIL' },        color:'#eab308' }),
+  p(CAT.SAFETY, 'SAFETY_GUARDRAIL_6M',        '안전 가드레일 (6m)',     null,'KR',  0.1,6.0,1.1,  { metadata: { safetyType:'GUARD_RAIL' },        color:'#eab308' }),
+  p(CAT.SAFETY, 'SAFETY_BOLLARD',             '안전 볼라드',            null,'INTL',0.22,0.22,0.9, { metadata: { safetyType:'BOLLARD' },           color:'#eab308' }),
+
+  // === 시설물 ===
+  p(CAT.FACILITY, 'FACILITY_COLUMN_STANDARD', '건물 기둥 (표준)',       null,'KR',  0.4,0.4,4.0,  { metadata: { facilityType:'COLUMN' },     color:'#9ca3af' }),
+  p(CAT.FACILITY, 'FACILITY_COLUMN_LARGE',    '건물 기둥 (대형)',       null,'KR',  0.6,0.6,6.0,  { metadata: { facilityType:'COLUMN' },     color:'#9ca3af' }),
+  p(CAT.FACILITY, 'FACILITY_ELEC_PANEL',      '배전반',                null,'KR',  0.8,0.3,1.5,  { metadata: { facilityType:'ELEC_PANEL' }, color:'#6b7280' }),
+  p(CAT.FACILITY, 'FACILITY_TRASH_SET',       '분리수거함 세트',        null,'KR',  1.2,0.5,0.9,  { metadata: { facilityType:'TRASH' },      color:'#6b7280' }),
 
   // === 바닥 (width/depth=면적, height=0.02 얇은 바닥) ===
   p(CAT.FLOOR, 'FLOOR_EPOXY_GRAY',  '에폭시 코팅 바닥 (회색)', null,'KR', 10,10,0.02, { floorStyle:'EPOXY_GRAY',  color:'#6B7B8D' }),

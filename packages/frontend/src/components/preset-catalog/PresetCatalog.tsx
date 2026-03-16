@@ -20,6 +20,9 @@ const CATEGORY_META: Record<string, { icon: string; color: string; group: string
   EQUIPMENT:      { icon: '🔧', color: '#06b6d4', group: '장비' },
   SAFETY:         { icon: '🧯', color: '#ef4444', group: '장비' },
   FACILITY:       { icon: '🏛️', color: '#9ca3af', group: '장비' },
+  FLOOR:          { icon: '⬜', color: '#6b7b8d', group: '공간' },
+  WALL:           { icon: '🧱', color: '#9a978f', group: '공간' },
+  DOOR:           { icon: '🚪', color: '#6b7280', group: '공간' },
 };
 
 /**
