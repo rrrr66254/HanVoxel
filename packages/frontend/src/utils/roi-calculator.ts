@@ -1,53 +1,82 @@
 /**
  * ROI 계산 엔진 — HanVoxel 도입 효과 분석
  *
- * 산업 평균 벤치마크 기반 예상 개선율 적용
+ * 사용자가 직접 비용과 개선율을 입력하고,
+ * 산업 평균 벤치마크는 참고값으로 제공
  */
 
+// 산업 평균 벤치마크 (참고용 기본값)
+export const BENCHMARK = {
+  avgMonthlySalary: 3500000,          // 월 평균 인건비 (원)
+  avgErrorCostPerCase: 25000,          // 오류당 평균 비용 (원)
+  avgRentPerM2Monthly: 15000,          // m²당 월 임대료 (원)
+  pickingEfficiencyGain: 25,           // 피킹 효율 개선율 (%)
+  errorReductionRate: 60,              // 오류율 감소율 (%)
+  laborSavingRate: 15,                 // 인건비 절감율 (%)
+  spaceSavingRate: 10,                 // 공간 절감율 (%)
+};
+
 export interface RoiInput {
-  warehouseArea: number;     // 창고 면적 (m²)
-  employeeCount: number;     // 직원 수
-  monthlyPickings: number;   // 월 피킹 건수
-  currentErrorRate: number;  // 현재 오류율 (%, 예: 2.5)
+  // 창고 기본 정보
+  warehouseArea: number;               // 창고 면적 (m²)
+  monthlyPickings: number;             // 월 피킹 건수
+  currentErrorRate: number;            // 현재 오류율 (%)
+
+  // 직접 입력하는 비용
+  annualLaborCost: number;             // 연간 인건비 (원)
+  annualErrorCost: number;             // 연간 오류 비용 (원)
+  monthlyRentPerM2: number;            // m²당 월 임대료 (원)
+
+  // 사용자 편집 가능한 개선율 (%)
+  laborSavingRate: number;             // 인건비 절감율 (%)
+  errorReductionRate: number;          // 오류율 감소율 (%)
+  spaceSavingRate: number;             // 공간 절감율 (%)
+  pickingEfficiencyGain: number;       // 피킹 효율 개선율 (%)
 }
 
 export interface RoiResult {
   // 현재 비용
-  currentAnnualLaborCost: number;      // 현재 연간 인건비
-  currentAnnualErrorCost: number;      // 현재 연간 오류 비용
-  currentAnnualTotalCost: number;      // 현재 연간 총 비용
+  currentAnnualLaborCost: number;
+  currentAnnualErrorCost: number;
+  currentAnnualTotalCost: number;
 
   // 개선 후
-  improvedErrorRate: number;           // 개선 후 오류율 (%)
-  improvedPickingEfficiency: number;   // 피킹 효율 개선율 (%)
-  spaceSavingPercent: number;          // 공간 절감율 (%)
+  improvedErrorRate: number;
+  improvedPickingEfficiency: number;
+  spaceSavingPercent: number;
 
   // 절감액
-  annualLaborSaving: number;           // 연간 인건비 절감액
-  annualErrorSaving: number;           // 연간 오류 비용 절감액
-  annualSpaceSaving: number;           // 연간 공간 절감액
-  annualTotalSaving: number;           // 연간 총 절감액
+  annualLaborSaving: number;
+  annualErrorSaving: number;
+  annualSpaceSaving: number;
+  annualTotalSaving: number;
 
   // 투자 회수
-  monthlySubscription: number;         // 월 구독료
-  annualSubscription: number;          // 연 구독료
-  netAnnualSaving: number;             // 순 연간 절감액 (절감 - 구독)
-  roiPercent: number;                  // ROI (%)
-  paybackMonths: number;              // 투자 회수 기간 (개월)
+  monthlySubscription: number;
+  annualSubscription: number;
+  netAnnualSaving: number;
+  roiPercent: number;
+  paybackMonths: number;
 }
 
-// 산업 평균 벤치마크
-const BENCHMARK = {
-  avgMonthlySalary: 3500000,          // 월 평균 인건비 (원)
-  avgErrorCostPerCase: 25000,          // 오류당 평균 비용 (원, 반품/재작업/고객불만)
-  avgRentPerM2Monthly: 15000,          // m²당 월 임대료 (원)
+// 실제 데이터 비교용 인터페이스
+export interface ActualDataInput {
+  actualAnnualLaborCost: number;       // 도입 후 실제 연간 인건비
+  actualAnnualErrorCost: number;       // 도입 후 실제 오류 비용
+  actualErrorRate: number;             // 도입 후 실제 오류율
+  actualMonthlyPickings: number;       // 도입 후 실제 월 피킹 건수
+}
 
-  // HanVoxel 도입 시 개선율 (산업 평균 기반)
-  pickingEfficiencyGain: 0.25,         // 피킹 효율 25% 개선
-  errorReductionRate: 0.60,            // 오류율 60% 감소
-  laborSavingRate: 0.15,              // 인건비 15% 절감 (동선 최적화)
-  spaceSavingRate: 0.10,               // 공간 10% 절감 (레이아웃 최적화)
-};
+export interface ActualDataResult {
+  laborSaving: number;
+  errorCostSaving: number;
+  totalSaving: number;
+  laborSavingPercent: number;
+  errorCostSavingPercent: number;
+  errorRateReduction: number;
+  pickingChange: number;
+  pickingChangePercent: number;
+}
 
 // 면적 기반 추천 플랜 가격
 function getSubscriptionPrice(area: number): { monthly: number; annual: number; planName: string } {
@@ -57,23 +86,26 @@ function getSubscriptionPrice(area: number): { monthly: number; annual: number; 
 }
 
 export function calculateRoi(input: RoiInput): RoiResult {
-  const { warehouseArea, employeeCount, monthlyPickings, currentErrorRate } = input;
+  const {
+    warehouseArea, currentErrorRate,
+    annualLaborCost, annualErrorCost, monthlyRentPerM2,
+    laborSavingRate, errorReductionRate, spaceSavingRate, pickingEfficiencyGain,
+  } = input;
 
-  // === 현재 비용 산출 ===
-  const currentAnnualLaborCost = employeeCount * BENCHMARK.avgMonthlySalary * 12;
-  const monthlyErrors = monthlyPickings * (currentErrorRate / 100);
-  const currentAnnualErrorCost = monthlyErrors * BENCHMARK.avgErrorCostPerCase * 12;
+  // === 현재 비용 (사용자 직접 입력) ===
+  const currentAnnualLaborCost = annualLaborCost;
+  const currentAnnualErrorCost = annualErrorCost;
   const currentAnnualTotalCost = currentAnnualLaborCost + currentAnnualErrorCost;
 
   // === 개선 효과 ===
-  const improvedErrorRate = currentErrorRate * (1 - BENCHMARK.errorReductionRate);
-  const improvedPickingEfficiency = BENCHMARK.pickingEfficiencyGain * 100;
-  const spaceSavingPercent = BENCHMARK.spaceSavingRate * 100;
+  const improvedErrorRate = currentErrorRate * (1 - errorReductionRate / 100);
+  const improvedPickingEfficiency = pickingEfficiencyGain;
+  const spaceSavingPercent = spaceSavingRate;
 
   // === 절감액 산출 ===
-  const annualLaborSaving = currentAnnualLaborCost * BENCHMARK.laborSavingRate;
-  const annualErrorSaving = currentAnnualErrorCost * BENCHMARK.errorReductionRate;
-  const annualSpaceSaving = warehouseArea * BENCHMARK.spaceSavingRate * BENCHMARK.avgRentPerM2Monthly * 12;
+  const annualLaborSaving = currentAnnualLaborCost * (laborSavingRate / 100);
+  const annualErrorSaving = currentAnnualErrorCost * (errorReductionRate / 100);
+  const annualSpaceSaving = warehouseArea * (spaceSavingRate / 100) * monthlyRentPerM2 * 12;
   const annualTotalSaving = annualLaborSaving + annualErrorSaving + annualSpaceSaving;
 
   // === 투자 회수 ===
@@ -101,6 +133,39 @@ export function calculateRoi(input: RoiInput): RoiResult {
     netAnnualSaving,
     roiPercent,
     paybackMonths,
+  };
+}
+
+// 실제 데이터 비교 계산
+export function calculateActualSaving(
+  beforeInput: RoiInput,
+  actual: ActualDataInput,
+): ActualDataResult {
+  const laborSaving = beforeInput.annualLaborCost - actual.actualAnnualLaborCost;
+  const errorCostSaving = beforeInput.annualErrorCost - actual.actualAnnualErrorCost;
+  const totalSaving = laborSaving + errorCostSaving;
+
+  const laborSavingPercent = beforeInput.annualLaborCost > 0
+    ? (laborSaving / beforeInput.annualLaborCost) * 100
+    : 0;
+  const errorCostSavingPercent = beforeInput.annualErrorCost > 0
+    ? (errorCostSaving / beforeInput.annualErrorCost) * 100
+    : 0;
+  const errorRateReduction = beforeInput.currentErrorRate - actual.actualErrorRate;
+  const pickingChange = actual.actualMonthlyPickings - beforeInput.monthlyPickings;
+  const pickingChangePercent = beforeInput.monthlyPickings > 0
+    ? (pickingChange / beforeInput.monthlyPickings) * 100
+    : 0;
+
+  return {
+    laborSaving,
+    errorCostSaving,
+    totalSaving,
+    laborSavingPercent,
+    errorCostSavingPercent,
+    errorRateReduction,
+    pickingChange,
+    pickingChangePercent,
   };
 }
 
@@ -135,21 +200,22 @@ export function generateRoiPdfHtml(input: RoiInput, result: RoiResult): string {
   .row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
   .footer { margin-top: 40px; text-align: center; color: #94a3b8; font-size: 11px; }
   .logo { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .logo img { height: 28px; }
   .logo span { color: #1B7340; }
 </style>
 </head>
 <body>
-  <div class="logo"><img src="/logo-icon.svg" alt="" /><span>HanVoxel</span></div>
+  <div class="logo"><span>HanVoxel</span></div>
   <h1>ROI 분석 리포트</h1>
   <p class="subtitle">${date} 기준 · Spatial Digital Twin 도입 효과 분석</p>
 
   <h2>입력 조건</h2>
   <div class="grid">
     <div class="card"><div class="card-label">창고 면적</div><div class="card-value">${fmt(input.warehouseArea)} m²</div></div>
-    <div class="card"><div class="card-label">직원 수</div><div class="card-value">${fmt(input.employeeCount)}명</div></div>
     <div class="card"><div class="card-label">월 피킹 건수</div><div class="card-value">${fmt(input.monthlyPickings)}건</div></div>
+    <div class="card"><div class="card-label">연간 인건비</div><div class="card-value">${fmt(input.annualLaborCost)}원</div></div>
+    <div class="card"><div class="card-label">연간 오류 비용</div><div class="card-value">${fmt(input.annualErrorCost)}원</div></div>
     <div class="card"><div class="card-label">현재 오류율</div><div class="card-value">${input.currentErrorRate}%</div></div>
+    <div class="card"><div class="card-label">적용 개선율</div><div class="card-value">인건비 ${input.laborSavingRate}% / 오류 ${input.errorReductionRate}% / 공간 ${input.spaceSavingRate}%</div></div>
   </div>
 
   <h2>예상 개선 효과</h2>
@@ -177,7 +243,7 @@ export function generateRoiPdfHtml(input: RoiInput, result: RoiResult): string {
   </div>
 
   <div class="footer">
-    <p>본 리포트는 산업 평균 벤치마크 기반 추정치이며, 실제 결과는 운영 환경에 따라 달라질 수 있습니다.</p>
+    <p>본 리포트는 사용자 입력 기반 추정치이며, 실제 결과는 운영 환경에 따라 달라질 수 있습니다.</p>
     <p style="margin-top:8px;">© ${new Date().getFullYear()} HanVoxel — Spatial Digital Twin Factory Platform</p>
   </div>
 </body>
