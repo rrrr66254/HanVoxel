@@ -30,6 +30,7 @@ interface SpatialMeshProps {
   onResize?: (object: SpatialObject) => void;
   onResizeStart?: () => void;
   onResizeEnd?: () => void;
+  allObjects?: SpatialObject[];
 }
 
 // raycast 차단용 no-op 함수 — 비활성 레이어 오브젝트의 클릭/호버 이벤트를 완전 차단
@@ -58,7 +59,7 @@ const STATUS_COLORS: Record<string, string> = {
  * 개별 공간 객체를 3D 메시로 렌더링하는 컴포넌트
  * 랙/팔레트/컨테이너는 실제 구조체 모델로 렌더링
  */
-export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected, editLayer = 'objects', onResize, onResizeStart, onResizeEnd }: SpatialMeshProps) {
+export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, isSelected, editLayer = 'objects', onResize, onResizeStart, onResizeEnd, allObjects }: SpatialMeshProps) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -389,7 +390,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 통로만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
+          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} allObjects={allObjects} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
@@ -436,7 +437,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 바닥만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
+          <ResizeHandles object={object} onResize={onResize} mode="floor" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} allObjects={allObjects} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, 0.5, 0]} style={{ pointerEvents: 'none' }}>
@@ -486,7 +487,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         />
         {/* 리사이즈 핸들 — 선택된 벽만 표시 */}
         {isSelected && isInteractable && onResize && (
-          <ResizeHandles object={object} onResize={onResize} mode="wall" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} />
+          <ResizeHandles object={object} onResize={onResize} mode="wall" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} allObjects={allObjects} />
         )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, object.scaleY / 2 + 0.3, 0]} style={{ pointerEvents: 'none' }}>
@@ -692,7 +693,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
       {/* 리사이즈 핸들 — 선택된 구역만 표시 */}
       {isZone && isSelected && isInteractable && onResize && (
         <group position={[object.positionX, object.positionY, object.positionZ]}>
-          <ResizeHandles object={object} onResize={onResize} mode="floor" />
+          <ResizeHandles object={object} onResize={onResize} mode="floor" allObjects={allObjects} />
         </group>
       )}
     </group>
