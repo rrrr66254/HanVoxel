@@ -302,18 +302,18 @@ export function generateWarehouseLayout(
     { color: '#64748b', opacity: 1, metadata: { aisleType: 'FORKLIFT' } },
   ));
 
-  // --- 작업대 ---
-  objects.push(obj(
-    'ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
-    [W / 2 - 3, 0.45, STAGING_Z + 1],
-    [2, 0.9, 1.5],
-    { color: '#8b5cf6', metadata: { equipType: 'PACKING' } },
-  ));
+  // --- 작업대 (우측벽 쪽 배치) ---
   objects.push(obj(
     'ws-inspect', TYPES.WORKSTATION, '검수 작업대', 'WS-QC',
-    [W / 2 + 3, 0.45, STAGING_Z + 1],
-    [2, 0.9, 1.5],
-    { color: '#8b5cf6', metadata: { equipType: 'QC_TABLE' } },
+    [W - 2, 0.45, STAGING_Z + 1],
+    [1.5, 0.9, 0.8],
+    { metadata: { equipType: 'QC_TABLE' } },
+  ));
+  objects.push(obj(
+    'ws-picking', TYPES.WORKSTATION, '피킹 작업대', 'WS-PICK',
+    [W - 2, 0.45, STAGING_Z + 3],
+    [1.5, 0.9, 0.8],
+    { metadata: { equipType: 'PACKING' } },
   ));
 
   // --- 보관 구역 영역 표시 ---
