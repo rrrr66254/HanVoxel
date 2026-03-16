@@ -28,7 +28,7 @@ interface WarehouseSceneProps {
   onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
   placingPreset?: SpatialPreset | null;
-  onPlace?: (position: [number, number, number]) => void;
+  onPlace?: (position: [number, number, number], rotationY?: number) => void;
   // Zone 시스템
   zones?: ZoneConfig[];
   drawingZoneType?: ZoneType | null;

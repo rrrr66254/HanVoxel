@@ -80,10 +80,10 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.EQUIPMENT, 'EQUIP_CHARGING_LARGE',     '충전 스테이션 (대형)',   null,'INTL',3.0,3.0,0.6,  { metadata: { equipType:'CHARGING' },  color:'#06b6d4' }),
 
   // === 안전·소방 ===
-  p(CAT.SAFETY, 'SAFETY_HYDRANT',             '소화전 캐비닛',          null,'KR',  0.6,0.2,0.8,  { metadata: { safetyType:'FIRE_HYDRANT' },     color:'#ef4444' }),
+  p(CAT.SAFETY, 'SAFETY_HYDRANT',             '소화전 캐비닛',          null,'KR',  0.6,0.2,0.8,  { metadata: { safetyType:'FIRE_HYDRANT', wallMounted: true },     color:'#ef4444' }),
   p(CAT.SAFETY, 'SAFETY_EXTINGUISHER_SMALL',  '소화기 (소형 3.3kg)',    null,'KR',  0.2,0.2,0.5,  { metadata: { safetyType:'FIRE_EXTINGUISHER' }, color:'#ef4444' }),
   p(CAT.SAFETY, 'SAFETY_EXTINGUISHER_LARGE',  '소화기 (대형 6.5kg)',    null,'KR',  0.25,0.25,0.65,{ metadata: { safetyType:'FIRE_EXTINGUISHER' }, color:'#ef4444' }),
-  p(CAT.SAFETY, 'SAFETY_EXIT_SIGN',           '비상구 표시등',          null,'KR',  0.4,0.08,0.2, { metadata: { safetyType:'EXIT_SIGN' },         color:'#22c55e' }),
+  p(CAT.SAFETY, 'SAFETY_EXIT_SIGN',           '비상구 표시등',          null,'KR',  0.4,0.08,0.2, { metadata: { safetyType:'EXIT_SIGN', wallMounted: true, mountHeight: 2.5 },         color:'#22c55e' }),
   p(CAT.SAFETY, 'SAFETY_GUARDRAIL_3M',        '안전 가드레일 (3m)',     null,'KR',  0.1,3.0,1.1,  { metadata: { safetyType:'GUARD_RAIL' },        color:'#eab308' }),
   p(CAT.SAFETY, 'SAFETY_GUARDRAIL_6M',        '안전 가드레일 (6m)',     null,'KR',  0.1,6.0,1.1,  { metadata: { safetyType:'GUARD_RAIL' },        color:'#eab308' }),
   p(CAT.SAFETY, 'SAFETY_BOLLARD',             '안전 볼라드',            null,'INTL',0.22,0.22,0.9, { metadata: { safetyType:'BOLLARD' },           color:'#eab308' }),
@@ -91,7 +91,7 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   // === 시설물 ===
   p(CAT.FACILITY, 'FACILITY_COLUMN_STANDARD', '건물 기둥 (표준)',       null,'KR',  0.4,0.4,4.0,  { metadata: { facilityType:'COLUMN' },     color:'#9ca3af' }),
   p(CAT.FACILITY, 'FACILITY_COLUMN_LARGE',    '건물 기둥 (대형)',       null,'KR',  0.6,0.6,6.0,  { metadata: { facilityType:'COLUMN' },     color:'#9ca3af' }),
-  p(CAT.FACILITY, 'FACILITY_ELEC_PANEL',      '배전반',                null,'KR',  0.8,0.3,1.5,  { metadata: { facilityType:'ELEC_PANEL' }, color:'#6b7280' }),
+  p(CAT.FACILITY, 'FACILITY_ELEC_PANEL',      '배전반',                null,'KR',  0.8,0.3,1.5,  { metadata: { facilityType:'ELEC_PANEL', wallMounted: true, mountHeight: 1.2 }, color:'#6b7280' }),
   p(CAT.FACILITY, 'FACILITY_TRASH_SET',       '분리수거함 세트',        null,'KR',  1.2,0.5,0.9,  { metadata: { facilityType:'TRASH' },      color:'#6b7280' }),
 
   // === 바닥 (width/depth=면적, height=0.02 얇은 바닥) ===

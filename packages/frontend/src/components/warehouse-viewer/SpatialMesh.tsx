@@ -14,7 +14,7 @@ import { ProductBoxModel } from './ProductBoxModel';
 import {
   QCTableModel, FireHydrantModel, FireExtinguisherModel,
   PackingStationModel, ChargingStationModel, GuardRailModel,
-  ColumnModel, ExitSignModel,
+  ColumnModel, ExitSignModel, TrashBinModel,
 } from './EquipmentModel';
 import { ResizeHandles } from './ResizeHandles';
 
@@ -577,6 +577,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
       : safetyType === 'GUARD_RAIL' ? GuardRailModel
       : facilityType === 'COLUMN' ? ColumnModel
       : facilityType === 'ELEC_PANEL' ? FireHydrantModel // 배전반도 캐비닛형
+      : facilityType === 'TRASH' ? TrashBinModel
       : null;
 
     // 볼라드/분리수거함은 기본 메시로 렌더링

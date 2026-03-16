@@ -21,6 +21,45 @@ import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
+// 바닥 위치 충돌 검사 (비우기 시 사용)
+function checkFloorCollision(
+  x: number, y: number, z: number,
+  width: number, height: number, depth: number,
+  allObjects: SpatialObject[],
+  excludeId?: string,
+): boolean {
+  const margin = 0.05;
+  const minX = x - width / 2;
+  const maxX = x + width / 2;
+  const minY = y - height / 2;
+  const maxY = y + height / 2;
+  const minZ = z - depth / 2;
+  const maxZ = z + depth / 2;
+
+  for (const obj of allObjects) {
+    if (obj.id === excludeId || !obj.isActive) continue;
+    const tn = obj.type.name;
+    // 바닥/통로/구역 제외
+    if (tn === 'FLOOR' || tn === 'AISLE' || tn === 'ZONE' || tn === 'SAFETY_ZONE') continue;
+    const oMeta = obj.metadata as Record<string, unknown> | null;
+    if (oMeta?.floorStyle || oMeta?.aisleType) continue;
+
+    const oMinX = obj.positionX - obj.scaleX / 2;
+    const oMaxX = obj.positionX + obj.scaleX / 2;
+    const oMinY = obj.positionY - obj.scaleY / 2;
+    const oMaxY = obj.positionY + obj.scaleY / 2;
+    const oMinZ = obj.positionZ - obj.scaleZ / 2;
+    const oMaxZ = obj.positionZ + obj.scaleZ / 2;
+
+    if (minX < oMaxX - margin && maxX > oMinX + margin &&
+        minY < oMaxY - margin && maxY > oMinY + margin &&
+        minZ < oMaxZ - margin && maxZ > oMinZ + margin) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // 프리셋에서 스타일 메타데이터 추출 (통로/바닥/벽)
 function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
   const extra = preset as unknown as Record<string, unknown>;
@@ -48,6 +87,9 @@ function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
   if (presetMeta?.equipType) meta.equipType = presetMeta.equipType;
   if (presetMeta?.safetyType) meta.safetyType = presetMeta.safetyType;
   if (presetMeta?.facilityType) meta.facilityType = presetMeta.facilityType;
+  // 벽 부착 메타데이터
+  if (presetMeta?.wallMounted) meta.wallMounted = true;
+  if (presetMeta?.mountHeight) meta.mountHeight = presetMeta.mountHeight;
   return meta;
 }
 
@@ -276,7 +318,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     setRightPanel('none');
   }, []);
 
-  const handlePlace = useCallback(async (position: [number, number, number]) => {
+  const handlePlace = useCallback(async (position: [number, number, number], rotationY?: number) => {
     if (!placingPreset) return;
     const code = `${placingPreset.code}_${Date.now()}`;
     const typeInfo = getTypeFromPreset(placingPreset);
@@ -285,7 +327,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       type: { id: DEFAULT_TYPE_ID, name: typeInfo.name, label: placingPreset.name, description: null, depth: 5 },
       name: placingPreset.name, code, status: 'ACTIVE', isActive: true,
       positionX: position[0], positionY: position[1], positionZ: position[2],
-      rotationX: 0, rotationY: 0, rotationZ: 0,
+      rotationX: 0, rotationY: rotationY ?? 0, rotationZ: 0,
       scaleX: placingPreset.width || 1, scaleY: placingPreset.height || 1, scaleZ: placingPreset.depth || 1,
       color: typeInfo.itemType === 'container' ? null : (placingPreset.color ?? null),
       opacity: placingPreset.opacity, visible: true,
@@ -298,7 +340,123 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
         ...extractStyleMeta(placingPreset),
       },
     };
-    setPlacedObjects((prev) => [...prev, localObj]);
+    // 출입문 배치 시 — 벽 자동 분할 (벽에 개구부 생성)
+    const styleMeta = extractStyleMeta(placingPreset);
+    const isDoorPlacement = !!styleMeta.doorStyle;
+    const newWallSegments: SpatialObject[] = [];
+
+    if (isDoorPlacement) {
+      const allObjects = [...(objects ?? []), ...placedObjects];
+      const doorW = localObj.scaleX;
+      const doorH = localObj.scaleY;
+      const doorX = localObj.positionX;
+      const doorZ = localObj.positionZ;
+      const doorRotY = localObj.rotationY;
+
+      for (const wall of allObjects) {
+        const wMeta = wall.metadata as Record<string, unknown> | null;
+        if (!wMeta?.wallStyle) continue;
+        const wRotY = wall.rotationY;
+        const isXAligned = Math.abs(Math.sin(wRotY)) < 0.5;
+        const wallIsParallel = Math.abs(Math.sin(wRotY) - Math.sin(doorRotY)) < 0.3 ||
+          Math.abs(Math.sin(wRotY) + Math.sin(doorRotY)) < 0.3;
+        if (!wallIsParallel) continue;
+
+        // 벽의 길이 방향에서 문 위치 체크
+        if (isXAligned) {
+          const wallLeft = wall.positionX - wall.scaleX / 2;
+          const wallRight = wall.positionX + wall.scaleX / 2;
+          const doorLeft = doorX - doorW / 2;
+          const doorRight = doorX + doorW / 2;
+          // Z 근접 확인
+          if (Math.abs(wall.positionZ - doorZ) > wall.scaleZ + 0.5) continue;
+          if (doorLeft <= wallLeft && doorRight >= wallRight) continue; // 문이 벽보다 큼
+          if (doorRight <= wallLeft || doorLeft >= wallRight) continue; // 겹치지 않음
+
+          // 벽을 좌/우 두 조각으로 분할
+          const leftW = Math.max(0, doorLeft - wallLeft);
+          const rightW = Math.max(0, wallRight - doorRight);
+
+          // 기존 벽 제거 → 새 조각 추가
+          setPlacedObjects((prev) => prev.filter((o) => o.id !== wall.id));
+
+          if (leftW > 0.1) {
+            const leftSeg: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_L`,
+              positionX: wallLeft + leftW / 2,
+              scaleX: leftW,
+            };
+            newWallSegments.push(leftSeg);
+          }
+          if (rightW > 0.1) {
+            const rightSeg: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_R`,
+              positionX: doorRight + rightW / 2,
+              scaleX: rightW,
+            };
+            newWallSegments.push(rightSeg);
+          }
+          // 문 상단 벽 조각 (문 높이 위에 남은 벽)
+          if (wall.scaleY > doorH + 0.1) {
+            const topH = wall.scaleY - doorH;
+            const topSeg: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_T`,
+              positionX: doorX,
+              positionY: wall.positionY + (wall.scaleY - topH) / 2,
+              scaleX: doorW,
+              scaleY: topH,
+            };
+            newWallSegments.push(topSeg);
+          }
+          break; // 한 벽만 분할
+        } else {
+          // Z축 방향 벽
+          const wallTop = wall.positionZ - wall.scaleX / 2;
+          const wallBottom = wall.positionZ + wall.scaleX / 2;
+          const doorTop = doorZ - doorW / 2;
+          const doorBottom = doorZ + doorW / 2;
+          if (Math.abs(wall.positionX - doorX) > wall.scaleZ + 0.5) continue;
+          if (doorTop <= wallTop && doorBottom >= wallBottom) continue;
+          if (doorBottom <= wallTop || doorTop >= wallBottom) continue;
+
+          const topW = Math.max(0, doorTop - wallTop);
+          const bottomW = Math.max(0, wallBottom - doorBottom);
+
+          setPlacedObjects((prev) => prev.filter((o) => o.id !== wall.id));
+
+          if (topW > 0.1) {
+            const topSeg: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_L`,
+              positionZ: wallTop + topW / 2,
+              scaleX: topW,
+            };
+            newWallSegments.push(topSeg);
+          }
+          if (bottomW > 0.1) {
+            const bottomSeg: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_R`,
+              positionZ: doorBottom + bottomW / 2,
+              scaleX: bottomW,
+            };
+            newWallSegments.push(bottomSeg);
+          }
+          if (wall.scaleY > doorH + 0.1) {
+            const topH = wall.scaleY - doorH;
+            const topSegAbove: SpatialObject = {
+              ...wall, id: crypto.randomUUID(), code: `${wall.code}_T`,
+              positionZ: doorZ,
+              positionY: wall.positionY + (wall.scaleY - topH) / 2,
+              scaleX: doorW,
+              scaleY: topH,
+            };
+            newWallSegments.push(topSegAbove);
+          }
+          break;
+        }
+      }
+    }
+
+    setPlacedObjects((prev) => [...prev, localObj, ...newWallSegments]);
     setPlacingPreset(null);
     setEditingId(localObj.id);
     setRightPanel('editor');
@@ -306,6 +464,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     const saved = await createSpatialObject({
       siteId: currentSiteId, typeId: DEFAULT_TYPE_ID, name: localObj.name, code: localObj.code,
       positionX: localObj.positionX, positionY: localObj.positionY, positionZ: localObj.positionZ,
+      rotationY: localObj.rotationY,
       scaleX: localObj.scaleX, scaleY: localObj.scaleY, scaleZ: localObj.scaleZ,
       color: localObj.color, opacity: localObj.opacity, meshType: localObj.meshType, metadata: localObj.metadata,
     });
@@ -313,7 +472,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       setPlacedObjects((prev) => prev.map((o) => o.id === localObj.id ? { ...localObj, id: saved.id, siteId: saved.siteId, typeId: saved.typeId } : o));
       setEditingId(saved.id);
     }
-  }, [placingPreset, currentSiteId]);
+  }, [placingPreset, currentSiteId, objects, placedObjects]);
 
   // === 오브젝트 CRUD ===
   // 로컬 프리뷰 업데이트 (DB 저장 없이 실시간 반영)
@@ -374,15 +533,84 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   }, []);
 
   const handleRotate90 = useCallback(async (obj: SpatialObject) => {
-    const updatedObj: SpatialObject = { ...obj, rotationY: obj.rotationY + Math.PI / 2 };
+    // 90도 회전 시 폭(X)과 깊이(Z)를 스왑 — 랙에 맞게 방향 전환
+    const updatedObj: SpatialObject = {
+      ...obj,
+      rotationY: obj.rotationY + Math.PI / 2,
+      scaleX: obj.scaleZ,
+      scaleZ: obj.scaleX,
+    };
     setPlacedObjects((prev) => prev.map((o) => (o.id === updatedObj.id ? updatedObj : o)));
-    await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY });
+    await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY, scaleX: updatedObj.scaleX, scaleZ: updatedObj.scaleZ });
   }, []);
 
-  // BIN 아이템 제거
+  // BIN 아이템 제거 — 랙 앞 바닥에 배출 (충돌 시 복귀 + 경고)
   const handleRemoveBinItem = useCallback((rackId: string, level: number) => {
+    const binItem = binOccupancy.find((o) => o.rackId === rackId && o.level === level);
+    if (!binItem) return;
+
+    // 해당 랙 찾기
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    const rack = allObjs.find((o) => o.id === rackId);
+    if (!rack) {
+      setBinOccupancy((prev) => prev.filter((o) => !(o.rackId === rackId && o.level === level)));
+      return;
+    }
+
+    // 랙 앞 바닥 위치 계산 (랙 전면 + 아이템 깊이/2 여유)
+    const frontZ = rack.positionZ - rack.scaleZ / 2 - binItem.depth / 2 - 0.2;
+    const floorX = rack.positionX;
+    const floorY = binItem.height / 2;
+
+    // 충돌 검사 — 바닥 위치에 다른 오브젝트가 있는지 확인
+    const hasCollision = checkFloorCollision(floorX, floorY, frontZ, binItem.width, binItem.height, binItem.depth, allObjs, rackId);
+
+    if (hasCollision) {
+      // 충돌 — 복귀 + 경고
+      handleBlockedToast('랙 앞에 물건이 있습니다. 비우기 전에 앞쪽을 치워주세요.');
+      return;
+    }
+
+    // 충돌 없음 — 바닥에 새 오브젝트 생성
+    const newObj: SpatialObject = {
+      id: crypto.randomUUID(),
+      siteId: currentSiteId,
+      typeId: DEFAULT_TYPE_ID,
+      type: { id: DEFAULT_TYPE_ID, name: 'BIN', label: binItem.itemName, description: null, depth: 5 },
+      name: binItem.itemName,
+      code: `${binItem.presetCode ?? 'BIN'}_${Date.now()}`,
+      status: 'ACTIVE',
+      isActive: true,
+      positionX: floorX,
+      positionY: floorY,
+      positionZ: frontZ,
+      rotationX: 0, rotationY: 0, rotationZ: 0,
+      scaleX: binItem.width,
+      scaleY: binItem.height,
+      scaleZ: binItem.depth,
+      color: binItem.itemColor,
+      opacity: 1,
+      visible: true,
+      meshType: 'box',
+      metadata: {
+        itemType: binItem.itemType,
+        presetCode: binItem.presetCode,
+        ...(binItem.itemMetadata ?? {}),
+      },
+    };
+
+    // BIN에서 제거 + 바닥에 추가
     setBinOccupancy((prev) => prev.filter((o) => !(o.rackId === rackId && o.level === level)));
-  }, []);
+    setPlacedObjects((prev) => [...prev, newObj]);
+
+    // DB에 저장
+    createSpatialObject({
+      siteId: newObj.siteId, typeId: newObj.typeId, name: newObj.name, code: newObj.code,
+      positionX: newObj.positionX, positionY: newObj.positionY, positionZ: newObj.positionZ,
+      scaleX: newObj.scaleX, scaleY: newObj.scaleY, scaleZ: newObj.scaleZ,
+      color: newObj.color, opacity: newObj.opacity, meshType: newObj.meshType, metadata: newObj.metadata,
+    });
+  }, [binOccupancy, objects, placedObjects, currentSiteId]);
 
   // === 뷰 모드 / 줌 ===
   const handleViewModeChange = useCallback((mode: ViewMode) => {

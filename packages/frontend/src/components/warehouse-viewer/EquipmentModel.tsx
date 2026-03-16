@@ -373,7 +373,76 @@ export function ColumnModel({ width, depth, height, isSelected, isHovered }: Equ
   );
 }
 
-// ===== 8. 비상구 표시 (Emergency Exit Sign) =====
+// ===== 8. 분리수거함 세트 (Trash Bin Set) =====
+export function TrashBinModel({ width, depth, height, isSelected, isHovered }: EquipmentProps) {
+  // 3칸 분리수거함 — 파랑(일반), 초록(재활용), 빨강(위험)
+  const binCount = 3;
+  const gap = 0.02;
+  const binW = (width - gap * (binCount + 1)) / binCount;
+  const bodyH = height * 0.8;
+  const lidH = height * 0.12;
+  const baseH = 0.02;
+
+  const colors: [string, string, string] = ['#2563EB', '#16A34A', '#DC2626'];
+  const labels = ['일반', '재활용', '위험'];
+
+  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#404040', isSelected, isHovered), metalness: 0.4, roughness: 0.5,
+  }), [isSelected, isHovered]);
+
+  return (
+    <group>
+      {/* 하단 프레임 */}
+      <mesh position={[0, baseH / 2, 0]} material={frameMat}>
+        <boxGeometry args={[width, baseH, depth]} />
+      </mesh>
+
+      {/* 3개 분리수거함 */}
+      {colors.map((color, i) => {
+        const x = -width / 2 + gap + binW / 2 + i * (binW + gap);
+        const resolvedColor = resolveColor(color, isSelected, isHovered);
+        return (
+          <group key={i}>
+            {/* 통 본체 */}
+            <mesh position={[x, baseH + bodyH / 2, 0]} castShadow>
+              <boxGeometry args={[binW, bodyH, depth - 0.02]} />
+              <meshStandardMaterial color={resolvedColor} metalness={0.1} roughness={0.6} />
+            </mesh>
+
+            {/* 뚜껑 (살짝 넓게) */}
+            <mesh position={[x, baseH + bodyH + lidH / 2, 0]}>
+              <boxGeometry args={[binW + 0.01, lidH, depth - 0.01]} />
+              <meshStandardMaterial
+                color={resolvedColor}
+                metalness={0.2}
+                roughness={0.4}
+              />
+            </mesh>
+
+            {/* 뚜껑 손잡이 */}
+            <mesh position={[x, baseH + bodyH + lidH + 0.01, 0]} material={frameMat}>
+              <boxGeometry args={[binW * 0.3, 0.02, 0.03]} />
+            </mesh>
+
+            {/* 전면 라벨 패널 */}
+            <mesh position={[x, baseH + bodyH * 0.6, -depth / 2 + 0.005]}>
+              <boxGeometry args={[binW * 0.7, bodyH * 0.25, 0.005]} />
+              <meshStandardMaterial color="#FFFFFF" metalness={0.05} roughness={0.3} />
+            </mesh>
+
+            {/* 투입구 (어두운 슬롯) */}
+            <mesh position={[x, baseH + bodyH + lidH * 0.3, -depth / 2 + 0.005]}>
+              <boxGeometry args={[binW * 0.5, lidH * 0.4, 0.01]} />
+              <meshStandardMaterial color="#1a1a1a" metalness={0.1} roughness={0.9} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+// ===== 9. 비상구 표시 (Emergency Exit Sign) =====
 export function ExitSignModel({ width, depth, height, isSelected, isHovered }: EquipmentProps) {
   const signMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: resolveColor('#22AA44', isSelected, isHovered),
