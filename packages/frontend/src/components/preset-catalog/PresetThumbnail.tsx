@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 
 interface PresetThumbnailProps {
-  category: string;  // RACK, PALLET, LOADED_PALLET, CONTAINER, AISLE, PRODUCT_BOX, FLOOR, WALL, DOOR
+  category: string;  // RACK, PALLET, LOADED_PALLET, CONTAINER, AISLE, PRODUCT_BOX, FLOOR, WALL, DOOR, EQUIPMENT, SAFETY, FACILITY
   code: string;
   width: number;     // m
   depth: number;     // m
@@ -138,6 +138,15 @@ export function PresetThumbnail({
         break;
       case 'DOOR':
         drawDoor(ctx, cx, cy, scale, nw, nh, code);
+        break;
+      case 'EQUIPMENT':
+        drawEquipment(ctx, cx, cy, scale, nw, nd, nh, code);
+        break;
+      case 'SAFETY':
+        drawSafety(ctx, cx, cy, scale, nw, nd, nh, code);
+        break;
+      case 'FACILITY':
+        drawFacility(ctx, cx, cy, scale, nw, nd, nh, code);
         break;
       default:
         drawIsoBox(ctx, -nw / 2, 0, -nd / 2, nw, nh, nd, cx, cy, scale, '#4A90D9', '#3570B0', '#2D5A8E', '#1A3A5E');
@@ -613,5 +622,342 @@ function drawDoor(
     ctx.beginPath();
     ctx.arc(hp[0], hp[1], scale * 0.04, 0, Math.PI * 2);
     ctx.fill();
+  }
+}
+
+// 작업 장비
+function drawEquipment(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, scale: number,
+  w: number, d: number, h: number,
+  code: string,
+) {
+  const isQC = code.includes('QC');
+  const isPacking = code.includes('PACKING');
+  const isCharging = code.includes('CHARGING');
+
+  if (isQC) {
+    // 검수 작업대 — 스테인리스 상판 + 다리 + 검수 조명
+    const legH = h * 0.55;
+    const topH = 0.04;
+    const stainless = '#B0B8C0';
+    const legColor = '#606870';
+    const strokeColor = '#404850';
+
+    // 다리 4개
+    const legW = 0.04;
+    for (const [lx, lz] of [[-w / 2 + 0.06, -d / 2 + 0.06], [w / 2 - 0.06, -d / 2 + 0.06], [-w / 2 + 0.06, d / 2 - 0.06], [w / 2 - 0.06, d / 2 - 0.06]]) {
+      drawIsoBox(ctx, lx - legW / 2, 0, lz - legW / 2, legW, legH, legW, cx, cy, scale,
+        adjustColor(legColor, 1.1), adjustColor(legColor, 0.8), adjustColor(legColor, 0.9), strokeColor);
+    }
+
+    // 하단 선반
+    drawIsoBox(ctx, -w / 2 + 0.05, legH * 0.15, -d / 2 + 0.05, w - 0.1, 0.02, d - 0.1, cx, cy, scale,
+      adjustColor(legColor, 1.0), adjustColor(legColor, 0.7), adjustColor(legColor, 0.8));
+
+    // 상판
+    drawIsoBox(ctx, -w / 2, legH, -d / 2, w, topH, d, cx, cy, scale,
+      adjustColor(stainless, 1.15), adjustColor(stainless, 0.85), adjustColor(stainless, 0.95), strokeColor);
+
+    // 검수 조명 막대
+    drawIsoBox(ctx, -w * 0.35, legH + topH + 0.35, -0.025, w * 0.7, 0.03, 0.05, cx, cy, scale,
+      '#E8F0FF', '#C0D0E0', '#D0E0F0');
+    // 조명 지지대
+    drawIsoBox(ctx, -0.01, legH + topH, -d / 2 + 0.02, 0.02, 0.38, 0.02, cx, cy, scale,
+      adjustColor(legColor, 1.0), adjustColor(legColor, 0.7), adjustColor(legColor, 0.85));
+  } else if (isPacking) {
+    // 포장 작업대 — 목재 상판 + 테이프 롤
+    const legH = h * 0.55;
+    const topH = 0.04;
+    const woodColor = '#A08050';
+    const legColor = '#505860';
+    const strokeColor = '#3A4048';
+
+    // 다리
+    for (const [lx, lz] of [[-w / 2 + 0.04, -d / 2 + 0.04], [w / 2 - 0.04, -d / 2 + 0.04], [-w / 2 + 0.04, d / 2 - 0.04], [w / 2 - 0.04, d / 2 - 0.04]]) {
+      drawIsoBox(ctx, lx - 0.02, 0, lz - 0.02, 0.04, legH, 0.04, cx, cy, scale,
+        adjustColor(legColor, 1.1), adjustColor(legColor, 0.8), adjustColor(legColor, 0.9), strokeColor);
+    }
+
+    // 하단 선반
+    drawIsoBox(ctx, -w / 2 + 0.04, legH * 0.12, -d / 2 + 0.04, w - 0.08, 0.02, d - 0.08, cx, cy, scale,
+      adjustColor(legColor, 0.9), adjustColor(legColor, 0.6), adjustColor(legColor, 0.7));
+
+    // 상판
+    drawIsoBox(ctx, -w / 2, legH, -d / 2, w, topH, d, cx, cy, scale,
+      adjustColor(woodColor, 1.2), adjustColor(woodColor, 0.85), adjustColor(woodColor, 0.95), strokeColor);
+
+    // 테이프 롤 (원형)
+    const rollCenter = isoProject(w / 2 - 0.08, legH + topH + 0.15, 0, cx, cy, scale);
+    ctx.beginPath();
+    ctx.arc(rollCenter[0], rollCenter[1], scale * 0.06, 0, Math.PI * 2);
+    ctx.fillStyle = '#B89060';
+    ctx.fill();
+    ctx.strokeStyle = '#7A6040';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // 내부 원
+    ctx.beginPath();
+    ctx.arc(rollCenter[0], rollCenter[1], scale * 0.025, 0, Math.PI * 2);
+    ctx.fillStyle = '#605030';
+    ctx.fill();
+  } else if (isCharging) {
+    // 충전 스테이션 — 바닥 플랫폼 + 충전기 패널
+    const basePlatColor = '#505860';
+    const panelColor = '#3A4048';
+    const warningColor = '#FFD700';
+    const strokeColor = '#2A3038';
+
+    // 바닥 플랫폼
+    drawIsoBox(ctx, -w / 2, 0, -d / 2, w, 0.06, d, cx, cy, scale,
+      adjustColor(basePlatColor, 1.1), adjustColor(basePlatColor, 0.8), adjustColor(basePlatColor, 0.9), strokeColor);
+
+    // 충전기 패널 (뒷쪽)
+    drawIsoBox(ctx, -w * 0.3, 0.06, d / 2 - 0.2, w * 0.6, h * 0.5, 0.15, cx, cy, scale,
+      adjustColor(panelColor, 1.2), adjustColor(panelColor, 0.8), adjustColor(panelColor, 0.9), strokeColor);
+
+    // LED 상태등
+    for (let i = 0; i < 3; i++) {
+      const ledPos = isoProject(-0.08 + i * 0.08, h * 0.55, d / 2 - 0.23, cx, cy, scale);
+      ctx.beginPath();
+      ctx.arc(ledPos[0], ledPos[1], scale * 0.02, 0, Math.PI * 2);
+      ctx.fillStyle = '#44CC44';
+      ctx.fill();
+    }
+
+    // 경고 볼라드 (좌우)
+    for (const side of [-1, 1]) {
+      drawIsoBox(ctx, side * w / 2 * 0.85 - 0.04, 0.06, -d / 2 + 0.06, 0.08, h * 0.45, 0.08, cx, cy, scale,
+        adjustColor(warningColor, 1.1), adjustColor(warningColor, 0.7), adjustColor(warningColor, 0.85), '#AA8800');
+      // 검은 줄무늬
+      drawIsoBox(ctx, side * w / 2 * 0.85 - 0.04, 0.06 + h * 0.3, -d / 2 + 0.06, 0.082, 0.05, 0.082, cx, cy, scale,
+        adjustColor(basePlatColor, 0.8), adjustColor(basePlatColor, 0.5), adjustColor(basePlatColor, 0.6));
+    }
+  }
+}
+
+// 안전·소방 장비
+function drawSafety(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, scale: number,
+  w: number, d: number, h: number,
+  code: string,
+) {
+  const isHydrant = code.includes('HYDRANT');
+  const isExtinguisher = code.includes('EXTINGUISHER');
+  const isExitSign = code.includes('EXIT');
+  const isGuardRail = code.includes('GUARDRAIL');
+  const isBollard = code.includes('BOLLARD');
+
+  if (isHydrant) {
+    // 소화전 캐비닛 — 빨간 상자 + 유리창 + 호스
+    const redBody = '#CC2222';
+    const doorRed = '#DD3333';
+    const strokeColor = '#882222';
+
+    // 본체
+    drawIsoBox(ctx, -w / 2, 0, -d / 2, w, h, d, cx, cy, scale,
+      adjustColor(redBody, 1.1), adjustColor(redBody, 0.75), adjustColor(redBody, 0.85), strokeColor);
+
+    // 문 (전면)
+    drawIsoBox(ctx, -w / 2 + w * 0.06, h * 0.06, -d / 2 - 0.005, w * 0.88, h * 0.88, 0.01, cx, cy, scale,
+      adjustColor(doorRed, 1.1), adjustColor(doorRed, 0.8), adjustColor(doorRed, 0.9), strokeColor);
+
+    // 유리창 (반투명)
+    drawIsoBox(ctx, -w * 0.25, h * 0.35, -d / 2 - 0.01, w * 0.5, h * 0.35, 0.005, cx, cy, scale,
+      'rgba(136,204,255,0.4)', 'rgba(100,170,220,0.3)', 'rgba(120,190,240,0.35)');
+
+    // 호스 릴 (내부 원)
+    const hoseCenter = isoProject(0, h * 0.45, 0, cx, cy, scale);
+    ctx.beginPath();
+    ctx.arc(hoseCenter[0], hoseCenter[1], scale * w * 0.2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#C0C0C0';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // "소화전" 텍스트 (상단)
+    const textPos = isoProject(0, h * 0.85, -d / 2 - 0.015, cx, cy, scale);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.max(7, scale * 0.15)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('소화전', textPos[0], textPos[1]);
+  } else if (isExtinguisher) {
+    // 소화기 — 빨간 원통 + 헤드 + 노즐
+    const bodyR = Math.min(w, d) * 0.35;
+    const bodyH = h * 0.65;
+    const redColor = '#CC2222';
+    const darkColor = '#333333';
+    const strokeColor = '#881111';
+
+    // 받침대
+    drawIsoBox(ctx, -bodyR * 1.5, 0, -bodyR * 1.5, bodyR * 3, 0.03, bodyR * 3, cx, cy, scale,
+      '#505050', '#383838', '#404040');
+
+    // 원통 본체 (박스로 근사)
+    drawIsoBox(ctx, -bodyR, 0.03, -bodyR, bodyR * 2, bodyH, bodyR * 2, cx, cy, scale,
+      adjustColor(redColor, 1.15), adjustColor(redColor, 0.7), adjustColor(redColor, 0.85), strokeColor);
+
+    // 둥근 상단
+    drawIsoBox(ctx, -bodyR * 0.9, 0.03 + bodyH, -bodyR * 0.9, bodyR * 1.8, bodyR * 0.5, bodyR * 1.8, cx, cy, scale,
+      adjustColor(redColor, 1.2), adjustColor(redColor, 0.8), adjustColor(redColor, 0.9), strokeColor);
+
+    // 헤드 밸브 (검은색)
+    drawIsoBox(ctx, -bodyR * 0.4, 0.03 + bodyH + bodyR * 0.5, -bodyR * 0.4, bodyR * 0.8, h * 0.12, bodyR * 0.8, cx, cy, scale,
+      adjustColor(darkColor, 1.3), adjustColor(darkColor, 0.8), adjustColor(darkColor, 1.0), '#222');
+
+    // 레버
+    const leverStart = isoProject(bodyR * 0.3, 0.03 + bodyH + bodyR * 0.7, 0, cx, cy, scale);
+    const leverEnd = isoProject(bodyR * 0.8, 0.03 + bodyH + bodyR * 0.5, 0, cx, cy, scale);
+    ctx.strokeStyle = darkColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(leverStart[0], leverStart[1]);
+    ctx.lineTo(leverEnd[0], leverEnd[1]);
+    ctx.stroke();
+  } else if (isExitSign) {
+    // 비상구 표시등 — 녹색 사인
+    const greenColor = '#22AA44';
+    const strokeColor = '#116622';
+
+    // 사인 본체
+    drawIsoBox(ctx, -w / 2, h * 0.2, -d / 2, w, h * 0.6, d, cx, cy, scale,
+      adjustColor(greenColor, 1.2), adjustColor(greenColor, 0.7), adjustColor(greenColor, 0.85), strokeColor);
+
+    // 흰색 패널 (전면)
+    drawIsoBox(ctx, -w * 0.4, h * 0.3, -d / 2 - 0.003, w * 0.8, h * 0.4, 0.003, cx, cy, scale,
+      '#FFFFFF', '#E0E0E0', '#F0F0F0');
+
+    // 비상구 아이콘 (화살표 텍스트)
+    const arrowPos = isoProject(0, h * 0.5, -d / 2 - 0.006, cx, cy, scale);
+    ctx.fillStyle = '#22AA44';
+    ctx.font = `bold ${Math.max(8, scale * 0.12)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🚪→', arrowPos[0], arrowPos[1]);
+
+    // 브라켓
+    drawIsoBox(ctx, -0.015, 0, d / 2 - 0.015, 0.03, h * 0.22, 0.015, cx, cy, scale,
+      '#606060', '#484848', '#505050');
+  } else if (isGuardRail) {
+    // 안전 가드레일 — 노란 수평 레일 + 기둥
+    const railLen = Math.max(w, d);
+    const postColor = '#CCAA10';
+    const railColor = '#DDC020';
+    const strokeColor = '#887700';
+    const postCount = Math.max(2, Math.ceil(railLen / 1.5) + 1);
+
+    // 기둥
+    for (let i = 0; i < postCount; i++) {
+      const t = i / (postCount - 1);
+      const z = -railLen / 2 + t * railLen;
+      // 바닥 플레이트
+      drawIsoBox(ctx, -0.1, 0, z - 0.1, 0.2, 0.02, 0.2, cx, cy, scale,
+        '#606060', '#484848', '#505050');
+      // 기둥
+      drawIsoBox(ctx, -0.04, 0.02, z - 0.04, 0.08, h - 0.02, 0.08, cx, cy, scale,
+        adjustColor(postColor, 1.15), adjustColor(postColor, 0.75), adjustColor(postColor, 0.9), strokeColor);
+    }
+
+    // 상단 레일
+    drawIsoBox(ctx, -0.03, h * 0.85, -railLen / 2, 0.06, 0.06, railLen, cx, cy, scale,
+      adjustColor(railColor, 1.2), adjustColor(railColor, 0.75), adjustColor(railColor, 0.9), strokeColor);
+
+    // 중간 레일
+    drawIsoBox(ctx, -0.03, h * 0.45, -railLen / 2, 0.06, 0.06, railLen, cx, cy, scale,
+      adjustColor(railColor, 1.2), adjustColor(railColor, 0.75), adjustColor(railColor, 0.9), strokeColor);
+  } else if (isBollard) {
+    // 안전 볼라드 — 노란 원통
+    const r = Math.min(w, d) * 0.4;
+    const warningColor = '#FFD700';
+    const strokeColor = '#AA8800';
+
+    // 바닥 플레이트
+    drawIsoBox(ctx, -r * 2, 0, -r * 2, r * 4, 0.03, r * 4, cx, cy, scale,
+      '#606060', '#484848', '#505050');
+
+    // 볼라드 본체 (박스로 근사)
+    drawIsoBox(ctx, -r, 0.03, -r, r * 2, h - 0.03, r * 2, cx, cy, scale,
+      adjustColor(warningColor, 1.1), adjustColor(warningColor, 0.7), adjustColor(warningColor, 0.85), strokeColor);
+
+    // 검은 줄무늬
+    drawIsoBox(ctx, -r * 1.02, h * 0.6, -r * 1.02, r * 2.04, 0.06, r * 2.04, cx, cy, scale,
+      '#333', '#222', '#2A2A2A');
+    drawIsoBox(ctx, -r * 1.02, h * 0.3, -r * 1.02, r * 2.04, 0.06, r * 2.04, cx, cy, scale,
+      '#333', '#222', '#2A2A2A');
+
+    // 반사띠
+    drawIsoBox(ctx, -r * 1.01, h * 0.8, -r * 1.01, r * 2.02, 0.04, r * 2.02, cx, cy, scale,
+      '#FFFFFF', '#E0E0E0', '#F0F0F0');
+  }
+}
+
+// 시설물
+function drawFacility(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, scale: number,
+  w: number, d: number, h: number,
+  code: string,
+) {
+  const isColumn = code.includes('COLUMN');
+  const isPanel = code.includes('PANEL');
+  const isTrash = code.includes('TRASH');
+
+  if (isColumn) {
+    // 건물 기둥 — 콘크리트/H형강
+    const concreteColor = '#A0A0A0';
+    const baseColor = '#888888';
+    const strokeColor = '#606060';
+
+    // 기초
+    drawIsoBox(ctx, -w * 0.65, 0, -d * 0.65, w * 1.3, 0.1, d * 1.3, cx, cy, scale,
+      adjustColor(baseColor, 1.1), adjustColor(baseColor, 0.75), adjustColor(baseColor, 0.85), strokeColor);
+
+    // 기둥 본체
+    drawIsoBox(ctx, -w / 2, 0.1, -d / 2, w, h - 0.16, d, cx, cy, scale,
+      adjustColor(concreteColor, 1.1), adjustColor(concreteColor, 0.8), adjustColor(concreteColor, 0.9), strokeColor);
+
+    // 상단 캡
+    drawIsoBox(ctx, -w * 0.575, h - 0.06, -d * 0.575, w * 1.15, 0.06, d * 1.15, cx, cy, scale,
+      adjustColor(baseColor, 1.15), adjustColor(baseColor, 0.8), adjustColor(baseColor, 0.9), strokeColor);
+  } else if (isPanel) {
+    // 배전반 — 회색 캐비닛
+    const panelColor = '#505860';
+    const strokeColor = '#303840';
+
+    // 본체
+    drawIsoBox(ctx, -w / 2, 0, -d / 2, w, h, d, cx, cy, scale,
+      adjustColor(panelColor, 1.15), adjustColor(panelColor, 0.8), adjustColor(panelColor, 0.9), strokeColor);
+
+    // 문 (전면)
+    drawIsoBox(ctx, -w / 2 + w * 0.05, h * 0.05, -d / 2 - 0.005, w * 0.9, h * 0.9, 0.01, cx, cy, scale,
+      adjustColor(panelColor, 1.25), adjustColor(panelColor, 0.85), adjustColor(panelColor, 0.95), strokeColor);
+
+    // 손잡이
+    const handlePos = isoProject(w * 0.35, h / 2, -d / 2 - 0.012, cx, cy, scale);
+    ctx.fillStyle = '#C0C0C0';
+    ctx.beginPath();
+    ctx.arc(handlePos[0], handlePos[1], scale * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ⚡ 경고 표시
+    const warnPos = isoProject(0, h * 0.7, -d / 2 - 0.012, cx, cy, scale);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = `bold ${Math.max(10, scale * 0.2)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡', warnPos[0], warnPos[1]);
+  } else if (isTrash) {
+    // 분리수거함 세트 — 3칸 (색상 구분)
+    const colors = ['#3B82F6', '#22C55E', '#EF4444']; // 재활용/일반/위험물
+    const binW = w / 3 - 0.02;
+    const strokeColor = '#404040';
+
+    for (let i = 0; i < 3; i++) {
+      const x = -w / 2 + i * (binW + 0.02) + 0.01;
+      drawIsoBox(ctx, x, 0, -d / 2, binW, h, d, cx, cy, scale,
+        adjustColor(colors[i], 1.1), adjustColor(colors[i], 0.7), adjustColor(colors[i], 0.85), strokeColor);
+
+      // 뚜껑
+      drawIsoBox(ctx, x - 0.01, h, -d / 2 - 0.01, binW + 0.02, 0.03, d + 0.02, cx, cy, scale,
+        adjustColor(colors[i], 1.3), adjustColor(colors[i], 0.9), adjustColor(colors[i], 1.0));
+    }
   }
 }

@@ -11,6 +11,11 @@ import { WallPanelModel } from './WallPanelModel';
 import { DoorModel } from './DoorModel';
 import type { DoorStyle } from './DoorModel';
 import { ProductBoxModel } from './ProductBoxModel';
+import {
+  QCTableModel, FireHydrantModel, FireExtinguisherModel,
+  PackingStationModel, ChargingStationModel, GuardRailModel,
+  ColumnModel, ExitSignModel,
+} from './EquipmentModel';
 import { ResizeHandles } from './ResizeHandles';
 
 type EditLayerMode = 'structure' | 'objects';
@@ -546,6 +551,68 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         )}
       </group>
     );
+  }
+
+  // 장비/안전/시설물 3D 모델 렌더링
+  const equipType = meta?.equipType as string | undefined;
+  const safetyType = meta?.safetyType as string | undefined;
+  const facilityType = meta?.facilityType as string | undefined;
+  const isEquipment = !!equipType;
+  const isSafety = !!safetyType;
+  const isFacility = !!facilityType;
+
+  if (isEquipment || isSafety || isFacility) {
+    const EquipComponent = equipType === 'QC_TABLE' ? QCTableModel
+      : equipType === 'PACKING' ? PackingStationModel
+      : equipType === 'CHARGING' ? ChargingStationModel
+      : safetyType === 'FIRE_HYDRANT' ? FireHydrantModel
+      : safetyType === 'FIRE_EXTINGUISHER' ? FireExtinguisherModel
+      : safetyType === 'EXIT_SIGN' ? ExitSignModel
+      : safetyType === 'GUARD_RAIL' ? GuardRailModel
+      : facilityType === 'COLUMN' ? ColumnModel
+      : facilityType === 'ELEC_PANEL' ? FireHydrantModel // 배전반도 캐비닛형
+      : null;
+
+    // 볼라드/분리수거함은 기본 메시로 렌더링
+    if (EquipComponent) {
+      if (!isInteractable) return (
+        <group position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]} rotation={[object.rotationX, object.rotationY, object.rotationZ]} raycast={NOOP_RAYCAST}>
+          <EquipComponent width={object.scaleX} depth={object.scaleZ} height={object.scaleY} />
+        </group>
+      );
+
+      return (
+        <group
+          ref={groupRef}
+          position={[object.positionX, object.positionY - object.scaleY / 2, object.positionZ]}
+          rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
+          onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+          // @ts-expect-error castShadow on group propagates to children
+          castShadow
+        >
+          <EquipComponent
+            width={object.scaleX} depth={object.scaleZ} height={object.scaleY}
+            isSelected={isSelected} isHovered={hovered}
+          />
+          {hovered && (
+            <Html distanceFactor={15} position={[0, object.scaleY + 0.3, 0]} style={{ pointerEvents: 'none' }}>
+              <div style={{
+                background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+                padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11, color: '#E6EDF3',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              }}>
+                <span style={{ fontWeight: 700 }}>{object.name}</span>
+                <span style={{ color: '#8B949E', marginLeft: 6 }}>{object.type.label}</span>
+              </div>
+            </Html>
+          )}
+        </group>
+      );
+    }
   }
 
   // 기본 메시 렌더링 (구역, 작업대 등)

@@ -44,6 +44,10 @@ function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
     else if (code.includes('FLATRACK')) meta.type = 'FLAT_RACK';
     else if (code.includes('TANK')) meta.type = 'TANK';
   }
+  // 장비/안전/시설물 메타데이터 (프리셋 metadata에서 추출)
+  if (presetMeta?.equipType) meta.equipType = presetMeta.equipType;
+  if (presetMeta?.safetyType) meta.safetyType = presetMeta.safetyType;
+  if (presetMeta?.facilityType) meta.facilityType = presetMeta.facilityType;
   return meta;
 }
 
@@ -255,6 +259,12 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     if (catName.includes('WALL') || code.includes('WALL')) return { name: 'WALL' };
     // 출입문
     if (catName.includes('DOOR') || code.includes('DOOR')) return { name: 'WALL' };
+    // 작업 장비
+    if (catName.includes('EQUIPMENT') || code.includes('EQUIP')) return { name: 'WORKSTATION', itemType: 'equipment' };
+    // 안전·소방
+    if (catName.includes('SAFETY') || code.includes('SAFETY')) return { name: 'WORKSTATION', itemType: 'safety' };
+    // 시설물
+    if (catName.includes('FACILITY') || code.includes('FACILITY')) return { name: 'WORKSTATION', itemType: 'facility' };
     return { name: 'RACK' };
   }, []);
 
