@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
+import type { SpatialObject } from '../../types/spatial';
 
 // Zone 타입별 색상
 const ZONE_COLORS: Record<ZoneType, string> = {
@@ -24,8 +25,20 @@ const WALL_CENTER_Z = 20;
 const WALL_LEFT = WALL_CENTER_X - WALL_W / 2;
 const WALL_TOP = WALL_CENTER_Z - WALL_D / 2;
 
+// 오브젝트 타입별 2D 색상
+const OBJECT_COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
+  RACK: { fill: '#F59E0B20', stroke: '#F59E0B', label: '랙' },
+  AISLE: { fill: '#6366F115', stroke: '#6366F180', label: '통로' },
+  WALL: { fill: '#8B949E30', stroke: '#8B949E', label: '벽' },
+  WORKSTATION: { fill: '#A855F720', stroke: '#A855F7', label: '작업대' },
+  MACHINE: { fill: '#EC489920', stroke: '#EC4899', label: '설비' },
+  ZONE: { fill: '#3B82F615', stroke: '#3B82F680', label: '구역' },
+  SAFETY_ZONE: { fill: '#EF444415', stroke: '#EF444480', label: '안전' },
+};
+
 interface TopViewZoneDrawerProps {
   zones: ZoneConfig[];
+  objects?: SpatialObject[];
   onAddZone: (zone: Omit<ZoneConfig, 'id'>) => void;
   onDeleteZone: (id: string) => void;
   onClose: () => void;
@@ -39,7 +52,7 @@ interface TopViewZoneDrawerProps {
  * - Zone 색상 + 테두리 + 라벨 표시
  * - 3D 모드로 복귀 시 Zone 유지
  */
-export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: TopViewZoneDrawerProps) {
+export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone, onClose }: TopViewZoneDrawerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedType, setSelectedType] = useState<ZoneType>('STORAGE');
   const [drawing, setDrawing] = useState(false);
@@ -136,6 +149,56 @@ export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: T
     ctx.lineWidth = 2;
     ctx.strokeRect(floorX, floorY, floorW, floorH);
 
+    // 기존 오브젝트 렌더링 (랙, 통로, 벽 등)
+    objects.forEach((obj) => {
+      if (!obj.isActive || !obj.visible) return;
+      const typeName = obj.type.name;
+      // SITE, BUILDING, FLOOR, BIN은 건너뛰기
+      if (['SITE', 'BUILDING', 'FLOOR', 'BIN'].includes(typeName)) return;
+
+      const colors = OBJECT_COLORS[typeName] ?? { fill: '#8B949E15', stroke: '#8B949E60', label: '' };
+
+      // 오브젝트 중심 기준 → 좌상단 좌표 계산
+      const halfW = obj.scaleX / 2;
+      const halfD = obj.scaleZ / 2;
+
+      // rotationY에 따라 가로/세로 스왑
+      const rot = obj.rotationY % Math.PI;
+      const isRotated = Math.abs(rot - Math.PI / 2) < 0.1 || Math.abs(rot + Math.PI / 2) < 0.1;
+      const drawW = isRotated ? obj.scaleZ : obj.scaleX;
+      const drawD = isRotated ? obj.scaleX : obj.scaleZ;
+
+      const ox = (obj.positionX - drawW / 2 - WALL_CENTER_X) * scale;
+      const oy = (obj.positionZ - drawD / 2 - WALL_CENTER_Z) * scale;
+      const ow = drawW * scale;
+      const oh = drawD * scale;
+
+      // 채움
+      ctx.fillStyle = colors.fill;
+      ctx.fillRect(ox, oy, ow, oh);
+
+      // 테두리
+      ctx.strokeStyle = colors.stroke;
+      ctx.lineWidth = typeName === 'WALL' ? 1 : 1.5;
+      ctx.strokeRect(ox, oy, ow, oh);
+
+      // 라벨 (일정 크기 이상일 때만)
+      if (ow > 20 && oh > 14) {
+        ctx.fillStyle = colors.stroke;
+        const fontSize = Math.max(8, Math.min(11, ow / 6));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // 이름이 있으면 이름, 없으면 타입 라벨
+        const label = obj.name || colors.label;
+        // 긴 이름은 잘라서 표시
+        const maxChars = Math.floor(ow / (fontSize * 0.6));
+        const displayLabel = label.length > maxChars ? label.slice(0, maxChars) + '…' : label;
+        ctx.fillText(displayLabel, ox + ow / 2, oy + oh / 2);
+        ctx.textBaseline = 'alphabetic';
+      }
+    });
+
     // 기존 Zone 렌더링
     zones.forEach((zone) => {
       const zx = (zone.startX - WALL_CENTER_X) * scale;
@@ -188,7 +251,7 @@ export function TopViewZoneDrawer({ zones, onAddZone, onDeleteZone, onClose }: T
     }
 
     ctx.restore();
-  }, [zones, startPos, currentPos, selectedType, zoom, pan, canvasSize]);
+  }, [zones, objects, startPos, currentPos, selectedType, zoom, pan, canvasSize]);
 
   // 마우스 이벤트
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

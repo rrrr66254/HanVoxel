@@ -75,7 +75,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
       {/* 로고 */}
       <div
         style={{
-          padding: '20px 24px 16px',
+          padding: '8px 24px 8px',
           borderBottom: '1px solid #21262D',
         }}
       >
