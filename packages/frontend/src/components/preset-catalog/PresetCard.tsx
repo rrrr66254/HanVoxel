@@ -30,6 +30,9 @@ function inferCategory(preset: SpatialPreset): string {
   if (code.includes('FLOOR')) return 'FLOOR';
   if (code.includes('WALL')) return 'WALL';
   if (code.includes('DOOR')) return 'DOOR';
+  if (catName.includes('EQUIPMENT') || code.includes('EQUIP')) return 'EQUIPMENT';
+  if (catName.includes('SAFETY') || code.includes('SAFETY')) return 'SAFETY';
+  if (catName.includes('FACILITY') || code.includes('FACILITY')) return 'FACILITY';
   return 'RACK';
 }
 

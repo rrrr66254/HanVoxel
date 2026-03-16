@@ -14,7 +14,10 @@ INSERT INTO preset_categories (id, name, label, description, sort_order, updated
   ('10000000-0000-0000-0000-000000000003', 'LOADED_PALLET',  '적재 팔레트',   '팔레트 + 화물 합산 높이',                    3, NOW()),
   ('10000000-0000-0000-0000-000000000004', 'CONTAINER',      '컨테이너',      'ISO 표준 해상 컨테이너 규격',                4, NOW()),
   ('10000000-0000-0000-0000-000000000005', 'AISLE',          '통로',          '창고 내 통로 너비 기준',                     5, NOW()),
-  ('10000000-0000-0000-0000-000000000006', 'PRODUCT_BOX',    '제품 박스',     '업종별 박스 규격 및 팔레트 적재 기준',        6, NOW())
+  ('10000000-0000-0000-0000-000000000006', 'PRODUCT_BOX',    '제품 박스',     '업종별 박스 규격 및 팔레트 적재 기준',        6, NOW()),
+  ('10000000-0000-0000-0000-000000000007', 'EQUIPMENT',      '작업 장비',     '검수대·포장대·충전소 등 작업 장비',           7, NOW()),
+  ('10000000-0000-0000-0000-000000000008', 'SAFETY',         '안전·소방',     '소화전·소화기·가드레일·비상구 등 안전 설비',   8, NOW()),
+  ('10000000-0000-0000-0000-000000000009', 'FACILITY',       '시설물',        '기둥·배전반 등 건물 시설물',                  9, NOW())
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================
@@ -130,7 +133,45 @@ INSERT INTO spatial_presets (id, category_id, code, name, region, width, depth, 
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================
--- 8. 창고 템플릿 (warehouse_templates)
+-- 8. 작업 장비 (EQUIPMENT) — 검수대·포장대·충전소
+-- ============================================================
+
+INSERT INTO spatial_presets (id, category_id, code, name, standard, region, width, depth, height, max_load, color, opacity, mesh_type, metadata, updated_at) VALUES
+  ('20000000-0000-0000-0007-000000000001', '10000000-0000-0000-0000-000000000007', 'EQUIP_QC_TABLE',       '검수 작업대',         NULL, 'INTL', 1.8,  0.8,  0.9,  200, '#B0B8C0', 0.9, 'box', '{"equipType": "QC_TABLE", "material": "스테인리스", "feature": "검수조명 포함"}', NOW()),
+  ('20000000-0000-0000-0007-000000000002', '10000000-0000-0000-0000-000000000007', 'EQUIP_QC_TABLE_LARGE', '대형 검수 작업대',    NULL, 'INTL', 2.4,  1.0,  0.9,  300, '#B0B8C0', 0.9, 'box', '{"equipType": "QC_TABLE", "material": "스테인리스", "feature": "검수조명 포함, 넓은 작업면"}', NOW()),
+  ('20000000-0000-0000-0007-000000000003', '10000000-0000-0000-0000-000000000007', 'EQUIP_PACKING',        '포장 작업대',         NULL, 'INTL', 1.5,  0.8,  0.9,  150, '#A08050', 0.9, 'box', '{"equipType": "PACKING", "material": "목재+철재", "feature": "테이프 디스펜서 포함"}', NOW()),
+  ('20000000-0000-0000-0007-000000000004', '10000000-0000-0000-0000-000000000007', 'EQUIP_PACKING_LARGE',  '대형 포장 작업대',    NULL, 'INTL', 2.0,  1.0,  0.9,  200, '#A08050', 0.9, 'box', '{"equipType": "PACKING", "material": "목재+철재", "feature": "테이프 디스펜서 + 에어캡 롤러"}', NOW()),
+  ('20000000-0000-0000-0007-000000000005', '10000000-0000-0000-0000-000000000007', 'EQUIP_CHARGING',       '지게차 충전 스테이션', NULL, 'INTL', 2.0,  3.0,  1.2,  NULL, '#505860', 0.9, 'box', '{"equipType": "CHARGING", "powerType": "AC 380V", "feature": "LED 상태표시, 안전볼라드"}', NOW()),
+  ('20000000-0000-0000-0007-000000000006', '10000000-0000-0000-0000-000000000007', 'EQUIP_CHARGING_SMALL', 'AMR 충전 스테이션',    NULL, 'INTL', 1.0,  1.5,  0.6,  NULL, '#505860', 0.9, 'box', '{"equipType": "CHARGING", "powerType": "AC 220V", "feature": "소형 AMR/AGV용"}', NOW())
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================
+-- 9. 안전·소방 (SAFETY) — 소화전·소화기·비상구·가드레일
+-- ============================================================
+
+INSERT INTO spatial_presets (id, category_id, code, name, standard, region, width, depth, height, color, opacity, mesh_type, metadata, updated_at) VALUES
+  ('20000000-0000-0000-0008-000000000001', '10000000-0000-0000-0000-000000000008', 'SAFETY_HYDRANT',       '옥내 소화전 (함)',     '소방법',   'KR',   0.7,  0.25, 0.9,  '#CC2222', 0.9, 'box', '{"safetyType": "FIRE_HYDRANT", "standard": "NFSC 102", "note": "벽면 설치, 25m 간격"}', NOW()),
+  ('20000000-0000-0000-0008-000000000002', '10000000-0000-0000-0000-000000000008', 'SAFETY_EXTINGUISHER',  '소화기 (ABC 3.3kg)',   '소방법',   'KR',   0.18, 0.18, 0.5,  '#CC2222', 0.9, 'box', '{"safetyType": "FIRE_EXTINGUISHER", "type": "ABC", "weight": 3.3, "note": "20m 간격 배치"}', NOW()),
+  ('20000000-0000-0000-0008-000000000003', '10000000-0000-0000-0000-000000000008', 'SAFETY_EXTINGUISHER_L','소화기 (ABC 6.5kg)',   '소방법',   'KR',   0.2,  0.2,  0.6,  '#CC2222', 0.9, 'box', '{"safetyType": "FIRE_EXTINGUISHER", "type": "ABC", "weight": 6.5, "note": "대형 창고용"}', NOW()),
+  ('20000000-0000-0000-0008-000000000004', '10000000-0000-0000-0000-000000000008', 'SAFETY_EXIT_SIGN',     '비상구 표시등',        '소방법',   'KR',   0.4,  0.05, 0.2,  '#22AA44', 0.9, 'box', '{"safetyType": "EXIT_SIGN", "standard": "NFSC 303", "note": "LED 유도등, 복도/출구 상부"}', NOW()),
+  ('20000000-0000-0000-0008-000000000005', '10000000-0000-0000-0000-000000000008', 'SAFETY_GUARDRAIL',     '안전 가드레일 (2m)',   '산안법',   'KR',   0.1,  2.0,  1.1,  '#DDC020', 0.9, 'box', '{"safetyType": "GUARD_RAIL", "standard": "산업안전보건기준 규칙", "note": "랙 열 끝단, 통로 코너 설치"}', NOW()),
+  ('20000000-0000-0000-0008-000000000006', '10000000-0000-0000-0000-000000000008', 'SAFETY_GUARDRAIL_L',   '안전 가드레일 (3m)',   '산안법',   'KR',   0.1,  3.0,  1.1,  '#DDC020', 0.9, 'box', '{"safetyType": "GUARD_RAIL", "standard": "산업안전보건기준 규칙", "note": "긴 구간용"}', NOW()),
+  ('20000000-0000-0000-0008-000000000007', '10000000-0000-0000-0000-000000000008', 'SAFETY_BOLLARD',       '안전 볼라드',          '산안법',   'KR',   0.15, 0.15, 0.8,  '#FFD700', 0.9, 'cylinder', '{"safetyType": "BOLLARD", "note": "충돌 방지 기둥, 통로 코너·기둥 보호"}', NOW())
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================
+-- 10. 시설물 (FACILITY) — 기둥·배전반
+-- ============================================================
+
+INSERT INTO spatial_presets (id, category_id, code, name, standard, region, width, depth, height, color, opacity, mesh_type, metadata, updated_at) VALUES
+  ('20000000-0000-0000-0009-000000000001', '10000000-0000-0000-0000-000000000009', 'FACILITY_COLUMN',      'H형강 기둥 (400×400)', NULL, 'KR',   0.4,  0.4,  6.0,  '#A0A0A0', 0.9, 'box', '{"facilityType": "COLUMN", "material": "H형강", "note": "건물 구조 기둥, 6~9m 간격 배치"}', NOW()),
+  ('20000000-0000-0000-0009-000000000002', '10000000-0000-0000-0000-000000000009', 'FACILITY_COLUMN_SM',   'H형강 기둥 (300×300)', NULL, 'KR',   0.3,  0.3,  6.0,  '#A0A0A0', 0.9, 'box', '{"facilityType": "COLUMN", "material": "H형강", "note": "소형 건물용"}', NOW()),
+  ('20000000-0000-0000-0009-000000000003', '10000000-0000-0000-0000-000000000009', 'FACILITY_PANEL',       '배전반',               NULL, 'KR',   0.8,  0.3,  1.8,  '#505860', 0.9, 'box', '{"facilityType": "ELEC_PANEL", "note": "전력 배전함, 벽면 설치, 전면 1m 유지"}', NOW()),
+  ('20000000-0000-0000-0009-000000000004', '10000000-0000-0000-0000-000000000009', 'FACILITY_TRASH_BIN',   '분리수거함 세트',      NULL, 'INTL', 1.2,  0.5,  1.0,  '#6B7280', 0.9, 'box', '{"facilityType": "TRASH_BIN", "note": "일반/재활용/위험물 3분리"}', NOW())
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================
+-- 11. 창고 템플릿 (warehouse_templates)
 -- ============================================================
 
 INSERT INTO warehouse_templates (id, name, code, description, industry, area_min, area_max, rack_preset_id, pallet_preset_id, container_preset_id, rack_layout, aisle_type, aisle_width, main_aisle_width, metadata, updated_at) VALUES
