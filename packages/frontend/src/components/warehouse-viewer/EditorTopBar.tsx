@@ -26,6 +26,7 @@ interface EditorTopBarProps {
   objectCount: number;
   editLayer?: EditLayerMode;
   onEditLayerChange?: (layer: EditLayerMode) => void;
+  onSave?: () => void;
 }
 
 /**
@@ -42,6 +43,7 @@ export function EditorTopBar({
   objectCount,
   editLayer = 'objects',
   onEditLayerChange,
+  onSave,
 }: EditorTopBarProps) {
   return (
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
@@ -179,6 +181,7 @@ export function EditorTopBar({
 
         {/* 저장 버튼 (프리미엄 스타일) */}
         <button
+          onClick={onSave}
           className={`group relative flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold text-white transition-all ${
             saving
               ? 'bg-amber-600/80 shadow-md shadow-amber-500/20'
