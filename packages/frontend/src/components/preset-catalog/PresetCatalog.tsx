@@ -86,7 +86,7 @@ export function PresetCatalog({ visible, onClose, onSelectPreset }: PresetCatalo
     <div className="absolute top-0 right-0 flex h-full w-80 flex-col border-l border-gray-700 bg-gray-900/95 text-white backdrop-blur">
       {/* 헤더 */}
       <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
-        <h2 className="text-sm font-bold">표준 규격 카탈로그</h2>
+        <h2 className="text-sm font-bold">카탈로그</h2>
         <button
           onClick={onClose}
           className="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-white"
