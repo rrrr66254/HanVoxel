@@ -25,16 +25,234 @@ const WALL_CENTER_Z = 20;
 const WALL_LEFT = WALL_CENTER_X - WALL_W / 2;
 const WALL_TOP = WALL_CENTER_Z - WALL_D / 2;
 
-// 오브젝트 타입별 2D 색상
-const OBJECT_COLORS: Record<string, { fill: string; stroke: string; label: string }> = {
-  RACK: { fill: '#F59E0B20', stroke: '#F59E0B', label: '랙' },
-  AISLE: { fill: '#6366F115', stroke: '#6366F180', label: '통로' },
-  WALL: { fill: '#8B949E30', stroke: '#8B949E', label: '벽' },
-  WORKSTATION: { fill: '#A855F720', stroke: '#A855F7', label: '작업대' },
-  MACHINE: { fill: '#EC489920', stroke: '#EC4899', label: '설비' },
-  ZONE: { fill: '#3B82F615', stroke: '#3B82F680', label: '구역' },
-  SAFETY_ZONE: { fill: '#EF444415', stroke: '#EF444480', label: '안전' },
-};
+// ─── 2D 탑뷰 오브젝트 렌더러 ───
+
+/** 랙을 위에서 본 모습: 수직 프레임(4모서리) + 선반 판 + 빔 라인 */
+function drawRackTopView(
+  ctx: CanvasRenderingContext2D,
+  ox: number, oy: number, ow: number, oh: number,
+  obj: SpatialObject,
+) {
+  const meta = obj.metadata as Record<string, unknown> | null;
+  const levels = (meta?.levels as number) ?? 3;
+  const FRAME = Math.max(1.5, Math.min(3, ow * 0.04)); // 프레임 두께 (px)
+
+  // 선반 판 배경 (위에서 보면 선반 상단면)
+  ctx.fillStyle = '#8892A0';
+  ctx.fillRect(ox, oy, ow, oh);
+
+  // 선반 칸 구분선 (깊이 방향으로 levels 만큼 나눔 → 위에서 보면 가로줄)
+  ctx.strokeStyle = '#5C6370';
+  ctx.lineWidth = 0.8;
+  // 랙 깊이에 팔레트 위치를 가로줄로 표시
+  const slotCount = Math.max(1, Math.round(ow / (1.4 * (ow / obj.scaleX || 1))));
+  for (let i = 1; i < slotCount; i++) {
+    const sx = ox + (ow / slotCount) * i;
+    ctx.beginPath();
+    ctx.moveTo(sx, oy);
+    ctx.lineTo(sx, oy + oh);
+    ctx.stroke();
+  }
+
+  // 4개 수직 프레임 (모서리 기둥, 위에서 보면 작은 사각형)
+  ctx.fillStyle = '#5C6370';
+  // 좌상, 우상, 좌하, 우하
+  ctx.fillRect(ox, oy, FRAME, FRAME);
+  ctx.fillRect(ox + ow - FRAME, oy, FRAME, FRAME);
+  ctx.fillRect(ox, oy + oh - FRAME, FRAME, FRAME);
+  ctx.fillRect(ox + ow - FRAME, oy + oh - FRAME, FRAME, FRAME);
+
+  // 빔 (오렌지색 가로줄, 위에서 보면 앞뒤 빔)
+  ctx.strokeStyle = '#FF8C00';
+  ctx.lineWidth = Math.max(1, FRAME * 0.6);
+  // 전면 빔
+  ctx.beginPath();
+  ctx.moveTo(ox, oy + 1);
+  ctx.lineTo(ox + ow, oy + 1);
+  ctx.stroke();
+  // 후면 빔
+  ctx.beginPath();
+  ctx.moveTo(ox, oy + oh - 1);
+  ctx.lineTo(ox + ow, oy + oh - 1);
+  ctx.stroke();
+
+  // 외곽선
+  ctx.strokeStyle = '#6B7280';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox, oy, ow, oh);
+
+  // 라벨 (단수 표시)
+  if (ow > 18 && oh > 12) {
+    ctx.fillStyle = '#E6EDF3';
+    const fs = Math.max(7, Math.min(10, Math.min(ow, oh) / 3));
+    ctx.font = `bold ${fs}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${levels}단`, ox + ow / 2, oy + oh / 2);
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+/** 벽을 위에서 본 모습: 두꺼운 솔리드 라인 + 해칭 */
+function drawWallTopView(
+  ctx: CanvasRenderingContext2D,
+  ox: number, oy: number, ow: number, oh: number,
+) {
+  // 벽 본체 (콘크리트/샌드위치 패널 느낌)
+  ctx.fillStyle = '#6B7280';
+  ctx.fillRect(ox, oy, ow, oh);
+
+  // 해칭 (대각선 줄무늬 — 벽 단면 표현)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ox, oy, ow, oh);
+  ctx.clip();
+  ctx.strokeStyle = '#8B949E';
+  ctx.lineWidth = 0.5;
+  const step = Math.max(3, Math.min(6, Math.min(ow, oh) / 2));
+  const maxLen = ow + oh;
+  for (let d = -maxLen; d < maxLen; d += step) {
+    ctx.beginPath();
+    ctx.moveTo(ox + d, oy);
+    ctx.lineTo(ox + d + oh, oy + oh);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 외곽선
+  ctx.strokeStyle = '#9CA3AF';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox, oy, ow, oh);
+}
+
+/** 통로를 위에서 본 모습: 바닥 마킹 + 점선 경계 + 화살표 */
+function drawAisleTopView(
+  ctx: CanvasRenderingContext2D,
+  ox: number, oy: number, ow: number, oh: number,
+  obj: SpatialObject,
+) {
+  const meta = obj.metadata as Record<string, unknown> | null;
+  const isEmergency = (meta?.aisleType as string) === 'EMERGENCY';
+
+  // 바닥면 (연한 색)
+  ctx.fillStyle = isEmergency ? '#FBBF2415' : '#4B556320';
+  ctx.fillRect(ox, oy, ow, oh);
+
+  // 경계선 (점선)
+  ctx.strokeStyle = isEmergency ? '#FBBF24' : '#CBD5E1';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(ox, oy, ow, oh);
+  ctx.setLineDash([]);
+
+  // 비상 통로: 노란 빗금
+  if (isEmergency) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ox, oy, ow, oh);
+    ctx.clip();
+    ctx.strokeStyle = '#FBBF2460';
+    ctx.lineWidth = 1.5;
+    const step = 6;
+    const maxLen = ow + oh;
+    for (let d = -maxLen; d < maxLen; d += step) {
+      ctx.beginPath();
+      ctx.moveTo(ox + d, oy);
+      ctx.lineTo(ox + d + oh, oy + oh);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 중앙선 (긴 축 방향)
+  const isHorizontal = ow > oh;
+  ctx.strokeStyle = isEmergency ? '#FBBF2480' : '#94A3B860';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  if (isHorizontal) {
+    ctx.moveTo(ox + 4, oy + oh / 2);
+    ctx.lineTo(ox + ow - 4, oy + oh / 2);
+  } else {
+    ctx.moveTo(ox + ow / 2, oy + 4);
+    ctx.lineTo(ox + ow / 2, oy + oh - 4);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 방향 화살표
+  if ((isHorizontal ? ow : oh) > 20) {
+    ctx.fillStyle = isEmergency ? '#FBBF2480' : '#94A3B860';
+    const cx = ox + ow / 2;
+    const cy = oy + oh / 2;
+    const arrowSize = Math.min(4, Math.min(ow, oh) / 4);
+    ctx.beginPath();
+    if (isHorizontal) {
+      ctx.moveTo(cx + arrowSize * 2, cy);
+      ctx.lineTo(cx + arrowSize, cy - arrowSize);
+      ctx.lineTo(cx + arrowSize, cy + arrowSize);
+    } else {
+      ctx.moveTo(cx, cy + arrowSize * 2);
+      ctx.lineTo(cx - arrowSize, cy + arrowSize);
+      ctx.lineTo(cx + arrowSize, cy + arrowSize);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** 작업대/설비를 위에서 본 모습 */
+function drawEquipmentTopView(
+  ctx: CanvasRenderingContext2D,
+  ox: number, oy: number, ow: number, oh: number,
+  obj: SpatialObject,
+) {
+  const typeName = obj.type.name;
+  const isMachine = typeName === 'MACHINE';
+
+  // 본체
+  ctx.fillStyle = isMachine ? '#374151' : '#1F2937';
+  ctx.fillRect(ox, oy, ow, oh);
+
+  // 내부 디테일 (기계: 원형 부품 / 작업대: 작업면)
+  if (isMachine && Math.min(ow, oh) > 10) {
+    // 원형 부품 표현
+    ctx.strokeStyle = '#6B7280';
+    ctx.lineWidth = 1;
+    const r = Math.min(ow, oh) * 0.3;
+    ctx.beginPath();
+    ctx.arc(ox + ow / 2, oy + oh / 2, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // 중심점
+    ctx.fillStyle = '#EF4444';
+    ctx.beginPath();
+    ctx.arc(ox + ow / 2, oy + oh / 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (Math.min(ow, oh) > 10) {
+    // 작업면 표현 (안쪽 사각형)
+    const inset = Math.max(2, Math.min(ow, oh) * 0.12);
+    ctx.fillStyle = '#4B5563';
+    ctx.fillRect(ox + inset, oy + inset, ow - inset * 2, oh - inset * 2);
+  }
+
+  // 외곽선
+  ctx.strokeStyle = isMachine ? '#EF4444' : '#8B5CF6';
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(ox, oy, ow, oh);
+
+  // 라벨
+  if (ow > 20 && oh > 12) {
+    ctx.fillStyle = '#E6EDF3';
+    const fs = Math.max(7, Math.min(9, Math.min(ow, oh) / 3));
+    ctx.font = `${fs}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const label = obj.name || (isMachine ? '설비' : '작업대');
+    const maxChars = Math.floor(ow / (fs * 0.55));
+    ctx.fillText(label.length > maxChars ? label.slice(0, maxChars) + '…' : label, ox + ow / 2, oy + oh / 2);
+    ctx.textBaseline = 'alphabetic';
+  }
+}
 
 interface TopViewZoneDrawerProps {
   zones: ZoneConfig[];
@@ -149,18 +367,18 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
     ctx.lineWidth = 2;
     ctx.strokeRect(floorX, floorY, floorW, floorH);
 
-    // 기존 오브젝트 렌더링 (랙, 통로, 벽 등)
-    objects.forEach((obj) => {
-      if (!obj.isActive || !obj.visible) return;
+    // 기존 오브젝트 렌더링 — 렌더 순서: 통로(바닥) → 벽 → 랙/설비
+    const renderOrder: Record<string, number> = {
+      AISLE: 0, ZONE: 0, SAFETY_ZONE: 0,
+      WALL: 1,
+      RACK: 2, WORKSTATION: 3, MACHINE: 3,
+    };
+    const sortedObjects = [...objects]
+      .filter((o) => o.isActive && o.visible && !['SITE', 'BUILDING', 'FLOOR', 'BIN'].includes(o.type.name))
+      .sort((a, b) => (renderOrder[a.type.name] ?? 2) - (renderOrder[b.type.name] ?? 2));
+
+    sortedObjects.forEach((obj) => {
       const typeName = obj.type.name;
-      // SITE, BUILDING, FLOOR, BIN은 건너뛰기
-      if (['SITE', 'BUILDING', 'FLOOR', 'BIN'].includes(typeName)) return;
-
-      const colors = OBJECT_COLORS[typeName] ?? { fill: '#8B949E15', stroke: '#8B949E60', label: '' };
-
-      // 오브젝트 중심 기준 → 좌상단 좌표 계산
-      const halfW = obj.scaleX / 2;
-      const halfD = obj.scaleZ / 2;
 
       // rotationY에 따라 가로/세로 스왑
       const rot = obj.rotationY % Math.PI;
@@ -173,29 +391,28 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
       const ow = drawW * scale;
       const oh = drawD * scale;
 
-      // 채움
-      ctx.fillStyle = colors.fill;
-      ctx.fillRect(ox, oy, ow, oh);
-
-      // 테두리
-      ctx.strokeStyle = colors.stroke;
-      ctx.lineWidth = typeName === 'WALL' ? 1 : 1.5;
-      ctx.strokeRect(ox, oy, ow, oh);
-
-      // 라벨 (일정 크기 이상일 때만)
-      if (ow > 20 && oh > 14) {
-        ctx.fillStyle = colors.stroke;
-        const fontSize = Math.max(8, Math.min(11, ow / 6));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // 이름이 있으면 이름, 없으면 타입 라벨
-        const label = obj.name || colors.label;
-        // 긴 이름은 잘라서 표시
-        const maxChars = Math.floor(ow / (fontSize * 0.6));
-        const displayLabel = label.length > maxChars ? label.slice(0, maxChars) + '…' : label;
-        ctx.fillText(displayLabel, ox + ow / 2, oy + oh / 2);
-        ctx.textBaseline = 'alphabetic';
+      switch (typeName) {
+        case 'RACK':
+          drawRackTopView(ctx, ox, oy, ow, oh, obj);
+          break;
+        case 'WALL':
+          drawWallTopView(ctx, ox, oy, ow, oh);
+          break;
+        case 'AISLE':
+          drawAisleTopView(ctx, ox, oy, ow, oh, obj);
+          break;
+        case 'WORKSTATION':
+        case 'MACHINE':
+          drawEquipmentTopView(ctx, ox, oy, ow, oh, obj);
+          break;
+        default: {
+          // 기타 오브젝트 — 기본 반투명 박스
+          ctx.fillStyle = '#4B556320';
+          ctx.fillRect(ox, oy, ow, oh);
+          ctx.strokeStyle = '#6B728080';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(ox, oy, ow, oh);
+        }
       }
     });
 
