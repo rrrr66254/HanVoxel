@@ -1361,3 +1361,108 @@ model BenchmarkReport {
   @@index([companyId, period])
   @@map("benchmark_reports")
 }
+
+// ============================================================
+// ROI Tracking — 실제 절감 추적 (Phase 4)
+// ============================================================
+
+/// ROI 기준선 (HanVoxel 도입 전 운영 지표 스냅샷)
+model RoiBaseline {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+
+  /// 기준선 설정일
+  baselineDate DateTime @map("baseline_date") @db.Timestamptz
+
+  // ── 도입 전 비용 ──
+  /// 연간 인건비 (원)
+  annualLaborCost    BigInt @default(0) @map("annual_labor_cost")
+  /// 연간 오류 비용 (원)
+  annualErrorCost    BigInt @default(0) @map("annual_error_cost")
+  /// m²당 월 임대료 (원)
+  monthlyRentPerM2   Int    @default(0) @map("monthly_rent_per_m2")
+  /// 창고 면적 (m²)
+  warehouseArea      Float  @default(0) @map("warehouse_area")
+
+  // ── 도입 전 운영 지표 ──
+  /// 월 피킹 건수
+  monthlyPickings    Int    @default(0) @map("monthly_pickings")
+  /// 오류율 (%)
+  errorRate          Float  @default(0) @map("error_rate")
+  /// 직원 수
+  employeeCount      Int    @default(0) @map("employee_count")
+
+  // ── 예상 개선율 (설정 시점 입력값) ──
+  /// 인건비 절감율 (%)
+  laborSavingRate       Float @default(15) @map("labor_saving_rate")
+  /// 오류율 감소율 (%)
+  errorReductionRate    Float @default(60) @map("error_reduction_rate")
+  /// 공간 절감율 (%)
+  spaceSavingRate       Float @default(10) @map("space_saving_rate")
+  /// 피킹 효율 개선율 (%)
+  pickingEfficiencyGain Float @default(25) @map("picking_efficiency_gain")
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  snapshots RoiMonthlySnapshot[]
+
+  @@unique([companyId, siteId])
+  @@index([companyId])
+  @@map("roi_baselines")
+}
+
+/// ROI 월별 스냅샷 (실제 운영 데이터 기반 절감 추적)
+model RoiMonthlySnapshot {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  baselineId  String   @map("baseline_id") @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+
+  /// 집계 기간 (YYYY-MM)
+  period      String   @db.VarChar(7)
+
+  // ── 실제 운영 지표 (DB에서 자동 집계) ──
+  /// 월 피킹 건수 (picking_orders 테이블에서 집계)
+  actualPickings       Int    @default(0) @map("actual_pickings")
+  /// 월 오류 건수 (picking_lines 중 오류 건)
+  actualErrors         Int    @default(0) @map("actual_errors")
+  /// 실제 오류율 (%)
+  actualErrorRate      Float  @default(0) @map("actual_error_rate")
+  /// 현재 직원 수
+  actualEmployeeCount  Int    @default(0) @map("actual_employee_count")
+
+  // ── 사용자 입력 실제 비용 ──
+  /// 해당월 인건비 (원)
+  actualLaborCost      BigInt @default(0) @map("actual_labor_cost")
+  /// 해당월 오류 비용 (원)
+  actualErrorCost      BigInt @default(0) @map("actual_error_cost")
+
+  // ── 자동 계산된 절감액 ──
+  /// 인건비 절감액 (기준선 월할 - 실제)
+  laborSaving          BigInt @default(0) @map("labor_saving")
+  /// 오류 비용 절감액
+  errorCostSaving      BigInt @default(0) @map("error_cost_saving")
+  /// 공간 절감액 (기준선 기반 추정)
+  spaceSaving          BigInt @default(0) @map("space_saving")
+  /// 월 총 절감액
+  totalSaving          BigInt @default(0) @map("total_saving")
+
+  // ── 누적 ──
+  /// 도입 이후 누적 절감액
+  cumulativeSaving     BigInt @default(0) @map("cumulative_saving")
+
+  /// 데이터 소스 (AUTO: DB 자동집계, MANUAL: 수동입력, MIXED: 혼합)
+  dataSource  String @default("AUTO") @map("data_source") @db.VarChar(10)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  baseline RoiBaseline @relation(fields: [baselineId], references: [id])
+
+  @@unique([baselineId, period])
+  @@index([companyId, period])
+  @@map("roi_monthly_snapshots")
+}

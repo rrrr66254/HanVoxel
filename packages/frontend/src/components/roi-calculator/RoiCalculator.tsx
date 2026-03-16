@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { calculateRoi, calculateActualSaving, generateRoiPdfHtml, BENCHMARK } from '../../utils/roi-calculator';
 import type { RoiInput, ActualDataInput } from '../../utils/roi-calculator';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Download, Calculator, TrendingUp, Clock, Target, RotateCcw, Info, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Legend } from 'recharts';
+import { Download, Calculator, TrendingUp, Clock, Target, RotateCcw, Info, BarChart3, Database, Activity } from 'lucide-react';
+import * as roiApi from '../../api/roi-api';
+import type { RoiDashboardData } from '../../api/roi-api';
 
 // ─── 색상 상수 ───
 const COLORS = {
@@ -167,10 +169,278 @@ const DEFAULT_ACTUAL: ActualDataInput = {
   actualMonthlyPickings: 0,
 };
 
+// ─── 탭 타입 ───
+type RoiTab = 'estimate' | 'tracking';
+
+// ─── 실제 절감 추적 뷰 ───
+function RoiTrackingView({ dashboardData, loading, error, input, onSaveBaseline }: {
+  dashboardData: RoiDashboardData | null;
+  loading: boolean;
+  error: string | null;
+  input: RoiInput;
+  onSaveBaseline: () => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSaveBaseline();
+    setSaving(false);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: COLORS.textSecondary }}>
+        <Activity size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+        <p style={{ fontSize: 14 }}>데이터 로딩 중...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: COLORS.red }}>
+        <p style={{ fontSize: 14 }}>{error}</p>
+      </div>
+    );
+  }
+
+  // 기준선 미설정 상태
+  if (!dashboardData) {
+    return (
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <Database size={40} style={{ color: COLORS.blue, marginBottom: 12, opacity: 0.6 }} />
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 8 }}>
+            실제 절감 추적 시작하기
+          </h2>
+          <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6 }}>
+            현재 '예상 분석' 탭에 입력된 운영 데이터를 기준선으로 저장하면,<br />
+            매월 실제 운영 데이터를 DB에서 자동 수집하여 절감액을 추적합니다.
+          </p>
+        </div>
+
+        {/* 기준선으로 저장될 값 미리보기 */}
+        <div style={{
+          backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}`,
+          borderRadius: 12, padding: '24px 24px', marginBottom: 24,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 16 }}>기준선으로 저장될 값</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+            {[
+              { label: '창고 면적', value: `${fmt(input.warehouseArea)} m²` },
+              { label: '월 피킹 건수', value: `${fmt(input.monthlyPickings)} 건` },
+              { label: '연간 인건비', value: `${fmt(input.annualLaborCost)}원` },
+              { label: '연간 오류 비용', value: `${fmt(input.annualErrorCost)}원` },
+              { label: '인건비 절감율', value: `${input.laborSavingRate}%` },
+              { label: '오류율 감소율', value: `${input.errorReductionRate}%` },
+              { label: '공간 절감율', value: `${input.spaceSavingRate}%` },
+              { label: '피킹 효율 개선', value: `${input.pickingEfficiencyGain}%` },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${COLORS.chartGrid}` }}>
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textPrimary, fontFamily: 'monospace' }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving || input.annualLaborCost <= 0}
+          style={{
+            width: '100%', padding: '14px 0', fontSize: 15, fontWeight: 600,
+            color: '#FFFFFF', backgroundColor: input.annualLaborCost > 0 ? COLORS.blue : COLORS.border,
+            border: 'none', borderRadius: 10,
+            cursor: input.annualLaborCost > 0 ? 'pointer' : 'not-allowed',
+            opacity: input.annualLaborCost > 0 ? 1 : 0.5,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <Database size={18} />
+          {saving ? '저장 중...' : '기준선 저장 & 추적 시작'}
+        </button>
+
+        <p style={{ textAlign: 'center', fontSize: 11, color: COLORS.textMuted, marginTop: 12, lineHeight: 1.5 }}>
+          먼저 '예상 분석' 탭에서 정확한 운영 비용을 입력한 후 기준선을 저장하세요.<br />
+          피킹 건수, 오류율 등은 매월 DB에서 자동 집계됩니다.
+        </p>
+      </div>
+    );
+  }
+
+  // ─── 대시보드 표시 ───
+  const { baseline, snapshots, summary } = dashboardData;
+  const baseDate = new Date(baseline.baselineDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // 추이 차트 데이터
+  const trendData = snapshots.map((s) => ({
+    period: s.period,
+    인건비절감: s.laborSaving,
+    오류절감: s.errorCostSaving,
+    공간절감: s.spaceSaving,
+    누적절감: s.cumulativeSaving,
+  }));
+
+  return (
+    <div>
+      {/* 헤더 */}
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 4 }}>실제 절감 추적</h2>
+        <p style={{ fontSize: 13, color: COLORS.textSecondary }}>
+          기준선: {baseDate} 설정 · {summary.monthsTracked}개월 추적 중
+        </p>
+      </div>
+
+      {/* 핵심 KPI 4칸 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+        <MetricCard
+          label="총 실제 절감"
+          value={`${fmt(summary.totalSaving)}원`}
+          changeText={`${summary.monthsTracked}개월 누적`}
+          changeDirection="up"
+          icon={<TrendingUp size={16} />}
+          accentColor={COLORS.green}
+        />
+        <MetricCard
+          label="예측 달성율"
+          value={`${summary.achievementRate}%`}
+          changeText={summary.achievementRate >= 100 ? '목표 초과' : '목표 대비'}
+          changeDirection={summary.achievementRate >= 100 ? 'up' : 'down'}
+          icon={<Target size={16} />}
+          accentColor={summary.achievementRate >= 100 ? COLORS.green : COLORS.orange}
+        />
+        <MetricCard
+          label="예측 연간 절감"
+          value={`${fmt(summary.predictedAnnualTotal)}원`}
+          changeText="기준선 기반 추정"
+          changeDirection="up"
+          icon={<Calculator size={16} />}
+          accentColor={COLORS.blue}
+        />
+        <MetricCard
+          label="인건비 절감"
+          value={`${fmt(summary.totalLaborSaving)}원`}
+          changeText={summary.totalErrorSaving > 0 ? `오류절감 ${fmt(summary.totalErrorSaving)}원` : '누적'}
+          changeDirection="up"
+          icon={<Clock size={16} />}
+          accentColor={COLORS.purple}
+        />
+      </div>
+
+      {/* 추이 차트 + 절감 내역 2컬럼 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16, marginBottom: 28 }}>
+        {/* 월별 추이 라인 차트 */}
+        <div style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: '24px 20px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 20 }}>월별 절감 추이</h3>
+          {trendData.length > 0 ? (
+            <div style={{ width: '100%', height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 8, right: 20, left: 20, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chartGrid} vertical={false} />
+                  <XAxis dataKey="period" tick={{ fill: COLORS.textSecondary, fontSize: 11 }} axisLine={{ stroke: COLORS.chartGrid }} tickLine={false} />
+                  <YAxis tick={{ fill: COLORS.textSecondary, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 10000).toFixed(0)}만`} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: COLORS.textSecondary }} />
+                  <Line type="monotone" dataKey="인건비절감" stroke={COLORS.blue} strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="오류절감" stroke={COLORS.green} strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="공간절감" stroke={COLORS.purple} strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="누적절감" stroke={COLORS.orange} strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: COLORS.textMuted, fontSize: 13 }}>
+              아직 월별 스냅샷 데이터가 없습니다.<br />
+              매월 자동 집계되거나, API를 통해 수동 입력할 수 있습니다.
+            </div>
+          )}
+        </div>
+
+        {/* 절감 항목별 합계 */}
+        <div style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: '24px 20px' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 16 }}>항목별 누적 절감</h3>
+          <DetailRow label="인건비 절감" value={`${fmt(summary.totalLaborSaving)}원`} color={COLORS.green} />
+          <DetailRow label="오류 비용 절감" value={`${fmt(summary.totalErrorSaving)}원`} color={COLORS.green} />
+          <DetailRow label="공간 절감" value={`${fmt(summary.totalSpaceSaving)}원`} color={COLORS.green} />
+          <DetailRow label="총 실제 절감" value={`${fmt(summary.totalSaving)}원`} bold color={COLORS.green} />
+
+          <div style={{ height: 1, background: COLORS.border, margin: '12px 0' }} />
+
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: COLORS.textSecondary, marginBottom: 12 }}>기준선 정보</h3>
+          {[
+            { label: '연간 인건비', value: `${fmt(baseline.annualLaborCost)}원` },
+            { label: '연간 오류 비용', value: `${fmt(baseline.annualErrorCost)}원` },
+            { label: '창고 면적', value: `${fmt(baseline.warehouseArea)} m²` },
+            { label: '월 피킹 건수', value: `${fmt(baseline.monthlyPickings)} 건` },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+              <span style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</span>
+              <span style={{ fontSize: 12, color: COLORS.textPrimary, fontFamily: 'monospace' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 월별 상세 테이블 */}
+      {snapshots.length > 0 && (
+        <div style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: '24px 20px', marginBottom: 28 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 16 }}>월별 상세 내역</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'monospace' }}>
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
+                  {['기간', '피킹', '오류', '오류율', '인건비절감', '오류절감', '공간절감', '월합계', '누적', '소스'].map((h) => (
+                    <th key={h} style={{ padding: '8px 10px', textAlign: 'right', color: COLORS.textSecondary, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {snapshots.map((s) => (
+                  <tr key={s.period} style={{ borderBottom: `1px solid ${COLORS.chartGrid}` }}>
+                    <td style={{ padding: '8px 10px', color: COLORS.textPrimary, textAlign: 'left' }}>{s.period}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.textPrimary, textAlign: 'right' }}>{fmt(s.actualPickings)}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.red, textAlign: 'right' }}>{fmt(s.actualErrors)}</td>
+                    <td style={{ padding: '8px 10px', color: s.actualErrorRate > 0 ? COLORS.orange : COLORS.textMuted, textAlign: 'right' }}>{s.actualErrorRate.toFixed(2)}%</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.green, textAlign: 'right' }}>{fmt(s.laborSaving)}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.green, textAlign: 'right' }}>{fmt(s.errorCostSaving)}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.green, textAlign: 'right' }}>{fmt(s.spaceSaving)}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.green, fontWeight: 700, textAlign: 'right' }}>{fmt(s.totalSaving)}</td>
+                    <td style={{ padding: '8px 10px', color: COLORS.blue, fontWeight: 700, textAlign: 'right' }}>{fmt(s.cumulativeSaving)}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: 10, padding: '2px 6px', borderRadius: 4,
+                        backgroundColor: s.dataSource === 'AUTO' ? `${COLORS.green}20` : s.dataSource === 'MANUAL' ? `${COLORS.orange}20` : `${COLORS.blue}20`,
+                        color: s.dataSource === 'AUTO' ? COLORS.green : s.dataSource === 'MANUAL' ? COLORS.orange : COLORS.blue,
+                      }}>
+                        {s.dataSource === 'AUTO' ? 'DB' : s.dataSource === 'MANUAL' ? '수동' : '혼합'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 안내 */}
+      <p style={{ textAlign: 'center', fontSize: 11, color: COLORS.textMuted, lineHeight: 1.5 }}>
+        피킹 건수와 오류율은 DB(picking_orders, picking_lines)에서 자동 집계됩니다.<br />
+        인건비와 오류 비용은 매월 수동 입력하거나 API를 통해 업데이트할 수 있습니다.
+      </p>
+    </div>
+  );
+}
+
 /**
  * ROI 계산기 — HanVoxel 도입 효과 분석
  */
 export function RoiCalculator({ onBack: _onBack }: RoiCalculatorProps) {
+  const [activeTab, setActiveTab] = useState<RoiTab>('estimate');
+
   // 문자열 기반 입력 상태
   const [rawInput, setRawInput] = useState({
     warehouseArea: String(DEFAULT_INPUT.warehouseArea),
@@ -264,6 +534,56 @@ export function RoiCalculator({ onBack: _onBack }: RoiCalculatorProps) {
   // 실제 데이터 유효성
   const isActualValid = actualInput.actualAnnualLaborCost > 0 || actualInput.actualAnnualErrorCost > 0;
 
+  // ─── 실제 절감 추적 (DB 연동) ───
+  const [dashboardData, setDashboardData] = useState<RoiDashboardData | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+
+  // TODO: 실제 운영에서는 로그인된 사용자의 companyId/siteId를 사용
+  const DEMO_COMPANY_ID = 'demo-company';
+  const DEMO_SITE_ID = 'demo-site';
+
+  // 추적 탭 활성화 시 대시보드 데이터 로드
+  useEffect(() => {
+    if (activeTab !== 'tracking') return;
+    setTrackingLoading(true);
+    setTrackingError(null);
+    roiApi.getDashboard(DEMO_COMPANY_ID, DEMO_SITE_ID)
+      .then((data) => {
+        setDashboardData(data);
+        setTrackingLoading(false);
+      })
+      .catch(() => {
+        setTrackingError(null); // 데이터 없으면 기준선 설정 안내 표시
+        setTrackingLoading(false);
+      });
+  }, [activeTab]);
+
+  // 기준선 저장 핸들러
+  const handleSaveBaseline = useCallback(async () => {
+    try {
+      await roiApi.saveBaseline({
+        companyId: DEMO_COMPANY_ID, siteId: DEMO_SITE_ID,
+        annualLaborCost: input.annualLaborCost,
+        annualErrorCost: input.annualErrorCost,
+        monthlyRentPerM2: input.monthlyRentPerM2,
+        warehouseArea: input.warehouseArea,
+        monthlyPickings: input.monthlyPickings,
+        errorRate: input.currentErrorRate,
+        employeeCount: 0,
+        laborSavingRate: input.laborSavingRate,
+        errorReductionRate: input.errorReductionRate,
+        spaceSavingRate: input.spaceSavingRate,
+        pickingEfficiencyGain: input.pickingEfficiencyGain,
+      });
+      // 저장 후 대시보드 새로고침
+      const data = await roiApi.getDashboard(DEMO_COMPANY_ID, DEMO_SITE_ID);
+      setDashboardData(data);
+    } catch (err) {
+      setTrackingError(err instanceof Error ? err.message : '기준선 저장 실패');
+    }
+  }, [input]);
+
   return (
     <div style={{
       minHeight: '100vh', backgroundColor: COLORS.bg,
@@ -284,13 +604,43 @@ export function RoiCalculator({ onBack: _onBack }: RoiCalculatorProps) {
             </span>
             <span style={{ fontSize: 13, color: COLORS.textSecondary, fontWeight: 400 }}>ROI 계산기</span>
           </div>
-          <div style={{ color: COLORS.textMuted }}><Calculator size={20} /></div>
+          {/* 탭 전환 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: COLORS.bg, borderRadius: 8, padding: 3 }}>
+            {([
+              { key: 'estimate' as RoiTab, label: '예상 분석', icon: <Calculator size={14} /> },
+              { key: 'tracking' as RoiTab, label: '실제 절감 추적', icon: <Database size={14} /> },
+            ]).map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 6, border: 'none',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  backgroundColor: activeTab === key ? COLORS.card : 'transparent',
+                  color: activeTab === key ? COLORS.textPrimary : COLORS.textMuted,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {icon}{label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ─── 메인 컨텐츠 ─── */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 64px' }}>
-        {!showResult ? (
+        {activeTab === 'tracking' ? (
+          /* ═══ 실제 절감 추적 탭 ═══ */
+          <RoiTrackingView
+            dashboardData={dashboardData}
+            loading={trackingLoading}
+            error={trackingError}
+            input={input}
+            onSaveBaseline={handleSaveBaseline}
+          />
+        ) : !showResult ? (
           /* ═══ 입력 폼 ═══ */
           <>
             <div style={{ marginBottom: 32 }}>
