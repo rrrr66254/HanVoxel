@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 72 72" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 52 58" fill="none">
   <!-- 메인 큐브 상단면 -->
   <path d="M28 8 L48 20 L28 32 L8 20 Z" fill="#1E6091" />
   <!-- 메인 큐브 좌측면 -->
@@ -14,15 +14,10 @@
   <path d="M-6 44 L4 50 L4 58 L-6 52 Z" fill="#1A4F7A" opacity="0.7"/>
   <path d="M4 50 L14 44 L14 52 L4 58 Z" fill="#2D7DD2" opacity="0.7"/>
   <!-- 회로 패턴 -->
-  <line x1="28" y1="8" x2="28" y2="0" stroke="#2D7DD2" stroke-width="1.5"/>
-  <line x1="28" y1="0" x2="40" y2="-6" stroke="#2D7DD2" stroke-width="1.5"/>
-  <circle cx="40" cy="-6" r="2.5" fill="#2D7DD2"/>
-  <line x1="48" y1="20" x2="56" y2="16" stroke="#2D7DD2" stroke-width="1.5"/>
-  <circle cx="56" cy="16" r="2" fill="#2D7DD2"/>
-  <line x1="8" y1="20" x2="0" y2="14" stroke="#2D7DD2" stroke-width="1.5"/>
-  <circle cx="0" cy="14" r="2" fill="#C8A951"/>
-  <line x1="48" y1="20" x2="56" y2="26" stroke="#1E6091" stroke-width="1"/>
-  <circle cx="56" cy="26" r="1.5" fill="#C8A951"/>
-  <line x1="28" y1="0" x2="18" y2="-4" stroke="#1E6091" stroke-width="1"/>
-  <circle cx="18" cy="-4" r="1.5" fill="#2D7DD2"/>
+  <line x1="28" y1="8" x2="28" y2="3" stroke="#2D7DD2" stroke-width="1.5"/>
+  <circle cx="28" cy="3" r="2" fill="#2D7DD2"/>
+  <line x1="48" y1="20" x2="52" y2="18" stroke="#2D7DD2" stroke-width="1.5"/>
+  <circle cx="52" cy="18" r="2" fill="#2D7DD2"/>
+  <line x1="8" y1="20" x2="4" y2="17" stroke="#2D7DD2" stroke-width="1.5"/>
+  <circle cx="4" cy="17" r="2" fill="#C8A951"/>
 </svg>
