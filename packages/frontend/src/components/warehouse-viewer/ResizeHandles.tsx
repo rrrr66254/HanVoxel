@@ -97,8 +97,11 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
         { id: 'e', pos: [w / 2, h / 2, 0], cursor: 'ew-resize' },
         { id: 'w', pos: [-w / 2, h / 2, 0], cursor: 'ew-resize' },
         { id: 'n', pos: [0, h, 0], cursor: 'ns-resize' },
+        { id: 's', pos: [0, 0, 0], cursor: 'ns-resize' },
         { id: 'ne', pos: [w / 2, h, 0], cursor: 'nesw-resize' },
         { id: 'nw', pos: [-w / 2, h, 0], cursor: 'nesw-resize' },
+        { id: 'se', pos: [w / 2, 0, 0], cursor: 'nesw-resize' },
+        { id: 'sw', pos: [-w / 2, 0, 0], cursor: 'nesw-resize' },
       ];
 
   // 마우스 위치 → 월드 좌표 (바닥 평면 기준)
@@ -190,6 +193,10 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
             newScaleY = Math.max(0.5, origScaleY - dz);
             newPosY = origPosY + (-dz) / 2;
             break;
+          case 's':
+            newScaleY = Math.max(0.5, origScaleY + dz);
+            newPosY = origPosY + dz / 2;
+            break;
           case 'ne':
             newScaleX = Math.max(0.5, origScaleX + dx);
             newScaleY = Math.max(0.5, origScaleY - dz);
@@ -202,13 +209,25 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
             newPosX = origPosX + dx / 2;
             newPosY = origPosY + (-dz) / 2;
             break;
+          case 'se':
+            newScaleX = Math.max(0.5, origScaleX + dx);
+            newScaleY = Math.max(0.5, origScaleY + dz);
+            newPosX = origPosX + dx / 2;
+            newPosY = origPosY + dz / 2;
+            break;
+          case 'sw':
+            newScaleX = Math.max(0.5, origScaleX - dx);
+            newScaleY = Math.max(0.5, origScaleY + dz);
+            newPosX = origPosX + dx / 2;
+            newPosY = origPosY + dz / 2;
+            break;
           default: break;
         }
       }
 
       // 인접 구조물 가장자리 스냅 — 기존 0.5m 그리드보다 우선
       const others = allObjectsRef.current;
-      if (others && others.length > 0 && isFloor) {
+      if (others && others.length > 0) {
         const { xEdges, zEdges } = collectEdges(others, objectRef.current.id);
 
         // 현재 리사이즈 중인 오브젝트의 가장자리 좌표
@@ -262,13 +281,9 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
         newScaleY = Math.round(newScaleY * 2) / 2;
         newPosX = Math.round(newPosX * 2) / 2;
         newPosZ = Math.round(newPosZ * 2) / 2;
-      }
-
-      // 벽 모드는 항상 0.5m 그리드 스냅
-      if (!isFloor) {
-        newScaleX = Math.round(newScaleX * 2) / 2;
-        newScaleY = Math.round(newScaleY * 2) / 2;
-        newPosX = Math.round(newPosX * 2) / 2;
+        if (!isFloor) {
+          newPosY = Math.round(newPosY * 2) / 2;
+        }
       }
 
       onResizeRef.current({

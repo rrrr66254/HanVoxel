@@ -70,8 +70,8 @@ export function GhostMesh({ preset, onPlace, existingObjects = [] }: GhostMeshPr
     if (hit) {
       const snapX = Math.round(hit.x);
       const snapZ = Math.round(hit.z);
-      // 통로/바닥은 바닥에 깔림, 벽은 절반 높이, 일반은 절반 높이
-      const posY = (isAisle || isFloor) ? 0.01 : (isWall ? h / 2 : h / 2);
+      // 통로/바닥은 바닥에 깔림, 출입문은 Y=0 (DoorModel이 바닥에서 위로 그림), 벽/일반은 절반 높이
+      const posY = (isAisle || isFloor) ? 0.01 : (isDoor ? 0 : h / 2);
 
       groupRef.current.position.x = snapX;
       groupRef.current.position.y = posY;

@@ -284,6 +284,7 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           height={isLoadedPallet ? 0.144 : object.scaleY}
           isSelected={isSelected}
           isHovered={hovered}
+          isPlastic={!!object.code?.includes('PLASTIC')}
         />
         {/* 적재 팔레트인 경우 화물 박스 표시 */}
         {isLoadedPallet && (
@@ -535,6 +536,10 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
           isSelected={isSelected}
           isHovered={hovered && isInteractable}
         />
+        {/* 리사이즈 핸들 — 선택된 출입문만 표시 */}
+        {isSelected && isInteractable && onResize && (
+          <ResizeHandles object={object} onResize={onResize} mode="wall" onResizeStart={onResizeStart} onResizeEnd={onResizeEnd} allObjects={allObjects} />
+        )}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, object.scaleY + 0.3, 0]} style={{ pointerEvents: 'none' }}>
             <div style={{
