@@ -14,6 +14,7 @@ import tradeRoutes from './routes/trade.routes';
 import reorderRoutes from './routes/reorder.routes';
 import connectorRoutes from './routes/connector.routes';
 import benchmarkRoutes from './routes/benchmark.routes';
+import roiRoutes from './routes/roi.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -37,6 +38,7 @@ app.use('/api/v1', tradeRoutes);
 app.use('/api/v1', reorderRoutes);
 app.use('/api/v1', connectorRoutes);
 app.use('/api/v1', benchmarkRoutes);
+app.use('/api/v1', roiRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {
