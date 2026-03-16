@@ -82,7 +82,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
         <img
           src="/logo_nogb.png"
           alt="HanVoxel"
-          style={{ height: 72 }}
+          style={{ width: '100%', height: 'auto' }}
         />
       </div>
 
