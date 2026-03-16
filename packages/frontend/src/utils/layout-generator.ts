@@ -142,7 +142,7 @@ export function generateWarehouseLayout(
         `container-${i + 1}`, TYPES.ZONE, `컨테이너 도크 ${i + 1}`, `DOCK-${i + 1}`,
         [x, containerH / 2, DOCK_Z + containerD / 2],
         [containerW, containerH, containerD],
-        { color: '#1d4ed8', opacity: 0.35, metadata: { type: 'DRY_40FT' } },
+        { color: null, opacity: 1, metadata: { type: 'DRY_40FT' } },
       ));
     }
 

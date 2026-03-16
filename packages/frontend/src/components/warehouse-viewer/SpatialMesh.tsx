@@ -75,10 +75,17 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
   const meta = object.metadata as Record<string, unknown> | null;
 
   // 편집 레이어에 따라 인터랙션 가능 여부 결정
-  // 구조물: 바닥, 벽, 출입문, 통로, 구역/안전구역
-  const isStructure = typeName === 'FLOOR' || typeName === 'WALL' ||
+  // 컨테이너는 ZONE 타입이지만 오브젝트로 취급
+  const isContainerObj = !!(meta?.type && typeof meta.type === 'string' && (
+    (meta.type as string).includes('FT') || (meta.type as string).includes('REEFER') ||
+    (meta.type as string).includes('TANK') || (meta.type as string).includes('FLAT_RACK') || (meta.type as string).includes('OPEN_TOP')
+  ));
+  // 구조물: 바닥, 벽, 출입문, 통로, 구역/안전구역 (컨테이너 제외)
+  const isStructure = !isContainerObj && (
+    typeName === 'FLOOR' || typeName === 'WALL' ||
     typeName === 'AISLE' || typeName === 'ZONE' || typeName === 'SAFETY_ZONE' ||
-    !!(meta?.floorStyle) || !!(meta?.wallStyle) || !!(meta?.doorStyle) || !!(meta?.aisleType);
+    !!(meta?.floorStyle) || !!(meta?.wallStyle) || !!(meta?.doorStyle) || !!(meta?.aisleType)
+  );
   const isInteractable = editLayer === 'structure' ? isStructure : !isStructure;
 
   // 색상 결정
@@ -114,10 +121,8 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   // 랙인지 확인 (메타데이터에 levels가 있거나 타입이 RACK)
   const isRack = typeName === 'RACK' && meta?.levels;
-  // 컨테이너인지 확인 (메타데이터에 DRY 또는 REEFER 타입)
-  const isContainer = meta?.type && typeof meta.type === 'string' && (
-    meta.type.includes('FT') || meta.type.includes('REEFER')
-  );
+  // 컨테이너인지 확인
+  const isContainer = isContainerObj;
 
   // 랙 모델 렌더링
   if (isRack) {

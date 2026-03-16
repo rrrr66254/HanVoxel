@@ -8,9 +8,6 @@ interface KeyboardControlsProps {
   enabled?: boolean;
 }
 
-// 키 상태 추적
-const keysPressed = new Set<string>();
-
 /**
  * 3D 뷰어 키보드 조작
  * - WASD: 카메라 앞뒤좌우 이동
@@ -22,25 +19,36 @@ const keysPressed = new Set<string>();
 export function KeyboardControlsHandler({ controlsRef, enabled = true }: KeyboardControlsProps) {
   const { camera } = useThree();
   const moveSpeed = useRef(0.3);
+  // 키 상태 추적 (useRef로 컴포넌트 라이프사이클에 바인딩)
+  const keysPressedRef = useRef(new Set<string>());
 
   useEffect(() => {
+    const keys = keysPressedRef.current;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // 입력 필드 내에서는 무시
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      keysPressed.add(e.key.toLowerCase());
+      keys.add(e.key.toLowerCase());
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysPressed.delete(e.key.toLowerCase());
+      keys.delete(e.key.toLowerCase());
+    };
+
+    // 브라우저 탭 전환/포커스 아웃 시 모든 키 해제
+    const handleBlur = () => {
+      keys.clear();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      keysPressed.clear();
+      window.removeEventListener('blur', handleBlur);
+      keys.clear();
     };
   }, []);
 
@@ -48,6 +56,7 @@ export function KeyboardControlsHandler({ controlsRef, enabled = true }: Keyboar
     if (!enabled || !controlsRef.current) return;
 
     const controls = controlsRef.current;
+    const keysPressed = keysPressedRef.current;
     const speed = keysPressed.has('shift') ? moveSpeed.current * 3 : moveSpeed.current;
 
     // 카메라 방향 벡터

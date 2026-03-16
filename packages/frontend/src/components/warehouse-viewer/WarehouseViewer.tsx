@@ -29,6 +29,21 @@ function extractStyleMeta(preset: SpatialPreset): Record<string, unknown> {
   if (extra.floorStyle) meta.floorStyle = extra.floorStyle;
   if (extra.wallStyle) meta.wallStyle = extra.wallStyle;
   if (extra.doorStyle) meta.doorStyle = extra.doorStyle;
+  // 컨테이너 타입 메타데이터 (프리셋 metadata에서 가져오거나 코드에서 추출)
+  const presetMeta = extra.metadata as Record<string, unknown> | undefined;
+  if (presetMeta?.type) {
+    meta.type = presetMeta.type;
+  } else {
+    const code = (preset.code ?? '').toUpperCase();
+    if (code.includes('REEFER')) meta.type = 'REEFER';
+    else if (code.includes('HC_45FT')) meta.type = 'DRY_45FT';
+    else if (code.includes('HC_40FT')) meta.type = 'DRY_40FT';
+    else if (code.includes('40FT')) meta.type = 'DRY_40FT';
+    else if (code.includes('20FT')) meta.type = 'DRY_20FT';
+    else if (code.includes('OPEN')) meta.type = 'OPEN_TOP';
+    else if (code.includes('FLATRACK')) meta.type = 'FLAT_RACK';
+    else if (code.includes('TANK')) meta.type = 'TANK';
+  }
   return meta;
 }
 
@@ -230,8 +245,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
     if (catName.includes('PALLET') || code.includes('PALLET') || code.startsWith('T11') || code.startsWith('T12') || code.startsWith('T08') || code.startsWith('ISO_')) return { name: 'BIN', itemType: 'pallet' };
     // 제품 박스
     if (catName.includes('BOX') || catName.includes('PRODUCT') || code.includes('BOX') || code.includes('FOOD') || code.includes('AUTO') || code.includes('PHARMA') || code.includes('CHEMICAL') || code.includes('ELECTRONICS') || code.includes('GENERAL') || code.includes('COLD')) return { name: 'BIN', itemType: 'box' };
-    // 컨테이너
-    if (catName.includes('CONTAINER') || code.includes('FT') || code.includes('REEFER')) return { name: 'RACK' };
+    // 컨테이너 → ZONE 타입 + metadata.type으로 컨테이너 렌더링
+    if (catName.includes('CONTAINER') || code.includes('FT') || code.includes('REEFER')) return { name: 'ZONE', itemType: 'container' };
     // 통로
     if (catName.includes('AISLE') || code.includes('AISLE')) return { name: 'AISLE' };
     // 바닥
@@ -262,7 +277,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       positionX: position[0], positionY: position[1], positionZ: position[2],
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: placingPreset.width || 1, scaleY: placingPreset.height || 1, scaleZ: placingPreset.depth || 1,
-      color: placingPreset.color ?? null, opacity: placingPreset.opacity, visible: true,
+      color: typeInfo.itemType === 'container' ? null : (placingPreset.color ?? null),
+      opacity: placingPreset.opacity, visible: true,
       meshType: (placingPreset.meshType as MeshType) ?? 'box',
       metadata: {
         presetId: placingPreset.id, presetCode: placingPreset.code,
@@ -414,7 +430,8 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
       positionX: worldX, positionY: posY, positionZ: worldZ,
       rotationX: 0, rotationY: 0, rotationZ: 0,
       scaleX: preset.width || 1, scaleY: preset.height || 1, scaleZ: preset.depth || 1,
-      color: preset.color ?? null, opacity: preset.opacity, visible: true, meshType: (preset.meshType as MeshType) ?? 'box',
+      color: dropTypeInfo.itemType === 'container' ? null : (preset.color ?? null),
+      opacity: preset.opacity, visible: true, meshType: (preset.meshType as MeshType) ?? 'box',
       metadata: { presetId: preset.id, presetCode: preset.code, ...(dropTypeInfo.itemType ? { itemType: dropTypeInfo.itemType } : {}), ...extractStyleMeta(preset) },
     };
     setPlacedObjects((prev) => [...prev, localObj]); setEditingId(localObj.id); setSelectedId(localObj.id); setRightPanel('editor');
