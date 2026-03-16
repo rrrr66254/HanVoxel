@@ -79,18 +79,11 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
           borderBottom: '1px solid #21262D',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img
-            src="/logo-icon.svg"
-            alt="HanVoxel"
-            style={{ width: 32, height: 32 }}
-          />
-          <img
-            src="/logo.svg"
-            alt="HanVoxel"
-            style={{ height: 26 }}
-          />
-        </div>
+        <img
+          src="/logo_nogb.png"
+          alt="HanVoxel"
+          style={{ height: 36 }}
+        />
       </div>
 
       {/* 메뉴 */}
