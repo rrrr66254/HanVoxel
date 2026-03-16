@@ -38,6 +38,8 @@ interface WarehouseSceneProps {
   // 편집 레이어
   editLayer?: 'structure' | 'objects';
   onResize?: (object: SpatialObject) => void;
+  onResizeStart?: () => void;
+  onResizeEnd?: () => void;
   // 그리드 표시
   gridVisible?: boolean;
   // BIN 적재
@@ -56,7 +58,7 @@ interface WarehouseSceneProps {
 export function WarehouseScene({
   objects, selectedId, onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
-  editLayer = 'objects', onResize,
+  editLayer = 'objects', onResize, onResizeStart, onResizeEnd,
   gridVisible = true,
   binOccupancy = [],
 }: WarehouseSceneProps) {
@@ -142,6 +144,8 @@ export function WarehouseScene({
           isSelected={obj.id === selectedId}
           editLayer={editLayer}
           onResize={onResize}
+          onResizeStart={onResizeStart}
+          onResizeEnd={onResizeEnd}
         />
       ))}
 

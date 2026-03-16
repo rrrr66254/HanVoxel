@@ -103,9 +103,9 @@ export function PresetThumbnail({
     const cx = RES / 2;
     const cy = RES * 0.65;
 
-    // 정규화된 비율 계산 (가장 큰 축이 기준)
+    // 정규화된 비율 계산 (가장 큰 축이 기준) — 썸네일 박스를 꽉 채우도록 확대
     const maxDim = Math.max(w, d, h, 0.5);
-    const scale = (RES * 0.28) / maxDim;
+    const scale = (RES * 0.42) / maxDim;
 
     const nw = w || 1;
     const nd = d || 1;
@@ -268,7 +268,7 @@ function drawLoadedPallet(
   }
 }
 
-// 컨테이너 — 해상 컨테이너
+// 컨테이너 — 해상 컨테이너 (회색 + HanVoxel 텍스트)
 function drawContainer(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number, scale: number,
@@ -276,32 +276,83 @@ function drawContainer(
   code: string,
 ) {
   const isReefer = code.includes('REEFER');
-  const baseColor = isReefer ? '#E8E8E8' : '#3B6EA5';
-  const strokeColor = isReefer ? '#999' : '#1E4A7A';
+  const baseColor = isReefer ? '#D0D0D0' : '#808890';
+  const strokeColor = isReefer ? '#888' : '#505860';
 
   // 본체
   drawIsoBox(ctx, -w / 2, 0, -d / 2, w, h, d, cx, cy, scale,
     adjustColor(baseColor, 1.1), adjustColor(baseColor, 0.75), adjustColor(baseColor, 0.85), strokeColor);
 
-  // 골 무늬 (측면 세로줄)
-  const ribCount = Math.min(12, Math.floor(d / 0.8));
+  // 골 무늬 (우측면 세로줄)
+  const ribCount = Math.min(16, Math.floor(d / 0.6));
   for (let i = 1; i < ribCount; i++) {
     const z = -d / 2 + (d * i) / ribCount;
     const p1 = isoProject(w / 2, 0.05, z, cx, cy, scale);
     const p2 = isoProject(w / 2, h - 0.05, z, cx, cy, scale);
-    ctx.strokeStyle = adjustColor(baseColor, 0.65);
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = adjustColor(baseColor, 0.6);
+    ctx.lineWidth = 0.6;
     ctx.beginPath();
     ctx.moveTo(p1[0], p1[1]);
     ctx.lineTo(p2[0], p2[1]);
     ctx.stroke();
   }
 
+  // 좌측면(Z방향) 골 무늬도 추가
+  const ribCountLeft = Math.min(16, Math.floor(d / 0.6));
+  for (let i = 1; i < ribCountLeft; i++) {
+    const z = -d / 2 + (d * i) / ribCountLeft;
+    const p1 = isoProject(-w / 2 + 0.01, 0.05, z, cx, cy, scale);
+    const p2 = isoProject(-w / 2 + 0.01, h - 0.05, z, cx, cy, scale);
+    ctx.strokeStyle = adjustColor(baseColor, 0.55);
+    ctx.lineWidth = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]);
+    ctx.lineTo(p2[0], p2[1]);
+    ctx.stroke();
+  }
+
+  // "HanVoxel" 텍스트 (우측면에 표시 — 등각 투영)
+  const textY = h * 0.5;
+  const textZ1 = -d * 0.35;
+  const textZ2 = d * 0.35;
+  const tp1 = isoProject(w / 2 + 0.01, textY + h * 0.12, textZ1, cx, cy, scale);
+  const tp2 = isoProject(w / 2 + 0.01, textY + h * 0.12, textZ2, cx, cy, scale);
+  const angle = Math.atan2(tp2[1] - tp1[1], tp2[0] - tp1[0]);
+  const textLen = Math.sqrt((tp2[0] - tp1[0]) ** 2 + (tp2[1] - tp1[1]) ** 2);
+
+  ctx.save();
+  ctx.translate(tp1[0], tp1[1]);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${Math.max(8, textLen * 0.28)}px "Arial Black", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 2;
+  ctx.fillText('HanVoxel', textLen / 2, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
   // 문 (전면)
   const doorW = w * 0.4;
   const doorH = h * 0.85;
   drawIsoBox(ctx, -doorW / 2, h * 0.05, -d / 2 - 0.01, doorW, doorH, 0.02, cx, cy, scale,
     adjustColor(baseColor, 0.9), adjustColor(baseColor, 0.65), adjustColor(baseColor, 0.7), strokeColor);
+
+  // 모서리 피팅
+  const fitSize = Math.min(0.12, w * 0.08);
+  const fitColor = '#606060';
+  const fitStroke = '#404040';
+  // 하단 4 모서리
+  drawIsoBox(ctx, -w / 2, 0, -d / 2, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, w / 2 - fitSize, 0, -d / 2, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, -w / 2, 0, d / 2 - fitSize, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, w / 2 - fitSize, 0, d / 2 - fitSize, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  // 상단 4 모서리
+  drawIsoBox(ctx, -w / 2, h - fitSize, -d / 2, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, w / 2 - fitSize, h - fitSize, -d / 2, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, -w / 2, h - fitSize, d / 2 - fitSize, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
+  drawIsoBox(ctx, w / 2 - fitSize, h - fitSize, d / 2 - fitSize, fitSize, fitSize, fitSize, cx, cy, scale, fitColor, adjustColor(fitColor, 0.7), adjustColor(fitColor, 0.85), fitStroke);
 
   // 냉장 컨테이너: 냉각 유닛
   if (isReefer) {
