@@ -87,7 +87,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
 
       {/* 3D 뷰어 — 남은 영역 전체, 윈도우 크기에 맞춤 */}
       <div style={{ width: '100%', height: viewerHeight, position: 'relative', overflow: 'hidden' }}>
-        <WarehouseViewer objects={generatedObjects} />
+        <WarehouseViewer objects={generatedObjects} onSave={onNext} />
       </div>
 
       {/* 하단 힌트 */}

@@ -107,12 +107,13 @@ type RightPanelMode = 'none' | 'editor' | 'rackDetail';
 interface WarehouseViewerProps {
   objects: SpatialObject[];
   siteId?: string;
+  onSave?: () => void;
 }
 
 /**
  * 3D 창고 뷰어 — 오늘의집 스타일 + 이동 모드 + 더블클릭 상세
  */
-export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
+export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
@@ -766,7 +767,7 @@ export function WarehouseViewer({ objects, siteId }: WarehouseViewerProps) {
   return (
     <div className="flex h-full w-full flex-col bg-[#0D1117]">
       {/* 상단 바 */}
-      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} />
+      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} onSave={onSave} />
 
       {/* 메인 영역 */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
