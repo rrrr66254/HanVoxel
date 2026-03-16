@@ -146,6 +146,7 @@ export function WarehouseScene({
           onResize={onResize}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
+          allObjects={objects}
         />
       ))}
 

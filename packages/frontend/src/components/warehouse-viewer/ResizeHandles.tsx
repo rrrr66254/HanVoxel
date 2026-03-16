@@ -12,6 +12,8 @@ interface ResizeHandlesProps {
   onResizeStart?: () => void;
   /** 리사이즈 종료 시 호출 (OrbitControls 재활성화용) */
   onResizeEnd?: () => void;
+  /** 스냅 대상이 되는 다른 오브젝트들 */
+  allObjects?: SpatialObject[];
 }
 
 // 핸들 크기
@@ -29,7 +31,38 @@ type HandleId = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
  * 바닥/벽 리사이즈 핸들 — 윈도우 창 크기 조절 방식
  * 가장자리와 모서리에 드래그 핸들 표시
  */
-export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeEnd }: ResizeHandlesProps) {
+// 인접 구조물 가장자리 스냅 임계값 (m)
+const SNAP_THRESHOLD = 0.3;
+
+/** 다른 오브젝트들의 X/Z 가장자리 좌표 수집 */
+function collectEdges(objects: SpatialObject[], excludeId: string) {
+  const xEdges: number[] = [];
+  const zEdges: number[] = [];
+  for (const o of objects) {
+    if (o.id === excludeId || !o.visible) continue;
+    const hw = o.scaleX / 2;
+    const hd = o.scaleZ / 2;
+    xEdges.push(o.positionX - hw, o.positionX + hw);
+    zEdges.push(o.positionZ - hd, o.positionZ + hd);
+  }
+  return { xEdges, zEdges };
+}
+
+/** 값에 가장 가까운 가장자리를 찾아 스냅 (임계값 내) */
+function snapToEdge(value: number, edges: number[], threshold: number): number {
+  let best = value;
+  let bestDist = threshold;
+  for (const edge of edges) {
+    const dist = Math.abs(value - edge);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = edge;
+    }
+  }
+  return best;
+}
+
+export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeEnd, allObjects }: ResizeHandlesProps) {
   const { camera, gl } = useThree();
   const [hoveredHandle, setHoveredHandle] = useState<HandleId | null>(null);
   const activeHandleRef = useRef<HandleId | null>(null);
@@ -40,6 +73,8 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
   objectRef.current = object;
   const onResizeRef = useRef(onResize);
   onResizeRef.current = onResize;
+  const allObjectsRef = useRef(allObjects);
+  allObjectsRef.current = allObjects;
 
   const w = object.scaleX;
   const h = object.scaleY;
@@ -171,12 +206,70 @@ export function ResizeHandles({ object, onResize, mode, onResizeStart, onResizeE
         }
       }
 
-      // 스냅 (0.5m 단위)
-      newScaleX = Math.round(newScaleX * 2) / 2;
-      newScaleZ = Math.round(newScaleZ * 2) / 2;
-      newScaleY = Math.round(newScaleY * 2) / 2;
-      newPosX = Math.round(newPosX * 2) / 2;
-      newPosZ = Math.round(newPosZ * 2) / 2;
+      // 인접 구조물 가장자리 스냅 — 기존 0.5m 그리드보다 우선
+      const others = allObjectsRef.current;
+      if (others && others.length > 0 && isFloor) {
+        const { xEdges, zEdges } = collectEdges(others, objectRef.current.id);
+
+        // 현재 리사이즈 중인 오브젝트의 가장자리 좌표
+        const leftEdge = newPosX - newScaleX / 2;
+        const rightEdge = newPosX + newScaleX / 2;
+        const topEdge = newPosZ - newScaleZ / 2;
+        const bottomEdge = newPosZ + newScaleZ / 2;
+
+        // 드래그 중인 핸들에 따라 스냅할 가장자리 결정
+        const handlesX = handle === 'e' || handle === 'ne' || handle === 'se';
+        const handlesXLeft = handle === 'w' || handle === 'nw' || handle === 'sw';
+        const handlesZ = handle === 's' || handle === 'se' || handle === 'sw';
+        const handlesZTop = handle === 'n' || handle === 'ne' || handle === 'nw';
+
+        if (handlesX) {
+          const snapped = snapToEdge(rightEdge, xEdges, SNAP_THRESHOLD);
+          if (snapped !== rightEdge) {
+            const diff = snapped - rightEdge;
+            newScaleX += diff;
+            newPosX += diff / 2;
+          }
+        }
+        if (handlesXLeft) {
+          const snapped = snapToEdge(leftEdge, xEdges, SNAP_THRESHOLD);
+          if (snapped !== leftEdge) {
+            const diff = snapped - leftEdge;
+            newScaleX -= diff;
+            newPosX += diff / 2;
+          }
+        }
+        if (handlesZ) {
+          const snapped = snapToEdge(bottomEdge, zEdges, SNAP_THRESHOLD);
+          if (snapped !== bottomEdge) {
+            const diff = snapped - bottomEdge;
+            newScaleZ += diff;
+            newPosZ += diff / 2;
+          }
+        }
+        if (handlesZTop) {
+          const snapped = snapToEdge(topEdge, zEdges, SNAP_THRESHOLD);
+          if (snapped !== topEdge) {
+            const diff = snapped - topEdge;
+            newScaleZ -= diff;
+            newPosZ += diff / 2;
+          }
+        }
+      } else {
+        // 다른 오브젝트 없으면 기존 0.5m 그리드 스냅
+        newScaleX = Math.round(newScaleX * 2) / 2;
+        newScaleZ = Math.round(newScaleZ * 2) / 2;
+        newScaleY = Math.round(newScaleY * 2) / 2;
+        newPosX = Math.round(newPosX * 2) / 2;
+        newPosZ = Math.round(newPosZ * 2) / 2;
+      }
+
+      // 벽 모드는 항상 0.5m 그리드 스냅
+      if (!isFloor) {
+        newScaleX = Math.round(newScaleX * 2) / 2;
+        newScaleY = Math.round(newScaleY * 2) / 2;
+        newPosX = Math.round(newPosX * 2) / 2;
+      }
 
       onResizeRef.current({
         ...objectRef.current,
