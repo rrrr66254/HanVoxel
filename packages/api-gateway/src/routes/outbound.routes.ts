@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as outboundCtrl from '../controllers/outbound.controller';
+import * as bulkCtrl from '../controllers/bulk-outbound.controller';
 
 const router = Router();
 
@@ -20,5 +21,12 @@ router.get('/outbound/calendar', outboundCtrl.calendarHandler);
 
 // ── 통합 달력 (입고+출고) ────────────────────────
 router.get('/calendar', outboundCtrl.calendarAllHandler);
+
+// ── B2C 대량 출고 업로드 ─────────────────────────
+router.post('/outbound/bulk-upload', bulkCtrl.uploadMiddleware, bulkCtrl.bulkUploadHandler);
+router.post('/outbound/bulk-create', bulkCtrl.bulkCreateHandler);
+router.get('/outbound/bulk-logs', bulkCtrl.uploadLogsHandler);
+router.get('/outbound/bulk-mapping', bulkCtrl.platformMappingHandler);
+router.get('/outbound/bulk-template/:platform', bulkCtrl.templateDownloadHandler);
 
 export default router;

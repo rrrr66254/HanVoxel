@@ -1628,3 +1628,172 @@ model DeliveryCalendar {
   @@index([siteId, type])
   @@map("delivery_calendar")
 }
+
+// ============================================================
+// B2C 대량 출고 업로드 로그
+// ============================================================
+
+/// B2C 대량 출고 CSV/Excel 업로드 이력
+model BulkUploadLog {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId        String   @map("site_id") @db.Uuid
+  /// 업로드 파일명
+  fileName      String   @map("file_name") @db.VarChar(500)
+  /// 파일 크기 (bytes)
+  fileSize      Int      @map("file_size")
+  /// 총 행 수
+  totalRows     Int      @map("total_rows")
+  /// 성공 건수
+  successCount  Int      @default(0) @map("success_count")
+  /// 오류 건수
+  errorCount    Int      @default(0) @map("error_count")
+  /// 경고 건수
+  warningCount  Int      @default(0) @map("warning_count")
+  /// 업로드 상태: PARSING → VALIDATED → CREATING → COMPLETED → FAILED
+  status        String   @default("PARSING") @db.VarChar(20)
+  /// 플랫폼 유형: COUPANG | SMARTSTORE | CUSTOM
+  platformType  String   @default("CUSTOM") @map("platform_type") @db.VarChar(30)
+  /// 컬럼 매핑 설정 (JSON)
+  columnMapping Json?    @map("column_mapping")
+  /// 오류 상세 (JSON)
+  errorDetails  Json?    @map("error_details")
+  /// 업로드자 ID
+  uploadedBy    String?  @map("uploaded_by") @db.VarChar(200)
+
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([siteId, createdAt])
+  @@index([status])
+  @@map("bulk_upload_logs")
+}
+
+// ============================================================
+// 수주 관리 + MRP 소요 분석 + 재고 더블체크
+// ============================================================
+
+/// 수주 (고객 발주 수신)
+model SalesOrder {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId           String   @map("site_id") @db.Uuid
+  /// 수주 번호 (AUTO: SO-YYYYMMDD-XXXX)
+  orderNo          String   @unique @map("order_no") @db.VarChar(30)
+  /// 고객사 ID (erp_customers 참조)
+  customerId       String?  @map("customer_id") @db.Uuid
+  /// 고객사명 (비정규화)
+  customerName     String?  @map("customer_name") @db.VarChar(200)
+  /// 상태: RECEIVED → MRP_CHECKED → CONFIRMED → IN_PRODUCTION → SHIPPED
+  status           String   @default("RECEIVED") @db.VarChar(20)
+  /// 수주일
+  orderDate        DateTime @default(now()) @map("order_date") @db.Date
+  /// 납기일
+  deliveryDeadline DateTime? @map("delivery_deadline") @db.Date
+  /// 품목 목록 [{product_sku, qty, unit_price}]
+  items            Json     @default("[]")
+  /// 비고
+  notes            String?  @db.Text
+
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  mrpResults       MrpResult[]
+  stockChecks      StockCheckRequest[]
+
+  @@index([siteId, status])
+  @@index([siteId, deliveryDeadline])
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+/// BOM — Bill of Materials (제품별 소요 자재 목록)
+model BomItem {
+  id             String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId         String  @map("site_id") @db.Uuid
+  /// 완성품 SKU
+  productSku     String  @map("product_sku") @db.VarChar(100)
+  /// 소요 자재 SKU
+  materialSku    String  @map("material_sku") @db.VarChar(100)
+  /// 완성품 1개당 필요 자재 수량
+  qtyPerUnit     Float   @map("qty_per_unit")
+  /// 단위 (개, kg, L 등)
+  unit           String  @default("개") @db.VarChar(20)
+  /// 자재 조달 소요일
+  leadTimeDays   Int     @default(0) @map("lead_time_days")
+  /// 비고
+  notes          String? @db.Text
+
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([siteId, productSku, materialSku])
+  @@index([productSku])
+  @@index([materialSku])
+  @@map("bom_items")
+}
+
+/// MRP 소요량 계산 결과
+model MrpResult {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  salesOrderId     String   @map("sales_order_id") @db.Uuid
+  /// 소요 자재 SKU
+  materialSku      String   @map("material_sku") @db.VarChar(100)
+  /// 자재명
+  materialName     String?  @map("material_name") @db.VarChar(200)
+  /// 필요 수량
+  requiredQty      Float    @map("required_qty")
+  /// 현재 재고
+  currentStock     Float    @map("current_stock")
+  /// 부족 수량 (required - current, 음수이면 0)
+  shortageQty      Float    @map("shortage_qty")
+  /// 자동 발주 생성 여부
+  reorderTriggered Boolean  @default(false) @map("reorder_triggered")
+  /// 더블체크 담당자
+  checkedBy        String?  @map("checked_by") @db.VarChar(200)
+  /// 더블체크 시각
+  checkedAt        DateTime? @map("checked_at") @db.Timestamptz
+  /// 상태: PENDING → CHECKED_OK → CHECKED_SHORTAGE → REORDERED
+  status           String   @default("PENDING") @db.VarChar(20)
+
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  salesOrder       SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  stockChecks      StockCheckRequest[]
+
+  @@index([salesOrderId])
+  @@index([materialSku])
+  @@index([status])
+  @@map("mrp_results")
+}
+
+/// 재고 더블체크 요청
+model StockCheckRequest {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  mrpResultId    String    @map("mrp_result_id") @db.Uuid
+  salesOrderId   String    @map("sales_order_id") @db.Uuid
+  /// 재고 담당자 user_id
+  assignedTo     String?   @map("assigned_to") @db.VarChar(200)
+  /// 요청 시각
+  requestedAt    DateTime  @default(now()) @map("requested_at") @db.Timestamptz
+  /// 응답 시각
+  respondedAt    DateTime? @map("responded_at") @db.Timestamptz
+  /// 담당자가 확인한 실물 수량
+  actualQty      Float?    @map("actual_qty")
+  /// 시스템 재고 vs 실물 차이
+  discrepancy    Float?
+  /// 상태: PENDING → IN_PROGRESS → CONFIRMED → DISCREPANCY_FOUND
+  status         String    @default("PENDING") @db.VarChar(20)
+  /// 비고
+  notes          String?   @db.Text
+
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  mrpResult      MrpResult    @relation(fields: [mrpResultId], references: [id], onDelete: Cascade)
+  salesOrder     SalesOrder   @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+
+  @@index([salesOrderId])
+  @@index([mrpResultId])
+  @@index([assignedTo, status])
+  @@map("stock_check_requests")
+}

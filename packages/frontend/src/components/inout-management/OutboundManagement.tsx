@@ -18,7 +18,9 @@ import {
   Package,
   X,
   Clock,
+  Upload,
 } from 'lucide-react';
+import { BulkOutboundUpload } from './BulkOutboundUpload';
 import type { OutboundOrder } from '../../api/outbound-api';
 import { ManifestPdf } from './ManifestPdf';
 
@@ -105,6 +107,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [manifestOrderId, setManifestOrderId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OutboundOrder | null>(null);
 
@@ -144,6 +147,11 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
   const calcTotal = (items: OutboundOrder['items']) =>
     items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
 
+  // B2C 대량 출고 업로드 모드
+  if (showBulkUpload) {
+    return <BulkOutboundUpload onBack={() => setShowBulkUpload(false)} />;
+  }
+
   // 명세표 뷰 모드
   if (manifestOrderId) {
     const order = orders.find((o) => o.id === manifestOrderId) ?? MOCK_ORDERS.find((o) => o.id === manifestOrderId);
@@ -163,17 +171,30 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
           <Truck size={22} style={{ color: C.orange }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>출고 관리</h2>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', borderRadius: 8,
-            background: C.orange, color: '#fff', border: 'none',
-            cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          }}
-        >
-          <Plus size={16} /> 출고 주문 생성
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8,
+              background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.3)',
+              cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            }}
+          >
+            <Upload size={16} /> B2C 대량 출고
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8,
+              background: C.orange, color: '#fff', border: 'none',
+              cursor: 'pointer', fontSize: 13, fontWeight: 600,
+            }}
+          >
+            <Plus size={16} /> 출고 주문 생성
+          </button>
+        </div>
       </div>
 
       {/* 필터: 상태 + 유형 */}
