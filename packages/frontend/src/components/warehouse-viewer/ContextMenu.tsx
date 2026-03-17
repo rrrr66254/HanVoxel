@@ -13,6 +13,8 @@ const VIEWPORT_MARGIN = 8; // viewport 경계 여백
 interface ContextMenuProps {
   /** 우클릭한 오브젝트 (없으면 빈 공간 메뉴) */
   object: SpatialObject | null;
+  /** 다중 선택된 오브젝트 ID 집합 */
+  multiSelectedIds?: Set<string>;
   /** 메뉴 위치 (화면 좌표) */
   position: { x: number; y: number } | null;
   onClose: () => void;
@@ -22,6 +24,9 @@ interface ContextMenuProps {
   onRotate90?: (object: SpatialObject) => void;
   onMove?: (object: SpatialObject) => void;
   onDelete?: (id: string) => void;
+  // 다중 선택 액션
+  onMultiMove?: (ids: Set<string>) => void;
+  onMultiDelete?: (ids: Set<string>) => void;
   // 빈 공간 메뉴 액션
   onResetView?: () => void;
   onTopView?: () => void;
@@ -41,15 +46,20 @@ interface MenuItemDef {
 /**
  * 3D 뷰어 우클릭 컨텍스트 메뉴
  * - 오브젝트 위 우클릭: 편집/복제/회전 90도/이동/삭제
+ * - 다중 선택 후 우클릭: 그룹 이동/그룹 삭제
  * - 빈 공간 우클릭: 줌 리셋/탑 뷰/프론트 뷰/그리드 토글
  * - viewport 경계 체크로 잘림 방지
  */
 export function ContextMenu({
-  object, position, onClose,
+  object, multiSelectedIds, position, onClose,
   onEdit, onDuplicate, onRotate90, onMove, onDelete,
+  onMultiMove, onMultiDelete,
   onResetView, onTopView, onFrontView, onToggleGrid, gridVisible = true,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // 다중 선택 모드 여부
+  const isMultiMode = multiSelectedIds && multiSelectedIds.size > 1;
 
   // 외부 클릭 시 닫기 (메뉴 내부 클릭은 무시)
   useEffect(() => {
@@ -82,25 +92,67 @@ export function ContextMenu({
   if (!position) return null;
 
   // 메뉴 항목 구성
-  const items: MenuItemDef[] = object
-    ? [
-        { icon: <Edit3 size={13} />, label: '편집', onClick: () => { onEdit?.(object); onClose(); } },
-        { icon: <Copy size={13} />, label: '복제', onClick: () => { onDuplicate?.(object); onClose(); } },
-        { icon: <RotateCw size={13} />, label: '90도 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
-        { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); }, dividerAfter: true },
-        { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: '#F85149' },
-      ]
-    : [
-        { icon: <Maximize size={13} />, label: '줌 리셋', onClick: () => { onResetView?.(); onClose(); } },
-        { icon: <ArrowUp size={13} />, label: '탑 뷰', onClick: () => { onTopView?.(); onClose(); }, dividerAfter: false },
-        { icon: <ArrowRight size={13} />, label: '프론트 뷰', onClick: () => { onFrontView?.(); onClose(); }, dividerAfter: true },
-        { icon: <Grid3x3 size={13} />, label: gridVisible ? '그리드 숨기기' : '그리드 표시', onClick: () => { onToggleGrid?.(); onClose(); } },
-      ];
+  let items: MenuItemDef[];
+  let headerContent: React.ReactNode = null;
+
+  if (isMultiMode) {
+    // 다중 선택 메뉴
+    headerContent = (
+      <div style={{
+        padding: '8px 14px 6px',
+        borderBottom: '1px solid #21262D',
+        marginBottom: 4,
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          {multiSelectedIds.size}개 선택됨
+        </div>
+        <div style={{ fontSize: 10, color: '#484F58' }}>그룹 작업</div>
+      </div>
+    );
+    items = [
+      { icon: <Move size={13} />, label: '그룹 이동', onClick: () => { onMultiMove?.(multiSelectedIds); onClose(); }, dividerAfter: true },
+      { icon: <Trash2 size={13} />, label: '그룹 삭제', onClick: () => { onMultiDelete?.(multiSelectedIds); onClose(); }, color: '#F85149' },
+    ];
+  } else if (object) {
+    // 단일 오브젝트 메뉴
+    headerContent = (
+      <div style={{
+        padding: '8px 14px 6px',
+        borderBottom: '1px solid #21262D',
+        marginBottom: 4,
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3' }}>{object.name}</div>
+        <div style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</div>
+      </div>
+    );
+    items = [
+      { icon: <Edit3 size={13} />, label: '편집', onClick: () => { onEdit?.(object); onClose(); } },
+      { icon: <Copy size={13} />, label: '복제', onClick: () => { onDuplicate?.(object); onClose(); } },
+      { icon: <RotateCw size={13} />, label: '90도 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
+      { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); }, dividerAfter: true },
+      { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: '#F85149' },
+    ];
+  } else {
+    // 빈 공간 메뉴
+    items = [
+      { icon: <Maximize size={13} />, label: '줌 리셋', onClick: () => { onResetView?.(); onClose(); } },
+      { icon: <ArrowUp size={13} />, label: '탑 뷰', onClick: () => { onTopView?.(); onClose(); }, dividerAfter: false },
+      { icon: <ArrowRight size={13} />, label: '프론트 뷰', onClick: () => { onFrontView?.(); onClose(); }, dividerAfter: true },
+      { icon: <Grid3x3 size={13} />, label: gridVisible ? '그리드 숨기기' : '그리드 표시', onClick: () => { onToggleGrid?.(); onClose(); } },
+    ];
+  }
 
   // 메뉴 높이 동적 계산
+  const hasHeader = isMultiMode || object;
   const dividerCount = items.filter((item) => item.dividerAfter).length;
   const menuHeight = MENU_PADDING
-    + (object ? MENU_HEADER_HEIGHT : 0)
+    + (hasHeader ? MENU_HEADER_HEIGHT : 0)
     + items.length * MENU_ITEM_HEIGHT
     + dividerCount * MENU_DIVIDER_HEIGHT
     + MENU_PADDING;
@@ -137,17 +189,8 @@ export function ContextMenu({
 
   return (
     <div ref={menuRef} style={menuStyle} onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }} onMouseDown={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}>
-      {/* 헤더 (오브젝트일 때) */}
-      {object && (
-        <div style={{
-          padding: '8px 14px 6px',
-          borderBottom: '1px solid #21262D',
-          marginBottom: 4,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3' }}>{object.name}</div>
-          <div style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</div>
-        </div>
-      )}
+      {/* 헤더 */}
+      {headerContent}
 
       {items.map((item, i) => (
         <div key={i}>
@@ -187,20 +230,22 @@ export function ContextMenu({
 export function useContextMenu() {
   const [contextState, setContextState] = useState<{
     object: SpatialObject | null;
+    multiSelectedIds: Set<string> | null;
     position: { x: number; y: number } | null;
-  }>({ object: null, position: null });
+  }>({ object: null, multiSelectedIds: null, position: null });
 
-  const openMenu = useCallback((e: React.MouseEvent, object?: SpatialObject) => {
+  const openMenu = useCallback((e: React.MouseEvent, object?: SpatialObject, multiIds?: Set<string>) => {
     e.preventDefault();
     e.stopPropagation();
     setContextState({
       object: object ?? null,
+      multiSelectedIds: multiIds ?? null,
       position: { x: e.clientX, y: e.clientY },
     });
   }, []);
 
   const closeMenu = useCallback(() => {
-    setContextState({ object: null, position: null });
+    setContextState({ object: null, multiSelectedIds: null, position: null });
   }, []);
 
   return { contextState, openMenu, closeMenu };

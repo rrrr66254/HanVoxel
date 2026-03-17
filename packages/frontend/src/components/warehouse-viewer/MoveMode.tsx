@@ -444,3 +444,151 @@ export function MoveModeGhost({
     </group>
   );
 }
+
+// ============================================================
+// 그룹 이동 모드 — 다중 선택된 오브젝트들을 동시에 이동
+// ============================================================
+
+interface GroupMoveModeProps {
+  /** 이동 대상 오브젝트 목록 */
+  movingObjects: SpatialObject[];
+  /** 원래 위치 맵 */
+  originalPositions: Map<string, { x: number; y: number; z: number }>;
+  /** 이동 확정 */
+  onDrop: (deltas: Map<string, THREE.Vector3>) => void;
+  /** 이동 취소 */
+  onCancel: () => void;
+}
+
+/**
+ * 그룹 이동 모드 3D 컴포넌트
+ * - 선택된 오브젝트들이 마우스를 따라 동시 이동
+ * - 중심점 기준 오프셋 유지
+ * - 클릭으로 확정, ESC로 취소
+ */
+export function GroupMoveGhost({ movingObjects, originalPositions, onDrop, onCancel }: GroupMoveModeProps) {
+  const groupRef = useRef<THREE.Group>(null);
+  const { camera, gl } = useThree();
+  const pointer = useRef(new THREE.Vector2());
+  const raycaster = useRef(new THREE.Raycaster());
+
+  // 중심점 계산
+  const centroid = useMemo(() => {
+    let cx = 0, cz = 0;
+    let count = 0;
+    originalPositions.forEach((pos) => {
+      cx += pos.x;
+      cz += pos.z;
+      count++;
+    });
+    return count > 0 ? new THREE.Vector3(cx / count, 0, cz / count) : new THREE.Vector3();
+  }, [originalPositions]);
+
+  // 각 오브젝트의 중심점 대비 오프셋
+  const offsets = useMemo(() => {
+    const map = new Map<string, THREE.Vector3>();
+    originalPositions.forEach((pos, id) => {
+      map.set(id, new THREE.Vector3(pos.x - centroid.x, pos.y, pos.z - centroid.z));
+    });
+    return map;
+  }, [originalPositions, centroid]);
+
+  const [ghostCenter, setGhostCenter] = useState(centroid.clone());
+
+  // 매 프레임 마우스 추적
+  useFrame(() => {
+    raycaster.current.setFromCamera(pointer.current, camera);
+    const intersection = new THREE.Vector3();
+    const hit = raycaster.current.ray.intersectPlane(floorPlane, intersection);
+    if (!hit) return;
+
+    setGhostCenter(new THREE.Vector3(intersection.x, 0, intersection.z));
+    if (groupRef.current) {
+      groupRef.current.position.set(intersection.x, 0, intersection.z);
+    }
+  });
+
+  // 커서 변경
+  useEffect(() => {
+    const canvas = gl.domElement;
+    canvas.style.cursor = 'crosshair';
+    return () => { canvas.style.cursor = 'default'; };
+  }, [gl]);
+
+  // 마우스 이벤트 등록
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const handleMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      // 델타 계산하여 확정
+      const deltas = new Map<string, THREE.Vector3>();
+      offsets.forEach((offset, id) => {
+        const origPos = originalPositions.get(id);
+        if (!origPos) return;
+        const newX = ghostCenter.x + offset.x;
+        const newZ = ghostCenter.z + offset.z;
+        deltas.set(id, new THREE.Vector3(newX - origPos.x, 0, newZ - origPos.z));
+      });
+      onDrop(deltas);
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+
+    canvas.addEventListener('pointermove', handleMove);
+    canvas.addEventListener('click', handleClick);
+    window.addEventListener('keydown', handleKey);
+
+    return () => {
+      canvas.removeEventListener('pointermove', handleMove);
+      canvas.removeEventListener('click', handleClick);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [gl, offsets, originalPositions, ghostCenter, onDrop, onCancel]);
+
+  return (
+    <group ref={groupRef}>
+      {movingObjects.map((obj) => {
+        const offset = offsets.get(obj.id);
+        if (!offset) return null;
+        return (
+          <group key={obj.id} position={[offset.x, offset.y, offset.z]}>
+            {/* 반투명 고스트 메시 */}
+            <mesh>
+              <boxGeometry args={[obj.scaleX, obj.scaleY, obj.scaleZ]} />
+              <meshStandardMaterial color="#2D7DD2" transparent opacity={0.35} depthWrite={false} />
+            </mesh>
+            {/* 외곽선 */}
+            <mesh>
+              <boxGeometry args={[obj.scaleX + 0.05, obj.scaleY + 0.05, obj.scaleZ + 0.05]} />
+              <meshStandardMaterial color="#2D7DD2" transparent opacity={0.12} wireframe depthWrite={false} />
+            </mesh>
+          </group>
+        );
+      })}
+      {/* 중앙 상태 라벨 */}
+      <Html distanceFactor={12} position={[0, 3, 0]} style={{ pointerEvents: 'none' }}>
+        <div style={{
+          background: 'rgba(45,125,210,0.15)',
+          border: '1px solid #2D7DD2',
+          borderRadius: 6,
+          padding: '4px 10px',
+          fontSize: 10,
+          color: '#2D7DD2',
+          whiteSpace: 'nowrap',
+          fontWeight: 600,
+        }}>
+          {movingObjects.length}개 이동 중 — 클릭하여 배치
+        </div>
+      </Html>
+    </group>
+  );
+}

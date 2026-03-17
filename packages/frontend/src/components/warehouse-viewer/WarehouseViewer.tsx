@@ -12,7 +12,7 @@ import { EditorBottomBar } from './EditorBottomBar';
 import { KeyboardControlsHandler } from './KeyboardControls';
 import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer } from './BinPlacement';
-import { MoveModeGhost } from './MoveMode';
+import { MoveModeGhost, GroupMoveGhost } from './MoveMode';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
 import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
@@ -228,6 +228,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const activeObjects = allObjects.filter((o) => {
     if (!o.isActive) return false;
     if (o.id === movingObjectId) return false; // 이동 중이면 원래 위치 숨김
+    if (groupMovingIds && groupMovingIds.has(o.id)) return false; // 그룹 이동 중이면 원래 위치 숨김
     const typeName = o.type.name;
     if (!layerVisibility.racks && typeName === 'RACK') return false;
     if (!layerVisibility.aisles && typeName === 'AISLE') return false;
@@ -600,6 +601,73 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY, scaleX: updatedObj.scaleX, scaleZ: updatedObj.scaleZ });
   }, []);
 
+  // === 다중 선택 그룹 삭제 ===
+  const handleMultiDelete = useCallback(async (ids: Set<string>) => {
+    ids.forEach((id) => handleDeleteObject(id));
+    setSelectedIds(new Set());
+  }, [handleDeleteObject]);
+
+  // === 다중 선택 그룹 이동 ===
+  // 그룹 이동 상태
+  const [groupMovingIds, setGroupMovingIds] = useState<Set<string> | null>(null);
+  const [groupOriginalPositions, setGroupOriginalPositions] = useState<Map<string, { x: number; y: number; z: number }> | null>(null);
+
+  const handleMultiMove = useCallback((ids: Set<string>) => {
+    // 그룹 이동 모드 진입 — 선택된 오브젝트들의 원래 위치 저장
+    const positions = new Map<string, { x: number; y: number; z: number }>();
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    ids.forEach((id) => {
+      const obj = allObjs.find((o) => o.id === id);
+      if (obj) positions.set(id, { x: obj.positionX, y: obj.positionY, z: obj.positionZ });
+    });
+    setGroupMovingIds(ids);
+    setGroupOriginalPositions(positions);
+    setEditingId(null);
+    setRightPanel('none');
+    setRackDetailId(null);
+  }, [objects, placedObjects]);
+
+  const isGroupMoving = groupMovingIds !== null && groupMovingIds.size > 0;
+
+  // 그룹 이동 대상 오브젝트 목록
+  const groupMovingObjects = isGroupMoving
+    ? allObjects.filter((o) => groupMovingIds.has(o.id))
+    : [];
+
+  // 그룹 이동 확정 — 델타 적용
+  const handleGroupMoveDrop = useCallback(async (deltas: Map<string, THREE.Vector3>) => {
+    for (const [id, delta] of deltas) {
+      const origPos = groupOriginalPositions?.get(id);
+      if (!origPos) continue;
+      const newX = origPos.x + delta.x;
+      const newY = origPos.y + delta.y;
+      const newZ = origPos.z + delta.z;
+
+      // 로컬 상태 업데이트
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === id);
+        if (exists) {
+          return prev.map((o) => o.id === id ? { ...o, positionX: newX, positionY: newY, positionZ: newZ } : o);
+        }
+        // 원본 오브젝트에서 가져와서 placedObjects에 추가
+        const orig = objects.find((o) => o.id === id);
+        if (orig) return [...prev, { ...orig, positionX: newX, positionY: newY, positionZ: newZ }];
+        return prev;
+      });
+
+      // DB 업데이트
+      await updateSpatialObject(id, { positionX: newX, positionY: newY, positionZ: newZ });
+    }
+    setGroupMovingIds(null);
+    setGroupOriginalPositions(null);
+  }, [groupOriginalPositions, objects]);
+
+  // 그룹 이동 취소
+  const handleGroupMoveCancel = useCallback(() => {
+    setGroupMovingIds(null);
+    setGroupOriginalPositions(null);
+  }, []);
+
   // BIN 아이템 제거 — 랙 앞 바닥에 배출 (충돌 시 복귀 + 경고)
   const handleRemoveBinItem = useCallback((rackId: string, level: number) => {
     const binItem = binOccupancy.find((o) => o.rackId === rackId && o.level === level);
@@ -792,7 +860,18 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         setSelectedIds(new Set());
         return;
       }
+      // Delete 키로 싱글 선택 삭제
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        handleDeleteObject(selectedId);
+        setSelectedId(null);
+        setEditingId(null);
+        setRightPanel('none');
+        setRackDetailId(null);
+        return;
+      }
       if (e.key === 'Escape') {
+        // 그룹 이동 취소
+        if (isGroupMoving) { setGroupMovingIds(null); setGroupOriginalPositions(null); return; }
         // 배치 모드 취소
         if (placingPreset) { setPlacingPreset(null); return; }
         // 이동 모드 취소 (MoveMode에서도 처리하지만 안전장치)
@@ -813,10 +892,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, selectedIds, handleViewModeChange, handleDeleteObject]);
+  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject]);
 
   // OrbitControls 비활성화 조건
-  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isResizing;
+  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isGroupMoving && !isResizing;
 
   // 2D 탑뷰 모드
   if (topViewMode) {
@@ -845,7 +924,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
             onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setSelectedIds(new Set()); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; openMenu(e); }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; if (selectedIds.size > 1) { openMenu(e, undefined, selectedIds); } else { openMenu(e); } }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -872,7 +951,13 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
                 if (wasDragRef.current || rightPanel !== 'none') return; // 드래그 또는 상세 패널 열림 시 컨텍스트 메뉴 비활성
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
-                openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
+                const fakeEvent = { clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent;
+                // 다중 선택된 오브젝트 중 하나를 우클릭한 경우 → 그룹 메뉴
+                if (selectedIds.size > 1 && selectedIds.has(obj.id)) {
+                  openMenu(fakeEvent, undefined, selectedIds);
+                } else {
+                  openMenu(fakeEvent, obj);
+                }
               }}
               placingPreset={placingPreset} onPlace={handlePlace}
               zones={zones} drawingZoneType={drawingZoneType}
@@ -897,11 +982,21 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
                 onBlockedToast={handleBlockedToast}
               />
             )}
+
+            {/* 그룹 이동 모드 고스트 */}
+            {isGroupMoving && groupOriginalPositions && (
+              <GroupMoveGhost
+                movingObjects={groupMovingObjects}
+                originalPositions={groupOriginalPositions}
+                onDrop={handleGroupMoveDrop}
+                onCancel={handleGroupMoveCancel}
+              />
+            )}
           </Canvas>
 
           {/* 드래그 선택 박스 오버레이 */}
           <SelectionBoxOverlay
-            enabled={!placingPreset && !isMoving && !drawingZoneType && !isResizing && activeTool === 'select'}
+            enabled={!placingPreset && !isMoving && !isGroupMoving && !drawingZoneType && !isResizing && activeTool === 'select'}
             objects={activeObjects}
             onSelectionComplete={handleBoxSelectionComplete}
             wrapperRef={wrapperRef}
@@ -966,6 +1061,21 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
               <span className="font-bold text-blue-400">{movingObject?.name}</span>
               이동 중 — 클릭하여 배치 · ESC 취소
               {/* 랙 근처에서는 BIN 배치 안내 */}
+            </div>
+          )}
+
+          {/* 그룹 이동 모드 배너 */}
+          {isGroupMoving && (
+            <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span className="font-bold text-blue-400">{groupMovingIds.size}개</span>
+              그룹 이동 중 — 클릭하여 배치
+              <button onClick={handleGroupMoveCancel} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
             </div>
           )}
 
@@ -1039,7 +1149,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
       {/* 컨텍스트 메뉴 */}
       <ContextMenu
-        object={contextState.object} position={contextState.position} onClose={closeMenu}
+        object={contextState.object} multiSelectedIds={contextState.multiSelectedIds ?? undefined} position={contextState.position} onClose={closeMenu}
         onEdit={(obj) => {
           closeMenu();
           // setTimeout으로 컨텍스트 메뉴 닫힌 후 모달 열기
@@ -1047,7 +1157,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         }}
         onDuplicate={handleDuplicate} onRotate90={handleRotate90}
         onMove={handleStartMove}
-        onDelete={handleDeleteObject} onResetView={handleResetView}
+        onDelete={handleDeleteObject}
+        onMultiMove={handleMultiMove}
+        onMultiDelete={handleMultiDelete}
+        onResetView={handleResetView}
         onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
         onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}
       />
