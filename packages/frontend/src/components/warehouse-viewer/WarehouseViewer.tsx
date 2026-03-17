@@ -839,8 +839,8 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             )}
           </Canvas>
 
-          {/* 층 선택 버튼 (다층 창고일 때만 표시) */}
-          {floorCount > 1 && onFloorChange && (
+          {/* 층 표시 (항상 표시, 다층일 때 선택 가능) */}
+          {onFloorChange && (
             <div className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 p-1 shadow-lg backdrop-blur">
               {Array.from({ length: floorCount }, (_, i) => i + 1).map((floor) => (
                 <button
