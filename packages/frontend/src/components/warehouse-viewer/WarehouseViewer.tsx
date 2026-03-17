@@ -219,6 +219,11 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const pointerDownPosRef = useRef<{ x: number; y: number; button: number } | null>(null);
   const wasDragRef = useRef(false);
 
+  // === 다중 선택 그룹 이동 ===
+  // 그룹 이동 상태
+  const [groupMovingIds, setGroupMovingIds] = useState<Set<string> | null>(null);
+  const [groupOriginalPositions, setGroupOriginalPositions] = useState<Map<string, { x: number; y: number; z: number }> | null>(null);
+
   // 전체 오브젝트 목록
   const placedIds = new Set(placedObjects.map((o) => o.id));
   const allObjects = [
@@ -680,11 +685,6 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     setBulkResizeIds(null);
     setRightPanel('none');
   }, []);
-
-  // === 다중 선택 그룹 이동 ===
-  // 그룹 이동 상태
-  const [groupMovingIds, setGroupMovingIds] = useState<Set<string> | null>(null);
-  const [groupOriginalPositions, setGroupOriginalPositions] = useState<Map<string, { x: number; y: number; z: number }> | null>(null);
 
   const handleMultiMove = useCallback((ids: Set<string>) => {
     // 그룹 이동 모드 진입 — 선택된 오브젝트들의 원래 위치 저장
