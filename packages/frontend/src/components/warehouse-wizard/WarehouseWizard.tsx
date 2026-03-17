@@ -27,6 +27,7 @@ const DEFAULT_FORM: WizardFormData = {
   areaWidth: 60,
   areaDepth: 45,
   ceilingHeight: 8,
+  floorCount: 1,
   industry: '',
   templateId: null,
 };

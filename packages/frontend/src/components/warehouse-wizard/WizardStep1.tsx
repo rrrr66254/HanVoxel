@@ -96,7 +96,7 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
               창고 크기
             </label>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <DimensionInput
                 label="가로"
                 unit="m"
@@ -121,6 +121,14 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                 max={30}
                 step={0.5}
                 onChange={(v) => set('ceilingHeight', v)}
+              />
+              <DimensionInput
+                label="층 수"
+                unit="층"
+                value={form.floorCount}
+                min={1}
+                max={10}
+                onChange={(v) => set('floorCount', v)}
               />
             </div>
 

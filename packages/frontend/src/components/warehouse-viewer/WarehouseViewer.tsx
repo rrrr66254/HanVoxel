@@ -108,12 +108,16 @@ interface WarehouseViewerProps {
   objects: SpatialObject[];
   siteId?: string;
   onSave?: () => void;
+  onBack?: () => void;
+  floorCount?: number;
+  currentFloor?: number;
+  onFloorChange?: (floor: number) => void;
 }
 
 /**
  * 3D 창고 뷰어 — 오늘의집 스타일 + 이동 모드 + 더블클릭 상세
  */
-export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProps) {
+export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 1, currentFloor = 1, onFloorChange }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
@@ -767,7 +771,7 @@ export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProp
   return (
     <div className="flex h-full w-full flex-col bg-[#0D1117]">
       {/* 상단 바 */}
-      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} onSave={onSave} />
+      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} onSave={onSave} onBack={onBack} />
 
       {/* 메인 영역 */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -782,7 +786,7 @@ export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProp
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
             onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving) return; openMenu(e); }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; openMenu(e); }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -805,7 +809,7 @@ export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProp
             <WarehouseScene
               objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
               onContextMenu={(obj, e) => {
-                if (wasDragRef.current) return; // 드래그였으면 컨텍스트 메뉴 표시 안 함
+                if (wasDragRef.current || rightPanel !== 'none') return; // 드래그 또는 상세 패널 열림 시 컨텍스트 메뉴 비활성
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
                 openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
@@ -834,6 +838,29 @@ export function WarehouseViewer({ objects, siteId, onSave }: WarehouseViewerProp
               />
             )}
           </Canvas>
+
+          {/* 층 선택 버튼 (다층 창고일 때만 표시) */}
+          {floorCount > 1 && onFloorChange && (
+            <div className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 p-1 shadow-lg backdrop-blur">
+              {Array.from({ length: floorCount }, (_, i) => i + 1).map((floor) => (
+                <button
+                  key={floor}
+                  onClick={() => onFloorChange(floor)}
+                  className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
+                    currentFloor === floor
+                      ? 'bg-blue-600/25 text-blue-400 shadow-sm shadow-blue-500/10'
+                      : 'text-gray-500 hover:bg-[#21262D] hover:text-gray-300'
+                  }`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                  </svg>
+                  {floor}층
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 이동 모드 배너 */}
           {isMoving && (

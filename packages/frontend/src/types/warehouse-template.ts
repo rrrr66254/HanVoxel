@@ -70,6 +70,7 @@ export interface WizardFormData {
   areaWidth: number;   // m
   areaDepth: number;   // m
   ceilingHeight: number; // m
+  floorCount: number;  // 층 수 (1~10)
   industry: string;
   templateId: string | null;
 }

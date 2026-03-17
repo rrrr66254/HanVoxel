@@ -51,14 +51,19 @@ function obj(
 
 /**
  * 창고 템플릿 + 폼 데이터 → SpatialObject[] 레이아웃 생성
+ * @param floorNumber 현재 층 번호 (1부터 시작, 기본 1)
  */
 export function generateWarehouseLayout(
   form: WizardFormData,
   template: WarehouseTemplate,
+  floorNumber = 1,
 ): SpatialObject[] {
   const W = form.areaWidth;
   const D = form.areaDepth;
   const H = form.ceilingHeight;
+  const isMultiFloor = form.floorCount > 1;
+  // 층별 고유 ID 접두사
+  const fp = isMultiFloor ? `F${floorNumber}-` : '';
 
   const rack = template.rackPreset ?? { width: 2.7, depth: 1.1, height: 5.4, levels: 3, levelHeight: 1.5, loadPerLevel: 1000, color: '#f59e0b', code: 'RACK', name: '랙' };
   const aisleW = template.aisleWidth;
@@ -74,6 +79,14 @@ export function generateWarehouseLayout(
     [W / 2, 0.01, D / 2],
     [W, 0.02, D],
     { metadata: { floorStyle: 'EPOXY_GRAY' } },
+  ));
+
+  // --- 천장 (골판 금속 지붕) ---
+  objects.push(obj(
+    'ceiling-main', TYPES.FLOOR, '천장', 'CEILING-MAIN',
+    [W / 2, H, D / 2],
+    [W, 0.05, D],
+    { color: '#1a1d24', opacity: 0.35, metadata: { floorStyle: 'METAL_ROOF', isCeiling: true } },
   ));
 
   // --- 벽 (샌드위치 패널) ---
@@ -146,27 +159,27 @@ export function generateWarehouseLayout(
       ));
     }
 
-    // 도크 구역
+    // 도크 구역 (바닥 마킹)
     objects.push(obj(
       'zone-dock', TYPES.ZONE, '컨테이너 도크 구역', 'ZONE-DOCK',
-      [W / 2, 1.5, DOCK_Z + DOCK_DEPTH / 2],
-      [W - 4, 3, DOCK_DEPTH],
-      { color: '#1d4ed8', opacity: 0.05 },
+      [W / 2, 0.02, DOCK_Z + DOCK_DEPTH / 2],
+      [W - 4, 0.04, DOCK_DEPTH],
+      { color: '#1d4ed8', opacity: 0.15 },
     ));
   }
 
-  // --- 입고/출고 스테이징 ---
+  // --- 입고/출고 스테이징 (바닥 마킹) ---
   objects.push(obj(
     'zone-inbound', TYPES.ZONE, '입고 스테이징', 'ZONE-IN',
-    [W / 4, rack.height / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [W / 2 - 3, rack.height / 1.5, STAGING_DEPTH],
-    { color: '#3b82f6', opacity: 0.06 },
+    [W / 4, 0.02, STAGING_Z + STAGING_DEPTH / 2],
+    [W / 2 - 3, 0.04, STAGING_DEPTH],
+    { color: '#3b82f6', opacity: 0.2 },
   ));
   objects.push(obj(
     'zone-outbound', TYPES.ZONE, '출고 스테이징', 'ZONE-OUT',
-    [W * 3 / 4, rack.height / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [W / 2 - 3, rack.height / 1.5, STAGING_DEPTH],
-    { color: '#10b981', opacity: 0.06 },
+    [W * 3 / 4, 0.02, STAGING_Z + STAGING_DEPTH / 2],
+    [W / 2 - 3, 0.04, STAGING_DEPTH],
+    { color: '#10b981', opacity: 0.2 },
   ));
 
   // --- 비상 통로 (바닥 마킹) ---
@@ -316,15 +329,15 @@ export function generateWarehouseLayout(
     { metadata: { equipType: 'PACKING' } },
   ));
 
-  // --- 보관 구역 영역 표시 ---
+  // --- 보관 구역 영역 표시 (바닥 마킹) ---
   const totalRacks = isBackToBack ? pairCount * racksPerRow * 2 : pairCount * racksPerRow;
   objects.push(obj(
     'zone-storage', TYPES.ZONE, '보관 구역', 'ZONE-STORAGE',
-    [storageOriginX + rowWidth / 2, rackH / 2, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
-    [rowWidth + 2, rackH + 0.5, storageEndZ - STORAGE_Z + aisleW],
+    [storageOriginX + rowWidth / 2, 0.02, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
+    [rowWidth + 2, 0.04, storageEndZ - STORAGE_Z + aisleW],
     {
       color: '#f59e0b',
-      opacity: 0.03,
+      opacity: 0.12,
       metadata: {
         rackStandard: rack.code,
         totalRacks,
@@ -333,6 +346,46 @@ export function generateWarehouseLayout(
       },
     },
   ));
+
+  // --- 다층 건물: 엘레베이터 + 계단 ---
+  if (isMultiFloor) {
+    // 공장용 화물 리프트 (도크 근처, 우측벽 쪽) — 3m × 3m
+    const liftX = W - 3;
+    const liftZ = DOCK_Z + 3;
+    objects.push(obj(
+      `freight-lift`, TYPES.WORKSTATION, `화물 리프트 (${floorNumber}층)`, 'LIFT-FREIGHT',
+      [liftX, H / 2, liftZ],
+      [3, H, 3],
+      { color: '#f59e0b', opacity: 0.85, metadata: { facilityType: 'FREIGHT_LIFT', floor: floorNumber, capacity: 5000 } },
+    ));
+
+    // 사람용 엘레베이터 (좌측벽 쪽, 직원 출입문 근처) — 2m × 2m
+    const elevX = 2;
+    const elevZ = D / 2 + 3;
+    objects.push(obj(
+      `passenger-elevator`, TYPES.WORKSTATION, `승객용 엘레베이터 (${floorNumber}층)`, 'ELEV-PASSENGER',
+      [elevX, H / 2, elevZ],
+      [2, H, 2],
+      { color: '#3b82f6', opacity: 0.85, metadata: { facilityType: 'PASSENGER_ELEVATOR', floor: floorNumber, capacity: 1000 } },
+    ));
+
+    // 계단 (좌측벽 쪽, 엘레베이터 옆) — 3m × 5m
+    const stairX = 2.5;
+    const stairZ = D / 2 - 3;
+    objects.push(obj(
+      `stairs`, TYPES.WORKSTATION, `계단 (${floorNumber}층)`, 'STAIRS-MAIN',
+      [stairX, H / 2, stairZ],
+      [3, H, 5],
+      { color: '#6b7280', opacity: 0.85, metadata: { facilityType: 'STAIRS', floor: floorNumber } },
+    ));
+  }
+
+  // 층 접두사 적용 (다층일 때만)
+  if (fp) {
+    for (const o of objects) {
+      o.id = fp + o.id;
+    }
+  }
 
   return objects;
 }

@@ -10,6 +10,7 @@ import {
   Undo2,
   Redo2,
   Layout,
+  ArrowLeft,
 } from 'lucide-react';
 
 type ToolMode = 'select' | 'move' | 'rotate' | 'delete';
@@ -27,6 +28,7 @@ interface EditorTopBarProps {
   editLayer?: EditLayerMode;
   onEditLayerChange?: (layer: EditLayerMode) => void;
   onSave?: () => void;
+  onBack?: () => void;
 }
 
 /**
@@ -44,9 +46,25 @@ export function EditorTopBar({
   editLayer = 'objects',
   onEditLayerChange,
   onSave,
+  onBack,
 }: EditorTopBarProps) {
   return (
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
+      {/* 뒤로가기 버튼 (마법사 모드에서만 표시) */}
+      {onBack && (
+        <>
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 transition-all hover:bg-[#21262D] hover:text-gray-200"
+            title="이전 단계로 돌아가기"
+          >
+            <ArrowLeft size={14} />
+            이전
+          </button>
+          <div className="mx-2 h-6 w-px bg-[#2A2F38]" />
+        </>
+      )}
+
       {/* 로고 */}
       <div className="mr-6 flex items-center gap-2">
         <img src="/logo_nogb.png" alt="HanVoxel" className="h-12" />
