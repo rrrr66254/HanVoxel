@@ -45,7 +45,7 @@ export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise 
     >
       {/* 브레드크럼 */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-        <img src="/logo_nogb.png" alt="HanVoxel" style={{ height: 40 }} />
+        <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: 15 }}>HanVoxel</span>
         <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
         <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
           {MODE_LABEL_KEYS[activeMode] ? t(MODE_LABEL_KEYS[activeMode]) : activeMode}
