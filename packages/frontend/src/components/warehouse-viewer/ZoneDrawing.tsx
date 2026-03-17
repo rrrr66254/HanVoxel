@@ -239,6 +239,149 @@ export function ZoneRenderer({ zones, onSelectZone }: ZoneRendererProps) {
   );
 }
 
+// === 바닥/벽 포인트-투-포인트 사각형 드로잉 ===
+
+export type DrawObjectType = 'FLOOR' | 'WALL';
+
+const DRAW_OBJECT_COLORS: Record<DrawObjectType, string> = {
+  FLOOR: '#94A3B8',
+  WALL: '#788296',
+};
+
+interface RectDrawResult {
+  startX: number;
+  startZ: number;
+  endX: number;
+  endZ: number;
+}
+
+interface RectObjectDrawerProps {
+  drawType: DrawObjectType;
+  onComplete: (rect: RectDrawResult) => void;
+  onCancel: () => void;
+}
+
+/**
+ * 바닥/벽 사각형 드로잉 — 두 점 클릭으로 직사각형 영역 생성
+ * Zone 드로잉과 동일한 UX: 첫 클릭 → 시작점, 두 번째 클릭 → 확정
+ */
+export function RectObjectDrawer({ drawType, onComplete, onCancel }: RectObjectDrawerProps) {
+  const { camera, gl } = useThree();
+  const [startPoint, setStartPoint] = useState<[number, number] | null>(null);
+  const [currentPoint, setCurrentPoint] = useState<[number, number]>([0, 0]);
+
+  // 매 프레임 마우스 추적
+  useFrame(() => {
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.ray.intersectPlane(floorPlane, intersection);
+    if (hit) {
+      const x = Math.round(hit.x);
+      const z = Math.round(hit.z);
+      setCurrentPoint([x, z]);
+    }
+  });
+
+  const canvas = gl.domElement;
+  const startPointRef = useRef(startPoint);
+  startPointRef.current = startPoint;
+  const currentPointRef = useRef(currentPoint);
+  currentPointRef.current = currentPoint;
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const sp = startPointRef.current;
+      const cp = currentPointRef.current;
+      if (!sp) {
+        setStartPoint(cp);
+      } else {
+        // 최소 크기 체크 (1m × 1m)
+        const w = Math.abs(sp[0] - cp[0]);
+        const d = Math.abs(sp[1] - cp[1]);
+        if (w < 1 && d < 1) return;
+        onComplete({
+          startX: Math.min(sp[0], cp[0]),
+          startZ: Math.min(sp[1], cp[1]),
+          endX: Math.max(sp[0], cp[0]),
+          endZ: Math.max(sp[1], cp[1]),
+        });
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [canvas, onComplete, onCancel]);
+
+  const color = DRAW_OBJECT_COLORS[drawType];
+  const isWall = drawType === 'WALL';
+
+  if (!startPoint) {
+    // 시작점 미설정 — 커서 표시
+    return (
+      <mesh position={[currentPoint[0], 0.05, currentPoint[1]]}>
+        <boxGeometry args={[1, 0.02, 1]} />
+        <meshStandardMaterial color={color} transparent opacity={0.5} />
+      </mesh>
+    );
+  }
+
+  // 프리뷰 사각형
+  const minX = Math.min(startPoint[0], currentPoint[0]);
+  const maxX = Math.max(startPoint[0], currentPoint[0]);
+  const minZ = Math.min(startPoint[1], currentPoint[1]);
+  const maxZ = Math.max(startPoint[1], currentPoint[1]);
+  const width = maxX - minX || 1;
+  const depth = maxZ - minZ || 1;
+  const centerX = (minX + maxX) / 2;
+  const centerZ = (minZ + maxZ) / 2;
+  // 벽 프리뷰는 높이 3m으로 표시
+  const previewH = isWall ? 3 : 0.02;
+  const previewY = isWall ? previewH / 2 : 0.05;
+
+  return (
+    <group>
+      <mesh position={[centerX, previewY, centerZ]}>
+        <boxGeometry args={[width, previewH, depth]} />
+        <meshStandardMaterial color={color} transparent opacity={0.25} />
+      </mesh>
+      <mesh position={[centerX, previewY, centerZ]}>
+        <boxGeometry args={[width, previewH, depth]} />
+        <meshStandardMaterial color={color} wireframe transparent opacity={0.6} />
+      </mesh>
+      <Html position={[centerX, (isWall ? previewH + 0.5 : 0.5), centerZ]} style={{ pointerEvents: 'none' }}>
+        <div style={{
+          background: '#161B22',
+          border: `1px solid ${color}`,
+          borderRadius: 6,
+          padding: '4px 8px',
+          fontSize: 11,
+          color: '#E6EDF3',
+          whiteSpace: 'nowrap',
+        }}>
+          {isWall ? '벽' : '바닥'} {width.toFixed(0)}m × {depth.toFixed(0)}m
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 interface ZoneListPanelProps {
   zones: ZoneConfig[];
   onDeleteZone: (id: string) => void;

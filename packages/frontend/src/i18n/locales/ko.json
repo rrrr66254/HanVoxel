@@ -1,0 +1,112 @@
+{
+  "sidebar": {
+    "spatialManagement": "공간 관리",
+    "operations": "운영",
+    "intelligence": "인텔리전스",
+    "settings": "설정",
+    "viewer": "3D 창고 뷰어",
+    "wizard": "새 창고 만들기",
+    "roi": "ROI 계산기",
+    "sla": "SLA 모니터링",
+    "qc": "품질 검수",
+    "picking": "모바일 피킹",
+    "subscription": "구독 관리",
+    "erp": "ERP 관리",
+    "trade": "무역 인텔리전스",
+    "reorder": "자동 발주",
+    "connector": "ERP 커넥터",
+    "benchmark": "업계 벤치마크",
+    "currentPlan": "현재 플랜"
+  },
+  "header": {
+    "alerts": "알림"
+  },
+  "settings": {
+    "title": "설정",
+    "tabs": {
+      "general": "일반",
+      "apikeys": "API 키",
+      "notifications": "알림",
+      "security": "보안"
+    },
+    "general": {
+      "basicSettings": "기본 설정",
+      "language": "언어",
+      "languageDesc": "인터페이스 표시 언어",
+      "theme": "테마",
+      "themeDesc": "UI 테마 선택",
+      "darkMode": "다크 모드",
+      "lightMode": "라이트 모드",
+      "timezone": "시간대",
+      "timezoneDesc": "날짜/시간 표시 기준",
+      "viewer3d": "3D 뷰어",
+      "grid": "그리드 표시",
+      "gridDesc": "3D 뷰어에 격자선 표시",
+      "fog": "안개 효과",
+      "fogDesc": "원거리 안개 효과",
+      "shadows": "그림자",
+      "shadowsDesc": "실시간 그림자 렌더링"
+    },
+    "apikeys": {
+      "description": "외부 서비스 연동에 필요한 API 키를 관리합니다. 키는 브라우저에 암호화되어 저장됩니다.",
+      "connectionTest": "연결 테스트",
+      "testing": "테스트 중...",
+      "connected": "연결됨",
+      "error": "오류",
+      "copy": "복사",
+      "delete": "삭제",
+      "stripDesc": "결제 처리 (Stripe Secret Key)",
+      "comtradeDesc": "글로벌 무역 데이터 API",
+      "customsDesc": "UNI-PASS 수출입 데이터",
+      "douzonDesc": "ERP 커넥터 인증 키",
+      "mlDesc": "이상 탐지 / 수요 예측 서비스"
+    },
+    "notifications": {
+      "channels": "알림 채널",
+      "email": "이메일 알림",
+      "emailDesc": "이상 탐지 / SLA 위반 시 이메일 발송",
+      "browser": "브라우저 알림",
+      "browserDesc": "푸시 알림 수신",
+      "slack": "Slack 연동",
+      "slackDesc": "Slack 채널로 알림 전송",
+      "types": "알림 유형",
+      "inventory": "재고 이상",
+      "inventoryDesc": "재고 수치 급변 시 알림",
+      "slaViolation": "SLA 위반",
+      "slaViolationDesc": "납기 준수율 기준 미달 시 알림",
+      "qcDefect": "QC 불량",
+      "qcDefectDesc": "품질 검수 불량률 초과 시 알림",
+      "reorderRec": "발주 추천",
+      "reorderRecDesc": "자동 발주 추천 생성 시 알림"
+    },
+    "security": {
+      "auth": "인증",
+      "twoFactor": "2단계 인증 (2FA)",
+      "twoFactorDesc": "Google Authenticator 또는 SMS 인증",
+      "sessionTimeout": "세션 타임아웃",
+      "sessionTimeoutDesc": "비활동 시 자동 로그아웃",
+      "min15": "15분",
+      "min30": "30분",
+      "hour1": "1시간",
+      "disabled": "사용 안 함",
+      "accessLog": "접근 로그",
+      "accessLogDesc": "최근 접근 로그가 여기에 표시됩니다. (Enterprise 플랜 전용 기능)"
+    }
+  },
+  "profile": {
+    "editProfile": "프로필 편집",
+    "settings": "설정",
+    "language": "언어",
+    "theme": "테마",
+    "logout": "로그아웃",
+    "name": "이름",
+    "email": "이메일",
+    "phone": "전화번호",
+    "phonePlaceholder": "010-1234-5678",
+    "cancel": "취소",
+    "save": "저장",
+    "korean": "한국어",
+    "english": "English",
+    "japanese": "日本語"
+  }
+}

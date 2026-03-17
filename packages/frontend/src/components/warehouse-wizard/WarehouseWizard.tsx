@@ -4,6 +4,7 @@ import { WizardStep2 } from './WizardStep2';
 import { WizardStep3 } from './WizardStep3';
 import { WizardStep4 } from './WizardStep4';
 import type { WizardFormData, WarehouseTemplate } from '../../types/warehouse-template';
+import { EMPTY_WAREHOUSE_TEMPLATE } from '../../types/warehouse-template';
 import { MOCK_TEMPLATES } from '../../data/mock-templates';
 
 interface WarehouseWizardProps {
@@ -40,8 +41,11 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<WizardFormData>(DEFAULT_FORM);
 
-  // 선택된 템플릿 조회
-  const selectedTemplate = MOCK_TEMPLATES.find((t) => t.id === form.templateId) ?? null;
+  // 선택된 템플릿 조회 (빈 창고 포함)
+  const isEmptyWarehouse = form.isEmptyWarehouse === true;
+  const selectedTemplate = isEmptyWarehouse
+    ? EMPTY_WAREHOUSE_TEMPLATE
+    : (MOCK_TEMPLATES.find((t) => t.id === form.templateId) ?? null);
 
   const handleComplete = useCallback(() => {
     if (selectedTemplate) {

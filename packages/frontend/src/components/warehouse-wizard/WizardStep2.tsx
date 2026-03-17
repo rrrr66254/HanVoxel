@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { WarehouseTemplate, WizardFormData } from '../../types/warehouse-template';
-import { INDUSTRY_LABELS, INDUSTRY_COLORS } from '../../types/warehouse-template';
+import { INDUSTRY_LABELS, INDUSTRY_COLORS, EMPTY_WAREHOUSE_TEMPLATE } from '../../types/warehouse-template';
 import { getWarehouseTemplates } from '../../api/warehouse-template-api';
 import { TemplatePreview } from './TemplatePreview';
 
@@ -56,8 +56,14 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
   const industryLabel = INDUSTRY_LABELS[form.industry] ?? form.industry;
 
   const handleSelect = (tpl: WarehouseTemplate) => {
-    onChange({ ...form, templateId: tpl.id });
+    onChange({ ...form, templateId: tpl.id, isEmptyWarehouse: false });
   };
+
+  const handleSelectEmpty = () => {
+    onChange({ ...form, templateId: EMPTY_WAREHOUSE_TEMPLATE.id, isEmptyWarehouse: true });
+  };
+
+  const isEmptySelected = form.templateId === EMPTY_WAREHOUSE_TEMPLATE.id;
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: 1100, padding: '0 16px' }}>
@@ -186,8 +192,54 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
             })}
           </div>
 
+          {/* 빈 창고 직접 구성 옵션 */}
+          <div className="mt-4">
+            <button
+              onClick={handleSelectEmpty}
+              className="group relative flex w-full items-center gap-4 rounded-2xl p-5 text-left transition-all"
+              style={{
+                border: isEmptySelected ? '2px solid #6B7280' : '2px solid #21262D',
+                background: isEmptySelected ? '#6B728008' : '#161B22',
+                boxShadow: isEmptySelected
+                  ? '0 0 24px rgba(107,114,128,0.15), 0 4px 16px rgba(0,0,0,0.3)'
+                  : '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              {/* 선택 표시 */}
+              {isEmptySelected && (
+                <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-gray-500">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+              )}
+
+              {/* 아이콘 */}
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
+                style={{
+                  background: isEmptySelected ? '#6B728020' : '#21262D',
+                  border: '1px dashed #484F58',
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={isEmptySelected ? '#9CA3AF' : '#484F58'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </div>
+
+              {/* 텍스트 */}
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-white">빈 창고에서 시작</h3>
+                <p className="mt-1 text-xs text-gray-500 leading-relaxed">
+                  템플릿 없이 빈 공간에서 직접 구성합니다. 프리셋 카탈로그에서 랙·팔레트 등을 자유롭게 배치하세요.
+                </p>
+              </div>
+            </button>
+          </div>
+
           {/* 선택된 템플릿 요약 (하단) */}
-          {selectedTemplate && (
+          {selectedTemplate && !isEmptySelected && (
             <div
               className="mt-6 flex items-center gap-4 rounded-xl px-5 py-4"
               style={{ background: `${industryColor}08`, border: `1px solid ${industryColor}30` }}

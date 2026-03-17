@@ -82,7 +82,27 @@ export interface WizardFormData {
   floorConfigs: FloorConfig[]; // 층별 개별 설정
   industry: string;
   templateId: string | null;
+  isEmptyWarehouse?: boolean; // 빈 창고 직접 구성 모드
 }
+
+// 빈 창고 템플릿 (직접 구성용)
+export const EMPTY_WAREHOUSE_TEMPLATE: WarehouseTemplate = {
+  id: '__empty__',
+  name: '빈 창고',
+  code: 'TPL_EMPTY',
+  description: '템플릿 없이 빈 공간에서 직접 구성합니다. 프리셋 카탈로그에서 랙·팔레트 등을 자유롭게 배치하세요.',
+  industry: '__ALL__',
+  areaMin: null,
+  areaMax: null,
+  rackPresetId: '',
+  palletPresetId: '',
+  containerPresetId: null,
+  rackLayout: 'SINGLE',
+  aisleType: 'REACH_TRUCK',
+  aisleWidth: 2.8,
+  mainAisleWidth: 4.0,
+  metadata: { variant: 'empty', isEmpty: true },
+};
 
 // 특정 층의 설정 가져오기 (개별 설정 없으면 기본값 사용)
 export function getFloorConfig(form: WizardFormData, floorNumber: number): FloorConfig {

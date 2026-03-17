@@ -6,8 +6,8 @@ import { SpatialMesh } from './SpatialMesh';
 import { GhostMesh } from './GhostMesh';
 import { BinOccupancyRenderer } from './BinPlacement';
 import type { BinOccupancy } from './BinPlacement';
-import { ZoneRenderer, ZoneDrawer } from './ZoneDrawing';
-import type { ZoneConfig, ZoneType } from './ZoneDrawing';
+import { ZoneRenderer, ZoneDrawer, RectObjectDrawer } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType, DrawObjectType } from './ZoneDrawing';
 import type { SpatialObject } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
@@ -24,6 +24,7 @@ const SAFETY_LINE_H = 0.15;
 interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
+  selectedIds?: Set<string>;
   onSelect: (object: SpatialObject) => void;
   onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
@@ -35,6 +36,10 @@ interface WarehouseSceneProps {
   onZoneDrawComplete?: (zone: Omit<ZoneConfig, 'id' | 'name'>) => void;
   onZoneDrawCancel?: () => void;
   onSelectZone?: (zone: ZoneConfig) => void;
+  // 바닥/벽 사각형 드로잉
+  drawingObjectType?: DrawObjectType | null;
+  onRectDrawComplete?: (rect: { startX: number; startZ: number; endX: number; endZ: number }) => void;
+  onRectDrawCancel?: () => void;
   // 편집 레이어
   editLayer?: 'structure' | 'objects';
   onResize?: (object: SpatialObject) => void;
@@ -56,8 +61,9 @@ interface WarehouseSceneProps {
  * - 조명: 천장 PointLight 4개 (형광등 배치, 흰색 1.5)
  */
 export function WarehouseScene({
-  objects, selectedId, onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
+  objects, selectedId, selectedIds = new Set(), onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
+  drawingObjectType, onRectDrawComplete, onRectDrawCancel,
   editLayer = 'objects', onResize, onResizeStart, onResizeEnd,
   gridVisible = true,
   binOccupancy = [],
@@ -141,7 +147,7 @@ export function WarehouseScene({
           onSelect={onSelect}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
-          isSelected={obj.id === selectedId}
+          isSelected={obj.id === selectedId || selectedIds.has(obj.id)}
           editLayer={editLayer}
           onResize={onResize}
           onResizeStart={onResizeStart}
@@ -166,6 +172,15 @@ export function WarehouseScene({
           zoneType={drawingZoneType}
           onComplete={onZoneDrawComplete}
           onCancel={onZoneDrawCancel}
+        />
+      )}
+
+      {/* 바닥/벽 사각형 드로잉 모드 */}
+      {drawingObjectType && onRectDrawComplete && onRectDrawCancel && (
+        <RectObjectDrawer
+          drawType={drawingObjectType}
+          onComplete={onRectDrawComplete}
+          onCancel={onRectDrawCancel}
         />
       )}
 

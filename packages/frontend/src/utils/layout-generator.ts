@@ -67,12 +67,6 @@ export function generateWarehouseLayout(
   // 층별 고유 ID 접두사
   const fp = isMultiFloor ? `F${floorNumber}-` : '';
 
-  const rack = template.rackPreset ?? { width: 2.7, depth: 1.1, height: 5.4, levels: 3, levelHeight: 1.5, loadPerLevel: 1000, color: '#f59e0b', code: 'RACK', name: '랙' };
-  const aisleW = template.aisleWidth;
-  const mainAisleW = template.mainAisleWidth;
-  const isBackToBack = template.rackLayout === 'BACK_TO_BACK';
-  const hasContainer = !!template.containerPresetId;
-
   const objects: SpatialObject[] = [];
 
   // --- 바닥 (에폭시 코팅) ---
@@ -112,6 +106,24 @@ export function generateWarehouseLayout(
     [W / 2, H / 2, 0], [W, H, 0.2],
     { metadata: { wallStyle: 'CONCRETE_WALL' } },
   ));
+
+  // 빈 창고 모드: 바닥·벽·천장만 생성하고 반환
+  const templateMeta = template.metadata as Record<string, unknown> | null;
+  if (templateMeta?.isEmpty) {
+    // 출입문 하나만 추가
+    objects.push(obj(
+      'door-dock-main', TYPES.WALL, '도크 셔터', 'DOOR-DOCK',
+      [W / 2, 0, 0.05], [4.0, 4.5, 0.15],
+      { metadata: { doorStyle: 'ROLLING_SHUTTER' } },
+    ));
+    return objects;
+  }
+
+  const rack = template.rackPreset ?? { width: 2.7, depth: 1.1, height: 5.4, levels: 3, levelHeight: 1.5, loadPerLevel: 1000, color: '#f59e0b', code: 'RACK', name: '랙' };
+  const aisleW = template.aisleWidth;
+  const mainAisleW = template.mainAisleWidth;
+  const isBackToBack = template.rackLayout === 'BACK_TO_BACK';
+  const hasContainer = !!template.containerPresetId;
 
   // --- 출입문 ---
   // 앞벽 도크 셔터

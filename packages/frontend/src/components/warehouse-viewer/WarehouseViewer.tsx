@@ -12,10 +12,12 @@ import { EditorBottomBar } from './EditorBottomBar';
 import { KeyboardControlsHandler } from './KeyboardControls';
 import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer } from './BinPlacement';
-import { MoveModeGhost } from './MoveMode';
+import { MoveModeGhost, GroupMoveGhost } from './MoveMode';
+import { BulkRackResizer } from './BulkRackResizer';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
+import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
-import type { ZoneConfig, ZoneType } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType, DrawObjectType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
 import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
@@ -102,7 +104,7 @@ type ToolMode = 'select' | 'move' | 'rotate' | 'delete';
 type ViewMode = 'perspective' | 'top' | 'front';
 
 // 우측 패널 모드
-type RightPanelMode = 'none' | 'editor' | 'rackDetail';
+type RightPanelMode = 'none' | 'editor' | 'rackDetail' | 'bulkResize';
 
 interface WarehouseViewerProps {
   objects: SpatialObject[];
@@ -119,6 +121,8 @@ interface WarehouseViewerProps {
  */
 export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 1, currentFloor = 1, onFloorChange }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 다중 선택 (드래그 선택 박스)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   // 층별 독립 오브젝트 관리 (floor → objects[])
   const [placedByFloor, setPlacedByFloor] = useState<Record<number, SpatialObject[]>>({});
@@ -189,6 +193,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const [zones, setZones] = useState<ZoneConfig[]>([]);
   const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
 
+  // 바닥/벽 사각형 드로잉 상태
+  const [drawingObjectType, setDrawingObjectType] = useState<DrawObjectType | null>(null);
+  const [drawingPreset, setDrawingPreset] = useState<SpatialPreset | null>(null);
+
   // BIN 적재 시스템
   const [binOccupancy, setBinOccupancy] = useState<BinOccupancy[]>([]);
 
@@ -225,6 +233,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const activeObjects = allObjects.filter((o) => {
     if (!o.isActive) return false;
     if (o.id === movingObjectId) return false; // 이동 중이면 원래 위치 숨김
+    if (groupMovingIds && groupMovingIds.has(o.id)) return false; // 그룹 이동 중이면 원래 위치 숨김
     const typeName = o.type.name;
     if (!layerVisibility.racks && typeName === 'RACK') return false;
     if (!layerVisibility.aisles && typeName === 'AISLE') return false;
@@ -278,7 +287,28 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const handleSelect = useCallback((obj: SpatialObject) => {
     if (isMoving || wasDragRef.current) return;
     setSelectedId(obj.id);
+    setSelectedIds(new Set()); // 싱글클릭 시 다중 선택 해제
   }, [isMoving]);
+
+  // === 드래그 선택 박스 완료 콜백 ===
+  const handleBoxSelectionComplete = useCallback((ids: Set<string>, additive: boolean) => {
+    if (additive) {
+      // Shift 키: 기존 선택에 추가/토글
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => {
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+        });
+        return next;
+      });
+    } else {
+      setSelectedIds(ids);
+    }
+    setSelectedId(null);
+    setEditingId(null);
+    setRightPanel('none');
+  }, []);
 
   // === 더블클릭 콜백 (NativeDoubleClickHandler에서 호출) ===
   const handleNativeDoubleClick = useCallback((objectId: string) => {
@@ -344,11 +374,28 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
   // === 프리셋 배치 ===
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
+    // 바닥/벽 프리셋은 사각형 드로잉 모드로 진입
+    const typeInfo = getTypeFromPreset(preset);
+    const styleMeta = extractStyleMeta(preset);
+    const isFloor = typeInfo.name === 'FLOOR' || !!styleMeta.floorStyle;
+    const isWall = typeInfo.name === 'WALL' && !!styleMeta.wallStyle; // 출입문은 제외
+
+    if (isFloor || isWall) {
+      setDrawingObjectType(isFloor ? 'FLOOR' : 'WALL');
+      setDrawingPreset(preset);
+      setPlacingPreset(null);
+      setSelectedId(null);
+      setEditingId(null);
+      setRightPanel('none');
+      handleViewModeChange('top');
+      return;
+    }
+
     setPlacingPreset(preset);
     setSelectedId(null);
     setEditingId(null);
     setRightPanel('none');
-  }, []);
+  }, [getTypeFromPreset, handleViewModeChange]);
 
   const handlePlace = useCallback(async (position: [number, number, number], rotationY?: number) => {
     if (!placingPreset) return;
@@ -576,6 +623,125 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY, scaleX: updatedObj.scaleX, scaleZ: updatedObj.scaleZ });
   }, []);
 
+  // === 다중 선택 그룹 삭제 ===
+  const handleMultiDelete = useCallback(async (ids: Set<string>) => {
+    ids.forEach((id) => handleDeleteObject(id));
+    setSelectedIds(new Set());
+  }, [handleDeleteObject]);
+
+  // === 다중 오브젝트 일괄 크기 수정 ===
+  const [bulkResizeIds, setBulkResizeIds] = useState<Set<string> | null>(null);
+
+  const handleBulkResize = useCallback((ids: Set<string>) => {
+    setBulkResizeIds(ids);
+    setRightPanel('bulkResize');
+    setEditingId(null);
+    setRackDetailId(null);
+  }, []);
+
+  // 일괄 크기 수정 대상 오브젝트 목록
+  const bulkResizeObjects = useMemo(() => {
+    if (!bulkResizeIds) return [];
+    return allObjects.filter((o) => bulkResizeIds.has(o.id));
+  }, [bulkResizeIds, allObjects]);
+
+  // 일괄 프리뷰 (실시간 반영, DB 저장 없음)
+  const handleBulkResizePreview = useCallback((updatedObjs: SpatialObject[]) => {
+    for (const updated of updatedObjs) {
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === updated.id);
+        if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+        return [...prev, updated];
+      });
+    }
+  }, []);
+
+  // 일괄 저장 (DB 반영)
+  const handleBulkResizeSave = useCallback(async (updatedObjs: SpatialObject[]) => {
+    setSaving(true);
+    for (const updated of updatedObjs) {
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === updated.id);
+        if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+        return [...prev, updated];
+      });
+      await updateSpatialObject(updated.id, {
+        positionX: updated.positionX, positionY: updated.positionY, positionZ: updated.positionZ,
+        scaleX: updated.scaleX, scaleY: updated.scaleY, scaleZ: updated.scaleZ,
+        metadata: updated.metadata,
+      });
+    }
+    setSaving(false);
+    setBulkResizeIds(null);
+    setRightPanel('none');
+  }, []);
+
+  const handleBulkResizeClose = useCallback(() => {
+    setBulkResizeIds(null);
+    setRightPanel('none');
+  }, []);
+
+  // === 다중 선택 그룹 이동 ===
+  // 그룹 이동 상태
+  const [groupMovingIds, setGroupMovingIds] = useState<Set<string> | null>(null);
+  const [groupOriginalPositions, setGroupOriginalPositions] = useState<Map<string, { x: number; y: number; z: number }> | null>(null);
+
+  const handleMultiMove = useCallback((ids: Set<string>) => {
+    // 그룹 이동 모드 진입 — 선택된 오브젝트들의 원래 위치 저장
+    const positions = new Map<string, { x: number; y: number; z: number }>();
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    ids.forEach((id) => {
+      const obj = allObjs.find((o) => o.id === id);
+      if (obj) positions.set(id, { x: obj.positionX, y: obj.positionY, z: obj.positionZ });
+    });
+    setGroupMovingIds(ids);
+    setGroupOriginalPositions(positions);
+    setEditingId(null);
+    setRightPanel('none');
+    setRackDetailId(null);
+  }, [objects, placedObjects]);
+
+  const isGroupMoving = groupMovingIds !== null && groupMovingIds.size > 0;
+
+  // 그룹 이동 대상 오브젝트 목록
+  const groupMovingObjects = isGroupMoving
+    ? allObjects.filter((o) => groupMovingIds.has(o.id))
+    : [];
+
+  // 그룹 이동 확정 — 델타 적용
+  const handleGroupMoveDrop = useCallback(async (deltas: Map<string, THREE.Vector3>) => {
+    for (const [id, delta] of deltas) {
+      const origPos = groupOriginalPositions?.get(id);
+      if (!origPos) continue;
+      const newX = origPos.x + delta.x;
+      const newY = origPos.y + delta.y;
+      const newZ = origPos.z + delta.z;
+
+      // 로컬 상태 업데이트
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === id);
+        if (exists) {
+          return prev.map((o) => o.id === id ? { ...o, positionX: newX, positionY: newY, positionZ: newZ } : o);
+        }
+        // 원본 오브젝트에서 가져와서 placedObjects에 추가
+        const orig = objects.find((o) => o.id === id);
+        if (orig) return [...prev, { ...orig, positionX: newX, positionY: newY, positionZ: newZ }];
+        return prev;
+      });
+
+      // DB 업데이트
+      await updateSpatialObject(id, { positionX: newX, positionY: newY, positionZ: newZ });
+    }
+    setGroupMovingIds(null);
+    setGroupOriginalPositions(null);
+  }, [groupOriginalPositions, objects]);
+
+  // 그룹 이동 취소
+  const handleGroupMoveCancel = useCallback(() => {
+    setGroupMovingIds(null);
+    setGroupOriginalPositions(null);
+  }, []);
+
   // BIN 아이템 제거 — 랙 앞 바닥에 배출 (충돌 시 복귀 + 경고)
   const handleRemoveBinItem = useCallback((rackId: string, level: number) => {
     const binItem = binOccupancy.find((o) => o.rackId === rackId && o.level === level);
@@ -674,6 +840,101 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const handleDeleteZone = useCallback((id: string) => { setZones((prev) => prev.filter((z) => z.id !== id)); }, []);
   const handleDrawZone = useCallback((type: ZoneType) => { setDrawingZoneType(type); handleViewModeChange('top'); }, [handleViewModeChange]);
 
+  // === 바닥/벽 사각형 드로잉 완료 ===
+  const handleRectDrawComplete = useCallback(async (rect: { startX: number; startZ: number; endX: number; endZ: number }) => {
+    if (!drawingPreset || !drawingObjectType) return;
+
+    const width = rect.endX - rect.startX;
+    const depth = rect.endZ - rect.startZ;
+    const centerX = (rect.startX + rect.endX) / 2;
+    const centerZ = (rect.startZ + rect.endZ) / 2;
+
+    const typeInfo = getTypeFromPreset(drawingPreset);
+    const styleMeta = extractStyleMeta(drawingPreset);
+    const isFloor = drawingObjectType === 'FLOOR';
+    const isWall = drawingObjectType === 'WALL';
+
+    // 바닥: 얇은 평면, 벽: 높이 있는 박스
+    const objHeight = isFloor ? 0.02 : (drawingPreset.height || 3);
+    const posY = isFloor ? 0.01 : objHeight / 2;
+
+    const code = `${drawingPreset.code}_${Date.now()}`;
+    const localObj: SpatialObject = {
+      id: crypto.randomUUID(), siteId: currentSiteId, typeId: DEFAULT_TYPE_ID,
+      type: { id: DEFAULT_TYPE_ID, name: typeInfo.name, label: drawingPreset.name, description: null, depth: 5 },
+      name: drawingPreset.name, code, status: 'ACTIVE', isActive: true,
+      positionX: centerX, positionY: posY, positionZ: centerZ,
+      rotationX: 0, rotationY: 0, rotationZ: 0,
+      scaleX: width, scaleY: objHeight, scaleZ: depth,
+      color: drawingPreset.color ?? null,
+      opacity: drawingPreset.opacity, visible: true,
+      meshType: (drawingPreset.meshType as MeshType) ?? 'box',
+      metadata: {
+        presetId: drawingPreset.id, presetCode: drawingPreset.code,
+        ...styleMeta,
+      },
+    };
+
+    // 바닥 overlap 제거: 새 바닥과 겹치는 기존 바닥 삭제
+    const overlappingFloorIds: string[] = [];
+    if (isFloor) {
+      const currentObjects = [...(objects ?? []), ...placedObjects];
+      for (const obj of currentObjects) {
+        if (obj.id === localObj.id) continue;
+        const meta = obj.metadata as Record<string, unknown> | null;
+        const isExistingFloor = obj.type.name === 'FLOOR' || !!meta?.floorStyle;
+        if (!isExistingFloor || !obj.isActive) continue;
+
+        // AABB overlap 체크 (XZ 평면)
+        const aLeft = obj.positionX - obj.scaleX / 2;
+        const aRight = obj.positionX + obj.scaleX / 2;
+        const aTop = obj.positionZ - obj.scaleZ / 2;
+        const aBottom = obj.positionZ + obj.scaleZ / 2;
+        const bLeft = rect.startX;
+        const bRight = rect.endX;
+        const bTop = rect.startZ;
+        const bBottom = rect.endZ;
+
+        if (aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop) {
+          overlappingFloorIds.push(obj.id);
+        }
+      }
+    }
+
+    // 겹치는 바닥 제거 후 새 오브젝트 추가
+    setPlacedObjects((prev) => {
+      const filtered = overlappingFloorIds.length > 0
+        ? prev.filter((o) => !overlappingFloorIds.includes(o.id))
+        : prev;
+      return [...filtered, localObj];
+    });
+
+    // DB에서 겹치는 바닥 삭제
+    for (const id of overlappingFloorIds) {
+      await deleteSpatialObject(id);
+    }
+
+    // DB에 새 오브젝트 저장
+    const saved = await createSpatialObject({
+      siteId: currentSiteId, typeId: DEFAULT_TYPE_ID, name: localObj.name, code: localObj.code,
+      positionX: localObj.positionX, positionY: localObj.positionY, positionZ: localObj.positionZ,
+      scaleX: localObj.scaleX, scaleY: localObj.scaleY, scaleZ: localObj.scaleZ,
+      color: localObj.color, opacity: localObj.opacity, meshType: localObj.meshType, metadata: localObj.metadata,
+    });
+    if (saved) {
+      setPlacedObjects((prev) => prev.map((o) => o.id === localObj.id ? { ...localObj, id: saved.id, siteId: saved.siteId, typeId: saved.typeId } : o));
+    }
+
+    // 드로잉 모드 유지 (연속 배치) — ESC로 취소
+    // 계속 그릴 수 있도록 drawingObjectType/drawingPreset 유지
+  }, [drawingPreset, drawingObjectType, currentSiteId, getTypeFromPreset, objects, placedObjects]);
+
+  const handleRectDrawCancel = useCallback(() => {
+    setDrawingObjectType(null);
+    setDrawingPreset(null);
+    handleViewModeChange('perspective');
+  }, [handleViewModeChange]);
+
   // === 드래그 앤 드롭 ===
   const handleDragOver = useCallback((e: React.DragEvent) => { if (e.dataTransfer.types.includes('application/hanvoxel-preset')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }, []);
 
@@ -762,13 +1023,34 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   // === ESC 키로 상세 패널 닫기 ===
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete 키로 다중 선택 삭제
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
+        selectedIds.forEach((id) => handleDeleteObject(id));
+        setSelectedIds(new Set());
+        return;
+      }
+      // Delete 키로 싱글 선택 삭제
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        handleDeleteObject(selectedId);
+        setSelectedId(null);
+        setEditingId(null);
+        setRightPanel('none');
+        setRackDetailId(null);
+        return;
+      }
       if (e.key === 'Escape') {
+        // 그룹 이동 취소
+        if (isGroupMoving) { setGroupMovingIds(null); setGroupOriginalPositions(null); return; }
         // 배치 모드 취소
         if (placingPreset) { setPlacingPreset(null); return; }
         // 이동 모드 취소 (MoveMode에서도 처리하지만 안전장치)
         if (movingObjectId) { setMovingObjectId(null); setOriginalPosition(null); return; }
         // Zone 드로잉 취소
         if (drawingZoneType) { setDrawingZoneType(null); handleViewModeChange('perspective'); return; }
+        // 바닥/벽 드로잉 취소
+        if (drawingObjectType) { handleRectDrawCancel(); return; }
+        // 다중 선택 해제
+        if (selectedIds.size > 0) { setSelectedIds(new Set()); return; }
         // 우측 패널 닫기
         if (rightPanel !== 'none') {
           setEditingId(null);
@@ -781,10 +1063,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, handleViewModeChange]);
+  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleRectDrawCancel]);
 
   // OrbitControls 비활성화 조건
-  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isResizing;
+  const orbitEnabled = !placingPreset && !drawingZoneType && !drawingObjectType && !isMoving && !isGroupMoving && !isResizing;
 
   // 2D 탑뷰 모드
   if (topViewMode) {
@@ -812,8 +1094,8 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             shadows
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; openMenu(e); }}
+            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setSelectedIds(new Set()); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; if (selectedIds.size > 1) { openMenu(e, undefined, selectedIds); } else { openMenu(e); } }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -822,6 +1104,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             }}
           >
             <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} panSpeed={0.5} rotateSpeed={0.5} zoomSpeed={1.2} />
+            <SelectionCameraSync wrapperRef={wrapperRef} />
             <DynamicRotateSpeed controlsRef={controlsRef} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
             {/* 네이티브 더블클릭 핸들러 (R3F 내부 컴포넌트) */}
@@ -834,17 +1117,26 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             />
 
             <WarehouseScene
-              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
+              objects={activeObjects} selectedId={selectedId} selectedIds={selectedIds} onSelect={handleSelect}
               onContextMenu={(obj, e) => {
                 if (wasDragRef.current || rightPanel !== 'none') return; // 드래그 또는 상세 패널 열림 시 컨텍스트 메뉴 비활성
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
-                openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
+                const fakeEvent = { clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent;
+                // 다중 선택된 오브젝트 중 하나를 우클릭한 경우 → 그룹 메뉴
+                if (selectedIds.size > 1 && selectedIds.has(obj.id)) {
+                  openMenu(fakeEvent, undefined, selectedIds);
+                } else {
+                  openMenu(fakeEvent, obj);
+                }
               }}
               placingPreset={placingPreset} onPlace={handlePlace}
               zones={zones} drawingZoneType={drawingZoneType}
               onZoneDrawComplete={handleZoneDrawComplete}
               onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
+              drawingObjectType={drawingObjectType}
+              onRectDrawComplete={handleRectDrawComplete}
+              onRectDrawCancel={handleRectDrawCancel}
               editLayer={editLayer} onResize={handlePreviewUpdate}
               onResizeStart={() => setIsResizing(true)}
               onResizeEnd={() => setIsResizing(false)}
@@ -864,7 +1156,46 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
                 onBlockedToast={handleBlockedToast}
               />
             )}
+
+            {/* 그룹 이동 모드 고스트 */}
+            {isGroupMoving && groupOriginalPositions && (
+              <GroupMoveGhost
+                movingObjects={groupMovingObjects}
+                originalPositions={groupOriginalPositions}
+                onDrop={handleGroupMoveDrop}
+                onCancel={handleGroupMoveCancel}
+              />
+            )}
           </Canvas>
+
+          {/* 드래그 선택 박스 오버레이 */}
+          <SelectionBoxOverlay
+            enabled={!placingPreset && !isMoving && !isGroupMoving && !drawingZoneType && !drawingObjectType && !isResizing && activeTool === 'select'}
+            objects={activeObjects}
+            onSelectionComplete={handleBoxSelectionComplete}
+            wrapperRef={wrapperRef}
+          />
+
+          {/* 다중 선택 정보 배너 */}
+          {selectedIds.size > 1 && (
+            <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span className="font-bold text-blue-400">{selectedIds.size}개</span>
+              오브젝트 선택됨
+              <span className="text-gray-500">· Shift+드래그로 추가 선택</span>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700"
+              >
+                선택 해제
+              </button>
+            </div>
+          )}
 
           {/* 층 표시 (항상 표시, 다층일 때 선택 가능) */}
           {onFloorChange && (
@@ -907,6 +1238,21 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             </div>
           )}
 
+          {/* 그룹 이동 모드 배너 */}
+          {isGroupMoving && (
+            <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span className="font-bold text-blue-400">{groupMovingIds.size}개</span>
+              그룹 이동 중 — 클릭하여 배치
+              <button onClick={handleGroupMoveCancel} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
+            </div>
+          )}
+
           {/* 배치 모드 안내 배너 */}
           {placingPreset && (
             <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
@@ -921,6 +1267,14 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             <div className="absolute bottom-14 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 px-5 py-2.5 text-xs text-gray-300 shadow-lg">
               클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
               <button onClick={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
+            </div>
+          )}
+
+          {/* 바닥/벽 드로잉 모드 안내 */}
+          {drawingObjectType && (
+            <div className="absolute bottom-14 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 px-5 py-2.5 text-xs text-gray-300 shadow-lg">
+              {drawingObjectType === 'FLOOR' ? '바닥' : '벽'}: 클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
+              <button onClick={handleRectDrawCancel} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
             </div>
           )}
 
@@ -975,9 +1329,29 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         </div>
       )}
 
+      {/* 다중 오브젝트 일괄 크기 수정 패널 */}
+      {rightPanel === 'bulkResize' && bulkResizeObjects.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={handleBulkResizeClose}>
+          <div
+            className="h-[80vh] w-80 overflow-hidden rounded-xl border border-[#2A2F38] bg-[#1A1D24] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.15)' }}
+          >
+            <BulkRackResizer
+              racks={bulkResizeObjects}
+              allObjects={allObjects}
+              onPreview={handleBulkResizePreview}
+              onSave={handleBulkResizeSave}
+              onClose={handleBulkResizeClose}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 컨텍스트 메뉴 */}
       <ContextMenu
-        object={contextState.object} position={contextState.position} onClose={closeMenu}
+        object={contextState.object} multiSelectedIds={contextState.multiSelectedIds ?? undefined} position={contextState.position} onClose={closeMenu}
+        multiSelectedObjects={contextState.multiSelectedIds ? allObjects.filter((o) => contextState.multiSelectedIds!.has(o.id)) : undefined}
         onEdit={(obj) => {
           closeMenu();
           // setTimeout으로 컨텍스트 메뉴 닫힌 후 모달 열기
@@ -985,7 +1359,11 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         }}
         onDuplicate={handleDuplicate} onRotate90={handleRotate90}
         onMove={handleStartMove}
-        onDelete={handleDeleteObject} onResetView={handleResetView}
+        onDelete={handleDeleteObject}
+        onMultiMove={handleMultiMove}
+        onMultiDelete={handleMultiDelete}
+        onBulkResize={handleBulkResize}
+        onResetView={handleResetView}
         onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
         onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}
       />
@@ -1010,11 +1388,12 @@ function DynamicRotateSpeed({ controlsRef }: { controlsRef: React.RefObject<Orbi
     // 카메라-타겟 거리 계산
     const dist = camera.position.distanceTo(controls.target);
 
-    // 거리에 비례하여 회전 속도 조절 (가까울수록 느리게)
-    // 거리 5~120m → rotateSpeed 0.1~0.5 (로그 스케일)
-    const minSpeed = 0.08;
+    // 거리에 비례하여 회전 속도 조절 (가까울수록 공전 최소화)
+    // 거리 5m → 0.02 / 15m → 0.08 / 40m → 0.25 / 120m → 0.5
+    const minSpeed = 0.02;
     const maxSpeed = 0.5;
-    const speed = minSpeed + (maxSpeed - minSpeed) * Math.min(1, Math.log(dist / 5 + 1) / Math.log(25));
+    const t = Math.min(1, Math.max(0, (dist - 5) / 115));
+    const speed = minSpeed + (maxSpeed - minSpeed) * (t * t);
     controls.rotateSpeed = speed;
   });
 

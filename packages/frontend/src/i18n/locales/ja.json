@@ -1,0 +1,112 @@
+{
+  "sidebar": {
+    "spatialManagement": "空間管理",
+    "operations": "運営",
+    "intelligence": "インテリジェンス",
+    "settings": "設定",
+    "viewer": "3D 倉庫ビューア",
+    "wizard": "新規倉庫作成",
+    "roi": "ROI 計算機",
+    "sla": "SLA モニタリング",
+    "qc": "品質検査",
+    "picking": "モバイルピッキング",
+    "subscription": "サブスクリプション",
+    "erp": "ERP 管理",
+    "trade": "貿易インテリジェンス",
+    "reorder": "自動発注",
+    "connector": "ERP コネクタ",
+    "benchmark": "業界ベンチマーク",
+    "currentPlan": "現在のプラン"
+  },
+  "header": {
+    "alerts": "通知"
+  },
+  "settings": {
+    "title": "設定",
+    "tabs": {
+      "general": "一般",
+      "apikeys": "API キー",
+      "notifications": "通知",
+      "security": "セキュリティ"
+    },
+    "general": {
+      "basicSettings": "基本設定",
+      "language": "言語",
+      "languageDesc": "インターフェース表示言語",
+      "theme": "テーマ",
+      "themeDesc": "UIテーマ選択",
+      "darkMode": "ダークモード",
+      "lightMode": "ライトモード",
+      "timezone": "タイムゾーン",
+      "timezoneDesc": "日付/時刻表示基準",
+      "viewer3d": "3D ビューア",
+      "grid": "グリッド表示",
+      "gridDesc": "3Dビューアにグリッド線を表示",
+      "fog": "フォグ効果",
+      "fogDesc": "遠距離フォグ効果",
+      "shadows": "影",
+      "shadowsDesc": "リアルタイムシャドウレンダリング"
+    },
+    "apikeys": {
+      "description": "外部サービス連携に必要なAPIキーを管理します。キーはブラウザに暗号化されて保存されます。",
+      "connectionTest": "接続テスト",
+      "testing": "テスト中...",
+      "connected": "接続済み",
+      "error": "エラー",
+      "copy": "コピー",
+      "delete": "削除",
+      "stripDesc": "決済処理 (Stripe Secret Key)",
+      "comtradeDesc": "グローバル貿易データAPI",
+      "customsDesc": "UNI-PASS 輸出入データ",
+      "douzonDesc": "ERPコネクタ認証キー",
+      "mlDesc": "異常検知 / 需要予測サービス"
+    },
+    "notifications": {
+      "channels": "通知チャンネル",
+      "email": "メール通知",
+      "emailDesc": "異常検知 / SLA違反時にメール送信",
+      "browser": "ブラウザ通知",
+      "browserDesc": "プッシュ通知を受信",
+      "slack": "Slack 連携",
+      "slackDesc": "Slackチャンネルに通知送信",
+      "types": "通知タイプ",
+      "inventory": "在庫異常",
+      "inventoryDesc": "在庫数値の急変時に通知",
+      "slaViolation": "SLA 違反",
+      "slaViolationDesc": "納期遵守率が基準未満の場合に通知",
+      "qcDefect": "QC 不良",
+      "qcDefectDesc": "品質検査不良率が閾値を超えた場合に通知",
+      "reorderRec": "発注推奨",
+      "reorderRecDesc": "自動発注推奨生成時に通知"
+    },
+    "security": {
+      "auth": "認証",
+      "twoFactor": "二段階認証 (2FA)",
+      "twoFactorDesc": "Google Authenticator またはSMS認証",
+      "sessionTimeout": "セッションタイムアウト",
+      "sessionTimeoutDesc": "非活動時に自動ログアウト",
+      "min15": "15分",
+      "min30": "30分",
+      "hour1": "1時間",
+      "disabled": "無効",
+      "accessLog": "アクセスログ",
+      "accessLogDesc": "最近のアクセスログがここに表示されます。(Enterpriseプラン専用機能)"
+    }
+  },
+  "profile": {
+    "editProfile": "プロフィール編集",
+    "settings": "設定",
+    "language": "言語",
+    "theme": "テーマ",
+    "logout": "ログアウト",
+    "name": "名前",
+    "email": "メール",
+    "phone": "電話番号",
+    "phonePlaceholder": "090-1234-5678",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "korean": "한국어",
+    "english": "English",
+    "japanese": "日本語"
+  }
+}
