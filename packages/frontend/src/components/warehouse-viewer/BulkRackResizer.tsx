@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { X, Save, RotateCcw, AlertTriangle } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
-interface BulkRackResizerProps {
-  /** 크기 수정 대상 랙 목록 */
-  racks: SpatialObject[];
+interface BulkResizerProps {
+  /** 크기 수정 대상 오브젝트 목록 (동일 타입) */
+  objects: SpatialObject[];
   /** 씬 내 전체 오브젝트 (충돌 검사용) */
   allObjects: SpatialObject[];
   /** 실시간 프리뷰 (DB 저장 없이) */
@@ -15,8 +15,23 @@ interface BulkRackResizerProps {
   onClose: () => void;
 }
 
-// 슬라이더 범위 상수
-const RANGE = {
+// 하위 호환을 위한 타입 별칭
+interface BulkRackResizerProps {
+  racks: SpatialObject[];
+  allObjects: SpatialObject[];
+  onPreview: (updated: SpatialObject[]) => void;
+  onSave: (updated: SpatialObject[]) => void;
+  onClose: () => void;
+}
+
+// 타입별 슬라이더 범위 상수
+const RANGE_COMMON = {
+  width:  { min: 0.1, max: 20.0, step: 0.1, label: '너비 (W)' },
+  depth:  { min: 0.1, max: 20.0, step: 0.1, label: '깊이 (D)' },
+  height: { min: 0.01, max: 12.0, step: 0.01, label: '높이 (H)' },
+};
+
+const RANGE_RACK = {
   width:  { min: 1.0, max: 6.0, step: 0.1, label: '너비 (W)' },
   depth:  { min: 0.5, max: 6.0, step: 0.1, label: '깊이 (D)' },
   height: { min: 2.0, max: 12.0, step: 0.1, label: '높이 (H)' },
@@ -24,24 +39,69 @@ const RANGE = {
   levelHeight: { min: 0.8, max: 3.0, step: 0.05, label: '단간 높이' },
 };
 
+const RANGE_PALLET = {
+  width:  { min: 0.4, max: 2.0, step: 0.01, label: '너비 (W)' },
+  depth:  { min: 0.4, max: 2.0, step: 0.01, label: '깊이 (D)' },
+  height: { min: 0.01, max: 2.0, step: 0.01, label: '높이 (H)' },
+};
+
+const RANGE_BOX = {
+  width:  { min: 0.1, max: 2.0, step: 0.01, label: '너비 (W)' },
+  depth:  { min: 0.1, max: 2.0, step: 0.01, label: '깊이 (D)' },
+  height: { min: 0.1, max: 2.0, step: 0.01, label: '높이 (H)' },
+};
+
+const RANGE_CONTAINER = {
+  width:  { min: 1.0, max: 5.0, step: 0.1, label: '너비 (W)' },
+  depth:  { min: 3.0, max: 20.0, step: 0.1, label: '깊이 (D)' },
+  height: { min: 1.0, max: 5.0, step: 0.1, label: '높이 (H)' },
+};
+
+const RANGE_AISLE = {
+  width:  { min: 0.5, max: 10.0, step: 0.1, label: '너비 (W)' },
+  depth:  { min: 0.5, max: 50.0, step: 0.1, label: '깊이 (D)' },
+  height: { min: 0.01, max: 1.0, step: 0.01, label: '높이 (H)' },
+};
+
+// 타입명 → 한국어 라벨
+const TYPE_LABELS: Record<string, string> = {
+  RACK: '랙', PALLET: '팔레트', CONTAINER: '컨테이너',
+  AISLE: '통로', FLOOR: '바닥', WALL: '벽', DOOR: '출입문',
+  ZONE: '구역', SAFETY_ZONE: '안전구역',
+};
+
+// 타입에 따른 슬라이더 범위 결정
+function getRangeForType(typeName: string) {
+  switch (typeName) {
+    case 'RACK': return RANGE_RACK;
+    case 'PALLET': return RANGE_PALLET;
+    case 'CONTAINER': return RANGE_CONTAINER;
+    case 'AISLE': return RANGE_AISLE;
+    default: return RANGE_COMMON;
+  }
+}
+
+// 랙 타입 여부 판별
+function isRackType(objects: SpatialObject[]): boolean {
+  return objects.length > 0 && objects[0].type.name === 'RACK';
+}
+
 /**
  * 오버랩 방지 자동 위치 조정
- * 랙의 크기가 변경되면, 주변 랙과 겹치지 않도록 위치를 재배치한다.
- * 전략: 각 랙의 기존 정렬 방향(행/열)을 감지하고, 간격을 유지하며 재배치
+ * 오브젝트의 크기가 변경되면, 주변 오브젝트와 겹치지 않도록 위치를 재배치한다.
+ * 전략: 기존 정렬 방향(행/열)을 감지하고, 간격을 유지하며 재배치
  */
-function autoRepositionRacks(
-  racks: SpatialObject[],
+function autoRepositionObjects(
+  targets: SpatialObject[],
   allObjects: SpatialObject[],
   excludeIds: Set<string>,
 ): SpatialObject[] {
-  if (racks.length <= 1) return racks;
+  if (targets.length <= 1) return targets;
 
-  // 랙 그룹의 주축 방향 감지 (X축/Z축 정렬 여부)
-  // 같은 Z에 있는 랙이 많으면 → X축 정렬 (가로 행)
-  // 같은 X에 있는 랙이 많으면 → Z축 정렬 (세로 열)
+  // 그룹의 주축 방향 감지 (X축/Z축 정렬 여부)
   const zGroups = new Map<string, SpatialObject[]>();
   const xGroups = new Map<string, SpatialObject[]>();
-  for (const r of racks) {
+  for (const r of targets) {
     const zKey = r.positionZ.toFixed(1);
     const xKey = r.positionX.toFixed(1);
     if (!zGroups.has(zKey)) zGroups.set(zKey, []);
@@ -50,30 +110,24 @@ function autoRepositionRacks(
     xGroups.get(xKey)!.push(r);
   }
 
-  // 가장 큰 그룹 기준 주축 결정
   let maxZGroupSize = 0;
   let maxXGroupSize = 0;
   zGroups.forEach((g) => { if (g.length > maxZGroupSize) maxZGroupSize = g.length; });
   xGroups.forEach((g) => { if (g.length > maxXGroupSize) maxXGroupSize = g.length; });
 
-  const result = [...racks];
+  const result = [...targets];
 
-  // 행 기반 재배치 (같은 Z에 있는 랙들을 X축으로 정렬)
+  // 행 기반 재배치 (같은 Z에 있는 오브젝트들을 X축으로 정렬)
   if (maxZGroupSize >= maxXGroupSize) {
-    // Z 기준 그룹별 처리
     zGroups.forEach((group) => {
       if (group.length <= 1) return;
-      // X 좌표 순 정렬
       group.sort((a, b) => a.positionX - b.positionX);
 
-      // 기존 간격 계산 (첫 번째 ~ 두 번째 사이 간격 기반)
-      const firstRack = group[0];
       const gap = group.length > 1
         ? Math.max(0.2, (group[1].positionX - group[0].positionX) - (group[0].scaleX / 2 + group[1].scaleX / 2))
         : 0.2;
 
-      // 시작점 (첫 번째 랙의 좌측 모서리)
-      let currentX = firstRack.positionX;
+      let currentX = group[0].positionX;
 
       for (let i = 0; i < group.length; i++) {
         const rIdx = result.findIndex((r) => r.id === group[i].id);
@@ -91,7 +145,7 @@ function autoRepositionRacks(
       }
     });
   } else {
-    // 열 기반 재배치 (같은 X에 있는 랙들을 Z축으로 정렬)
+    // 열 기반 재배치
     xGroups.forEach((group) => {
       if (group.length <= 1) return;
       group.sort((a, b) => a.positionZ - b.positionZ);
@@ -119,7 +173,7 @@ function autoRepositionRacks(
     });
   }
 
-  // 외부 오브젝트와의 충돌 해소 (대상 랙이 아닌 오브젝트와)
+  // 외부 오브젝트와의 충돌 해소
   const others = allObjects.filter((o) => {
     if (excludeIds.has(o.id)) return false;
     if (!o.isActive) return false;
@@ -135,7 +189,6 @@ function autoRepositionRacks(
     const r = result[i];
     for (const other of others) {
       if (boxOverlaps(r, other)) {
-        // 가장 가까운 방향으로 밀어냄
         const dx = r.positionX - other.positionX;
         const dz = r.positionZ - other.positionZ;
         const overlapX = (r.scaleX / 2 + other.scaleX / 2) - Math.abs(dx);
@@ -167,35 +220,44 @@ function boxOverlaps(a: SpatialObject, b: SpatialObject): boolean {
 }
 
 /**
- * 다중 랙 일괄 크기 수정 패널
- * - 슬라이더로 W/D/H/단수/단간높이 일괄 조정
+ * 다중 오브젝트 일괄 크기 수정 패널 (범용)
+ * - 동일 타입 오브젝트에 대해 W/D/H 일괄 조정
+ * - 랙의 경우 단수/단간높이 추가 슬라이더
  * - 실시간 3D 프리뷰
  * - 오버랩 방지 자동 위치 조정
  */
-export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose }: BulkRackResizerProps) {
+function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: BulkResizerProps) {
   // 원본 백업 (취소 시 복원용)
-  const originalRacks = useRef(racks.map((r) => ({ ...r }))).current;
+  const originals = useRef(objects.map((r) => ({ ...r }))).current;
+
+  // 타입 판별
+  const typeName = objects[0]?.type.name ?? 'GENERIC';
+  const isRack = isRackType(objects);
+  const range = getRangeForType(typeName);
+  const typeLabel = TYPE_LABELS[typeName] ?? '오브젝트';
 
   // 초기 평균값 계산
   const initAvg = useMemo(() => {
     let w = 0, d = 0, h = 0, lv = 0, lh = 0;
-    for (const r of racks) {
+    for (const r of objects) {
       const meta = r.metadata as Record<string, unknown> | null;
       w += r.scaleX;
       d += r.scaleZ;
       h += r.scaleY;
-      lv += (meta?.levels as number) ?? 3;
-      lh += (meta?.levelHeight as number) ?? 1.5;
+      if (isRack) {
+        lv += (meta?.levels as number) ?? 3;
+        lh += (meta?.levelHeight as number) ?? 1.5;
+      }
     }
-    const n = racks.length;
+    const n = objects.length;
     return {
       width: parseFloat((w / n).toFixed(2)),
       depth: parseFloat((d / n).toFixed(2)),
       height: parseFloat((h / n).toFixed(2)),
-      levels: Math.round(lv / n),
-      levelHeight: parseFloat((lh / n).toFixed(2)),
+      levels: isRack ? Math.round(lv / n) : 0,
+      levelHeight: isRack ? parseFloat((lh / n).toFixed(2)) : 0,
     };
-  }, [racks]);
+  }, [objects, isRack]);
 
   const [width, setWidth] = useState(initAvg.width);
   const [depth, setDepth] = useState(initAvg.depth);
@@ -207,38 +269,46 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
   // 프리뷰 디바운스
   const previewTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  // 업데이트된 오브젝트 생성 (공통 로직)
+  const buildUpdated = useCallback(() => {
+    return objects.map((r) => {
+      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+      const updated: SpatialObject = {
+        ...r,
+        scaleX: width,
+        scaleZ: depth,
+        scaleY: height,
+        // Y 위치 재계산 (바닥 기준)
+        positionY: height / 2,
+      };
+      // 랙이면 metadata에 단수/단간높이 반영
+      if (isRack) {
+        updated.metadata = {
+          ...meta,
+          levels,
+          levelHeight,
+          levelHeights: Array.from({ length: levels }, () => levelHeight),
+        };
+      }
+      return updated;
+    });
+  }, [objects, width, depth, height, levels, levelHeight, isRack]);
+
   // 슬라이더 변경 시 실시간 프리뷰
   const emitPreview = useCallback(() => {
     clearTimeout(previewTimer.current);
     previewTimer.current = setTimeout(() => {
-      const excludeIds = new Set(racks.map((r) => r.id));
-      let updated = racks.map((r) => {
-        const meta = (r.metadata ?? {}) as Record<string, unknown>;
-        return {
-          ...r,
-          scaleX: width,
-          scaleZ: depth,
-          scaleY: height,
-          // Y 위치 재계산 (바닥 기준)
-          positionY: height / 2,
-          metadata: {
-            ...meta,
-            levels,
-            levelHeight,
-            // 개별 층 높이 배열 초기화
-            levelHeights: Array.from({ length: levels }, () => levelHeight),
-          },
-        };
-      });
+      const excludeIds = new Set(objects.map((r) => r.id));
+      let updated = buildUpdated();
 
       // 자동 재배치
       if (autoReposition) {
-        updated = autoRepositionRacks(updated, allObjects, excludeIds);
+        updated = autoRepositionObjects(updated, allObjects, excludeIds);
       }
 
       onPreview(updated);
     }, 30);
-  }, [racks, allObjects, width, depth, height, levels, levelHeight, autoReposition, onPreview]);
+  }, [objects, allObjects, buildUpdated, autoReposition, onPreview]);
 
   useEffect(() => {
     emitPreview();
@@ -246,71 +316,61 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
 
   // 저장
   const handleSave = useCallback(() => {
-    const excludeIds = new Set(racks.map((r) => r.id));
-    let updated = racks.map((r) => {
-      const meta = (r.metadata ?? {}) as Record<string, unknown>;
-      return {
-        ...r,
-        scaleX: width,
-        scaleZ: depth,
-        scaleY: height,
-        positionY: height / 2,
-        metadata: {
-          ...meta,
-          levels,
-          levelHeight,
-          levelHeights: Array.from({ length: levels }, () => levelHeight),
-        },
-      };
-    });
+    const excludeIds = new Set(objects.map((r) => r.id));
+    let updated = buildUpdated();
 
     if (autoReposition) {
-      updated = autoRepositionRacks(updated, allObjects, excludeIds);
+      updated = autoRepositionObjects(updated, allObjects, excludeIds);
     }
 
     onSave(updated);
-  }, [racks, allObjects, width, depth, height, levels, levelHeight, autoReposition, onSave]);
+  }, [objects, allObjects, buildUpdated, autoReposition, onSave]);
 
   // 취소 (원본 복원)
   const handleCancel = useCallback(() => {
-    onPreview(originalRacks);
+    onPreview(originals);
     onClose();
-  }, [originalRacks, onPreview, onClose]);
+  }, [originals, onPreview, onClose]);
 
   // 리셋 (초기 평균값으로)
   const handleReset = useCallback(() => {
     setWidth(initAvg.width);
     setDepth(initAvg.depth);
     setHeight(initAvg.height);
-    setLevels(initAvg.levels);
-    setLevelHeight(initAvg.levelHeight);
-  }, [initAvg]);
+    if (isRack) {
+      setLevels(initAvg.levels);
+      setLevelHeight(initAvg.levelHeight);
+    }
+  }, [initAvg, isRack]);
 
   // 충돌 여부 표시
   const hasOverlap = useMemo(() => {
     if (!autoReposition) {
-      // 자동 재배치 비활성 시 수동 충돌 체크
-      const excludeIds = new Set(racks.map((r) => r.id));
-      const testRacks = racks.map((r) => ({
+      const excludeIds = new Set(objects.map((r) => r.id));
+      const testObjs = objects.map((r) => ({
         ...r,
         scaleX: width, scaleZ: depth, scaleY: height, positionY: height / 2,
       }));
-      // 랙 간 충돌
-      for (let i = 0; i < testRacks.length; i++) {
-        for (let j = i + 1; j < testRacks.length; j++) {
-          if (boxOverlaps(testRacks[i], testRacks[j])) return true;
+      // 대상 간 충돌
+      for (let i = 0; i < testObjs.length; i++) {
+        for (let j = i + 1; j < testObjs.length; j++) {
+          if (boxOverlaps(testObjs[i], testObjs[j])) return true;
         }
       }
       // 외부 오브젝트 충돌
       const others = allObjects.filter((o) => !excludeIds.has(o.id) && o.isActive && o.type.name !== 'FLOOR' && o.type.name !== 'AISLE');
-      for (const r of testRacks) {
+      for (const r of testObjs) {
         for (const o of others) {
           if (boxOverlaps(r, o)) return true;
         }
       }
     }
     return false;
-  }, [racks, allObjects, width, depth, height, autoReposition]);
+  }, [objects, allObjects, width, depth, height, autoReposition]);
+
+  const wRange = range.width;
+  const dRange = range.depth;
+  const hRange = range.height;
 
   return (
     <div style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -318,9 +378,9 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>랙 크기 일괄 수정</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{typeLabel} 크기 일괄 수정</h3>
             <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
-              {racks.length}개
+              {objects.length}개
             </span>
           </div>
           <span style={{ fontSize: 10, color: '#484F58' }}>슬라이더를 조절하면 실시간으로 반영됩니다</span>
@@ -332,15 +392,18 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
 
       <div style={{ flex: 1, overflow: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 크기 슬라이더 */}
-        <SliderField label={RANGE.width.label} value={width} onChange={setWidth} min={RANGE.width.min} max={RANGE.width.max} step={RANGE.width.step} unit="m" color="#F85149" />
-        <SliderField label={RANGE.depth.label} value={depth} onChange={setDepth} min={RANGE.depth.min} max={RANGE.depth.max} step={RANGE.depth.step} unit="m" color="#2D7DD2" />
-        <SliderField label={RANGE.height.label} value={height} onChange={setHeight} min={RANGE.height.min} max={RANGE.height.max} step={RANGE.height.step} unit="m" color="#3FB950" />
+        <SliderField label={wRange.label} value={width} onChange={setWidth} min={wRange.min} max={wRange.max} step={wRange.step} unit="m" color="#F85149" />
+        <SliderField label={dRange.label} value={depth} onChange={setDepth} min={dRange.min} max={dRange.max} step={dRange.step} unit="m" color="#2D7DD2" />
+        <SliderField label={hRange.label} value={height} onChange={setHeight} min={hRange.min} max={hRange.max} step={hRange.step} unit="m" color="#3FB950" />
 
-        <div style={{ height: 1, background: '#2A2F38' }} />
-
-        {/* 단수/단간높이 */}
-        <SliderField label={RANGE.levels.label} value={levels} onChange={(v) => setLevels(Math.round(v))} min={RANGE.levels.min} max={RANGE.levels.max} step={RANGE.levels.step} unit="단" color="#F59E0B" />
-        <SliderField label={RANGE.levelHeight.label} value={levelHeight} onChange={setLevelHeight} min={RANGE.levelHeight.min} max={RANGE.levelHeight.max} step={RANGE.levelHeight.step} unit="m" color="#A78BFA" />
+        {/* 랙 전용: 단수/단간높이 */}
+        {isRack && 'levels' in range && (
+          <>
+            <div style={{ height: 1, background: '#2A2F38' }} />
+            <SliderField label={(range as typeof RANGE_RACK).levels.label} value={levels} onChange={(v) => setLevels(Math.round(v))} min={(range as typeof RANGE_RACK).levels.min} max={(range as typeof RANGE_RACK).levels.max} step={(range as typeof RANGE_RACK).levels.step} unit="단" color="#F59E0B" />
+            <SliderField label={(range as typeof RANGE_RACK).levelHeight.label} value={levelHeight} onChange={setLevelHeight} min={(range as typeof RANGE_RACK).levelHeight.min} max={(range as typeof RANGE_RACK).levelHeight.max} step={(range as typeof RANGE_RACK).levelHeight.step} unit="m" color="#A78BFA" />
+          </>
+        )}
 
         <div style={{ height: 1, background: '#2A2F38' }} />
 
@@ -348,7 +411,7 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: '#E6EDF3' }}>오버랩 방지 자동 배치</div>
-            <div style={{ fontSize: 10, color: '#484F58', marginTop: 2 }}>크기 변경 시 랙 간 겹침 자동 해소</div>
+            <div style={{ fontSize: 10, color: '#484F58', marginTop: 2 }}>크기 변경 시 오브젝트 간 겹침 자동 해소</div>
           </div>
           <button
             onClick={() => setAutoReposition((v) => !v)}
@@ -375,21 +438,25 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
             fontSize: 11, color: '#F85149',
           }}>
             <AlertTriangle size={14} />
-            랙이 다른 오브젝트와 겹칩니다. 자동 배치를 켜거나 크기를 줄이세요.
+            {typeLabel}이(가) 다른 오브젝트와 겹칩니다. 자동 배치를 켜거나 크기를 줄이세요.
           </div>
         )}
 
         {/* 현재 값 요약 */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+          display: 'grid', gridTemplateColumns: isRack ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: 8,
           padding: '10px', borderRadius: 8, background: '#0D1117', border: '1px solid #21262D',
         }}>
-          <SummaryCell label="W" value={`${width.toFixed(1)}m`} color="#F85149" />
-          <SummaryCell label="D" value={`${depth.toFixed(1)}m`} color="#2D7DD2" />
-          <SummaryCell label="H" value={`${height.toFixed(1)}m`} color="#3FB950" />
-          <SummaryCell label="단수" value={`${levels}단`} color="#F59E0B" />
-          <SummaryCell label="단높" value={`${levelHeight.toFixed(2)}m`} color="#A78BFA" />
-          <SummaryCell label="하중" value={`${((racks[0]?.metadata as Record<string, unknown> | null)?.loadPerLevel as number ?? 1000)}kg`} color="#8B949E" />
+          <SummaryCell label="W" value={`${width.toFixed(step2dp(wRange.step))}m`} color="#F85149" />
+          <SummaryCell label="D" value={`${depth.toFixed(step2dp(dRange.step))}m`} color="#2D7DD2" />
+          <SummaryCell label="H" value={`${height.toFixed(step2dp(hRange.step))}m`} color="#3FB950" />
+          {isRack && (
+            <>
+              <SummaryCell label="단수" value={`${levels}단`} color="#F59E0B" />
+              <SummaryCell label="단높" value={`${levelHeight.toFixed(2)}m`} color="#A78BFA" />
+              <SummaryCell label="하중" value={`${((objects[0]?.metadata as Record<string, unknown> | null)?.loadPerLevel as number ?? 1000)}kg`} color="#8B949E" />
+            </>
+          )}
         </div>
 
         {/* 저장 */}
@@ -402,7 +469,7 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
             fontFamily: 'inherit',
           }}
         >
-          <Save size={14} /> {racks.length}개 랙 일괄 적용
+          <Save size={14} /> {objects.length}개 {typeLabel} 일괄 적용
         </button>
 
         <button onClick={handleReset} style={{
@@ -417,6 +484,24 @@ export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose 
       </div>
     </div>
   );
+}
+
+// step값으로 소수점 자릿수 계산
+function step2dp(step: number): number {
+  if (step >= 1) return 0;
+  const s = step.toString();
+  const dotIdx = s.indexOf('.');
+  return dotIdx < 0 ? 0 : s.length - dotIdx - 1;
+}
+
+// 새로운 범용 API — objects prop 사용
+export function BulkResizer(props: BulkResizerProps) {
+  return <BulkResizerCore {...props} />;
+}
+
+// 하위 호환: 기존 BulkRackResizer (racks prop → objects로 매핑)
+export function BulkRackResizer({ racks, allObjects, onPreview, onSave, onClose }: BulkRackResizerProps) {
+  return <BulkResizerCore objects={racks} allObjects={allObjects} onPreview={onPreview} onSave={onSave} onClose={onClose} />;
 }
 
 // 슬라이더 필드 컴포넌트

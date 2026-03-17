@@ -104,7 +104,7 @@ type ToolMode = 'select' | 'move' | 'rotate' | 'delete';
 type ViewMode = 'perspective' | 'top' | 'front';
 
 // 우측 패널 모드
-type RightPanelMode = 'none' | 'editor' | 'rackDetail' | 'bulkRackResize';
+type RightPanelMode = 'none' | 'editor' | 'rackDetail' | 'bulkResize';
 
 interface WarehouseViewerProps {
   objects: SpatialObject[];
@@ -608,25 +608,25 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     setSelectedIds(new Set());
   }, [handleDeleteObject]);
 
-  // === 다중 랙 일괄 크기 수정 ===
-  const [bulkRackResizeIds, setBulkRackResizeIds] = useState<Set<string> | null>(null);
+  // === 다중 오브젝트 일괄 크기 수정 ===
+  const [bulkResizeIds, setBulkResizeIds] = useState<Set<string> | null>(null);
 
-  const handleBulkRackResize = useCallback((ids: Set<string>) => {
-    setBulkRackResizeIds(ids);
-    setRightPanel('bulkRackResize');
+  const handleBulkResize = useCallback((ids: Set<string>) => {
+    setBulkResizeIds(ids);
+    setRightPanel('bulkResize');
     setEditingId(null);
     setRackDetailId(null);
   }, []);
 
-  // 일괄 크기 수정 대상 랙 목록
-  const bulkRackResizeRacks = useMemo(() => {
-    if (!bulkRackResizeIds) return [];
-    return allObjects.filter((o) => bulkRackResizeIds.has(o.id));
-  }, [bulkRackResizeIds, allObjects]);
+  // 일괄 크기 수정 대상 오브젝트 목록
+  const bulkResizeObjects = useMemo(() => {
+    if (!bulkResizeIds) return [];
+    return allObjects.filter((o) => bulkResizeIds.has(o.id));
+  }, [bulkResizeIds, allObjects]);
 
   // 일괄 프리뷰 (실시간 반영, DB 저장 없음)
-  const handleBulkRackPreview = useCallback((updatedRacks: SpatialObject[]) => {
-    for (const updated of updatedRacks) {
+  const handleBulkResizePreview = useCallback((updatedObjs: SpatialObject[]) => {
+    for (const updated of updatedObjs) {
       setPlacedObjects((prev) => {
         const exists = prev.some((o) => o.id === updated.id);
         if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
@@ -636,9 +636,9 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   }, []);
 
   // 일괄 저장 (DB 반영)
-  const handleBulkRackSave = useCallback(async (updatedRacks: SpatialObject[]) => {
+  const handleBulkResizeSave = useCallback(async (updatedObjs: SpatialObject[]) => {
     setSaving(true);
-    for (const updated of updatedRacks) {
+    for (const updated of updatedObjs) {
       setPlacedObjects((prev) => {
         const exists = prev.some((o) => o.id === updated.id);
         if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
@@ -651,12 +651,12 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
       });
     }
     setSaving(false);
-    setBulkRackResizeIds(null);
+    setBulkResizeIds(null);
     setRightPanel('none');
   }, []);
 
-  const handleBulkRackResizeClose = useCallback(() => {
-    setBulkRackResizeIds(null);
+  const handleBulkResizeClose = useCallback(() => {
+    setBulkResizeIds(null);
     setRightPanel('none');
   }, []);
 
@@ -1200,20 +1200,20 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         </div>
       )}
 
-      {/* 다중 랙 일괄 크기 수정 패널 */}
-      {rightPanel === 'bulkRackResize' && bulkRackResizeRacks.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={handleBulkRackResizeClose}>
+      {/* 다중 오브젝트 일괄 크기 수정 패널 */}
+      {rightPanel === 'bulkResize' && bulkResizeObjects.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={handleBulkResizeClose}>
           <div
             className="h-[80vh] w-80 overflow-hidden rounded-xl border border-[#2A2F38] bg-[#1A1D24] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.15)' }}
           >
             <BulkRackResizer
-              racks={bulkRackResizeRacks}
+              racks={bulkResizeObjects}
               allObjects={allObjects}
-              onPreview={handleBulkRackPreview}
-              onSave={handleBulkRackSave}
-              onClose={handleBulkRackResizeClose}
+              onPreview={handleBulkResizePreview}
+              onSave={handleBulkResizeSave}
+              onClose={handleBulkResizeClose}
             />
           </div>
         </div>
@@ -1233,7 +1233,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         onDelete={handleDeleteObject}
         onMultiMove={handleMultiMove}
         onMultiDelete={handleMultiDelete}
-        onBulkRackResize={handleBulkRackResize}
+        onBulkResize={handleBulkResize}
         onResetView={handleResetView}
         onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
         onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}

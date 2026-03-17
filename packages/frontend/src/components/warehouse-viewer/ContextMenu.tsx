@@ -27,8 +27,8 @@ interface ContextMenuProps {
   // 다중 선택 액션
   onMultiMove?: (ids: Set<string>) => void;
   onMultiDelete?: (ids: Set<string>) => void;
-  /** 다중 선택된 오브젝트가 모두 랙일 때 → 일괄 크기 수정 */
-  onBulkRackResize?: (ids: Set<string>) => void;
+  /** 다중 선택된 오브젝트가 동일 타입일 때 → 일괄 크기 수정 */
+  onBulkResize?: (ids: Set<string>) => void;
   /** 다중 선택된 오브젝트 목록 (랙 판별용) */
   multiSelectedObjects?: SpatialObject[];
   // 빈 공간 메뉴 액션
@@ -57,7 +57,7 @@ interface MenuItemDef {
 export function ContextMenu({
   object, multiSelectedIds, position, onClose,
   onEdit, onDuplicate, onRotate90, onMove, onDelete,
-  onMultiMove, onMultiDelete, onBulkRackResize, multiSelectedObjects,
+  onMultiMove, onMultiDelete, onBulkResize, multiSelectedObjects,
   onResetView, onTopView, onFrontView, onToggleGrid, gridVisible = true,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -119,16 +119,25 @@ export function ContextMenu({
         <div style={{ fontSize: 10, color: '#484F58' }}>그룹 작업</div>
       </div>
     );
-    // 모두 랙인지 판별
-    const allRacks = multiSelectedObjects
-      ? multiSelectedObjects.length > 0 && multiSelectedObjects.every((o) => {
-          const meta = o.metadata as Record<string, unknown> | null;
-          return o.type.name === 'RACK' && meta?.levels;
-        })
+    // 동일 타입 여부 판별
+    const allSameType = multiSelectedObjects
+      ? multiSelectedObjects.length > 0 && multiSelectedObjects.every((o) => o.type.name === multiSelectedObjects[0].type.name)
       : false;
 
+    // 타입별 라벨 결정
+    const bulkResizeLabel = allSameType && multiSelectedObjects && multiSelectedObjects.length > 0
+      ? (() => {
+          const tn = multiSelectedObjects[0].type.name;
+          const labels: Record<string, string> = {
+            RACK: '랙', PALLET: '팔레트', CONTAINER: '컨테이너',
+            AISLE: '통로', FLOOR: '바닥', WALL: '벽', DOOR: '출입문',
+          };
+          return `${labels[tn] ?? tn} 크기 수정`;
+        })()
+      : '크기 수정';
+
     items = [
-      ...(allRacks ? [{ icon: <Scaling size={13} />, label: '랙 크기 수정', onClick: () => { onBulkRackResize?.(multiSelectedIds); onClose(); }, dividerAfter: true }] : []),
+      ...(allSameType ? [{ icon: <Scaling size={13} />, label: bulkResizeLabel, onClick: () => { onBulkResize?.(multiSelectedIds); onClose(); }, dividerAfter: true }] : []),
       { icon: <Move size={13} />, label: '그룹 이동', onClick: () => { onMultiMove?.(multiSelectedIds); onClose(); }, dividerAfter: true },
       { icon: <Trash2 size={13} />, label: '그룹 삭제', onClick: () => { onMultiDelete?.(multiSelectedIds); onClose(); }, color: '#F85149' },
     ];
