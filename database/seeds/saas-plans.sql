@@ -1,6 +1,6 @@
 -- SaaS 요금제 seed 데이터
 
-INSERT INTO plans (id, code, name, description, price_monthly, price_yearly, max_sites, max_users, max_objects, trial_days, features, sort_order)
+INSERT INTO plans (id, code, name, description, price_monthly, price_yearly, max_sites, max_users, max_objects, trial_days, features, sort_order, updated_at)
 VALUES
   -- Starter (무료/트라이얼)
   (
@@ -15,7 +15,8 @@ VALUES
     500,
     14,
     '{"viewer3d": true, "presetCatalog": true, "roiCalculator": true, "exportPdf": false, "apiAccess": false, "customPresets": false, "multiSite": false, "advancedAnalytics": false}',
-    1
+    1,
+    NOW()
   ),
   -- Growth
   (
@@ -30,7 +31,8 @@ VALUES
     5000,
     14,
     '{"viewer3d": true, "presetCatalog": true, "roiCalculator": true, "exportPdf": true, "apiAccess": true, "customPresets": true, "multiSite": true, "advancedAnalytics": false}',
-    2
+    2,
+    NOW()
   ),
   -- Enterprise
   (
@@ -45,7 +47,8 @@ VALUES
     -1,
     30,
     '{"viewer3d": true, "presetCatalog": true, "roiCalculator": true, "exportPdf": true, "apiAccess": true, "customPresets": true, "multiSite": true, "advancedAnalytics": true, "mesIntegration": true, "erpIntegration": true, "simulation": true, "dedicatedSupport": true}',
-    3
+    3,
+    NOW()
   )
 ON CONFLICT (code) DO UPDATE SET
   name = EXCLUDED.name,
@@ -57,4 +60,5 @@ ON CONFLICT (code) DO UPDATE SET
   max_objects = EXCLUDED.max_objects,
   trial_days = EXCLUDED.trial_days,
   features = EXCLUDED.features,
-  sort_order = EXCLUDED.sort_order;
+  sort_order = EXCLUDED.sort_order,
+  updated_at = NOW();
