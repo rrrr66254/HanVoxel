@@ -29,6 +29,10 @@ interface EditorTopBarProps {
   onEditLayerChange?: (layer: EditLayerMode) => void;
   onSave?: () => void;
   onBack?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 /**
@@ -47,6 +51,10 @@ export function EditorTopBar({
   onEditLayerChange,
   onSave,
   onBack,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: EditorTopBarProps) {
   return (
     <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
@@ -137,19 +145,29 @@ export function EditorTopBar({
       {/* 구분선 */}
       <div className="mx-3 h-6 w-px bg-[#2A2F38]" />
 
-      {/* Undo / Redo (미래 확장용 — 비활성) */}
+      {/* Undo / Redo */}
       <div className="flex items-center gap-0.5">
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 cursor-not-allowed"
-          disabled
-          title="실행 취소"
+          className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+            canUndo
+              ? 'text-gray-400 hover:bg-[#1A1D24] hover:text-gray-200'
+              : 'text-gray-600 cursor-not-allowed'
+          }`}
+          disabled={!canUndo}
+          onClick={onUndo}
+          title="실행 취소 (Ctrl+Z)"
         >
           <Undo2 size={14} />
         </button>
         <button
-          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 cursor-not-allowed"
-          disabled
-          title="다시 실행"
+          className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+            canRedo
+              ? 'text-gray-400 hover:bg-[#1A1D24] hover:text-gray-200'
+              : 'text-gray-600 cursor-not-allowed'
+          }`}
+          disabled={!canRedo}
+          onClick={onRedo}
+          title="다시 실행 (Ctrl+Y)"
         >
           <Redo2 size={14} />
         </button>

@@ -14,6 +14,8 @@ import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer } from './BinPlacement';
 import { MoveModeGhost, GroupMoveGhost } from './MoveMode';
 import { BulkRackResizer } from './BulkRackResizer';
+import { useHistory } from './useHistory';
+import type { HistoryAction } from './useHistory';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
 import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
@@ -215,6 +217,128 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
   // (더블클릭은 NativeDoubleClickHandler에서 네이티브로 처리)
 
+  // Undo/Redo 히스토리
+  const { pushAction, undo, redo, canUndo, canRedo } = useHistory();
+
+  // Undo/Redo 적용 함수
+  const applyHistoryAction = useCallback((action: HistoryAction, isUndo: boolean) => {
+    switch (action.type) {
+      case 'place': {
+        if (isUndo) {
+          // place 취소 = 삭제
+          setPlacedObjects((prev) => prev.filter((o) => o.id !== action.object.id));
+          setDeletedIds((prev) => new Set(prev).add(action.object.id));
+          deleteSpatialObject(action.object.id);
+        } else {
+          // place 재실행 = 복원
+          setPlacedObjects((prev) => [...prev, action.object]);
+          setDeletedIds((prev) => { const next = new Set(prev); next.delete(action.object.id); return next; });
+          createSpatialObject({
+            siteId: action.object.siteId, typeId: action.object.typeId,
+            name: action.object.name, code: action.object.code,
+            positionX: action.object.positionX, positionY: action.object.positionY, positionZ: action.object.positionZ,
+            scaleX: action.object.scaleX, scaleY: action.object.scaleY, scaleZ: action.object.scaleZ,
+            color: action.object.color, opacity: action.object.opacity, meshType: action.object.meshType,
+            metadata: action.object.metadata,
+          });
+        }
+        break;
+      }
+      case 'delete': {
+        if (isUndo) {
+          // delete 취소 = 복원
+          setPlacedObjects((prev) => [...prev, action.object]);
+          setDeletedIds((prev) => { const next = new Set(prev); next.delete(action.object.id); return next; });
+          createSpatialObject({
+            siteId: action.object.siteId, typeId: action.object.typeId,
+            name: action.object.name, code: action.object.code,
+            positionX: action.object.positionX, positionY: action.object.positionY, positionZ: action.object.positionZ,
+            scaleX: action.object.scaleX, scaleY: action.object.scaleY, scaleZ: action.object.scaleZ,
+            color: action.object.color, opacity: action.object.opacity, meshType: action.object.meshType,
+            metadata: action.object.metadata,
+          });
+        } else {
+          // delete 재실행 = 삭제
+          setPlacedObjects((prev) => prev.filter((o) => o.id !== action.object.id));
+          setDeletedIds((prev) => new Set(prev).add(action.object.id));
+          deleteSpatialObject(action.object.id);
+        }
+        break;
+      }
+      case 'move': {
+        const pos = isUndo ? action.from : action.to;
+        setPlacedObjects((prev) => {
+          const exists = prev.some((o) => o.id === action.objectId);
+          if (exists) return prev.map((o) => o.id === action.objectId ? { ...o, positionX: pos.x, positionY: pos.y, positionZ: pos.z } : o);
+          const orig = objects.find((o) => o.id === action.objectId);
+          if (orig) return [...prev, { ...orig, positionX: pos.x, positionY: pos.y, positionZ: pos.z }];
+          return prev;
+        });
+        updateSpatialObject(action.objectId, { positionX: pos.x, positionY: pos.y, positionZ: pos.z });
+        break;
+      }
+      case 'rotate': {
+        const vals = isUndo ? action.before : action.after;
+        setPlacedObjects((prev) => {
+          const exists = prev.some((o) => o.id === action.objectId);
+          if (exists) return prev.map((o) => o.id === action.objectId ? { ...o, rotationY: vals.rotationY, scaleX: vals.scaleX, scaleZ: vals.scaleZ } : o);
+          const orig = objects.find((o) => o.id === action.objectId);
+          if (orig) return [...prev, { ...orig, rotationY: vals.rotationY, scaleX: vals.scaleX, scaleZ: vals.scaleZ }];
+          return prev;
+        });
+        updateSpatialObject(action.objectId, { rotationY: vals.rotationY, scaleX: vals.scaleX, scaleZ: vals.scaleZ });
+        break;
+      }
+      case 'multiDelete': {
+        if (isUndo) {
+          // 복원
+          action.objects.forEach((obj) => {
+            setPlacedObjects((prev) => [...prev, obj]);
+            setDeletedIds((prev) => { const next = new Set(prev); next.delete(obj.id); return next; });
+            createSpatialObject({
+              siteId: obj.siteId, typeId: obj.typeId, name: obj.name, code: obj.code,
+              positionX: obj.positionX, positionY: obj.positionY, positionZ: obj.positionZ,
+              scaleX: obj.scaleX, scaleY: obj.scaleY, scaleZ: obj.scaleZ,
+              color: obj.color, opacity: obj.opacity, meshType: obj.meshType, metadata: obj.metadata,
+            });
+          });
+        } else {
+          // 재삭제
+          action.objects.forEach((obj) => {
+            setPlacedObjects((prev) => prev.filter((o) => o.id !== obj.id));
+            setDeletedIds((prev) => new Set(prev).add(obj.id));
+            deleteSpatialObject(obj.id);
+          });
+        }
+        break;
+      }
+      case 'groupMove': {
+        action.moves.forEach((m) => {
+          const pos = isUndo ? m.from : m.to;
+          setPlacedObjects((prev) => {
+            const exists = prev.some((o) => o.id === m.objectId);
+            if (exists) return prev.map((o) => o.id === m.objectId ? { ...o, positionX: pos.x, positionY: pos.y, positionZ: pos.z } : o);
+            const orig = objects.find((o) => o.id === m.objectId);
+            if (orig) return [...prev, { ...orig, positionX: pos.x, positionY: pos.y, positionZ: pos.z }];
+            return prev;
+          });
+          updateSpatialObject(m.objectId, { positionX: pos.x, positionY: pos.y, positionZ: pos.z });
+        });
+        break;
+      }
+    }
+  }, [objects]);
+
+  const handleUndo = useCallback(() => {
+    const action = undo();
+    if (action) applyHistoryAction(action, true);
+  }, [undo, applyHistoryAction]);
+
+  const handleRedo = useCallback(() => {
+    const action = redo();
+    if (action) applyHistoryAction(action, false);
+  }, [redo, applyHistoryAction]);
+
   // 포인터 이벤트 추적 (클릭 vs 드래그 구분, 5px 임계값)
   const pointerDownPosRef = useRef<{ x: number; y: number; button: number } | null>(null);
   const wasDragRef = useRef(false);
@@ -262,6 +386,11 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   }, []);
 
   const handleMoveDrop = useCallback(async (obj: SpatialObject, newPos: THREE.Vector3) => {
+    pushAction({
+      type: 'move', objectId: obj.id,
+      from: { x: obj.positionX, y: obj.positionY, z: obj.positionZ },
+      to: { x: newPos.x, y: newPos.y, z: newPos.z },
+    });
     const updated: SpatialObject = { ...obj, positionX: newPos.x, positionY: newPos.y, positionZ: newPos.z };
     setPlacedObjects((prev) => {
       const exists = prev.some((o) => o.id === updated.id);
@@ -271,7 +400,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     setMovingObjectId(null);
     setOriginalPosition(null);
     await updateSpatialObject(updated.id, { positionX: newPos.x, positionY: newPos.y, positionZ: newPos.z });
-  }, []);
+  }, [pushAction]);
 
   const handleMoveDropToBin = useCallback(async (obj: SpatialObject, bin: BinOccupancy) => {
     setBinOccupancy((prev) => [...prev, bin]);
@@ -556,6 +685,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     }
 
     setPlacedObjects((prev) => [...prev, localObj, ...newWallSegments]);
+    pushAction({ type: 'place', object: localObj });
     setPlacingPreset(null);
     setEditingId(localObj.id);
     setRightPanel('editor');
@@ -601,14 +731,18 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     setSaving(false);
   }, []);
 
-  const handleDeleteObject = useCallback(async (id: string) => {
+  const handleDeleteObject = useCallback(async (id: string, skipHistory = false) => {
+    // 삭제 전 오브젝트 저장 (undo용)
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    const objToDelete = allObjs.find((o) => o.id === id);
+    if (objToDelete && !skipHistory) pushAction({ type: 'delete', object: objToDelete });
     setPlacedObjects((prev) => prev.filter((o) => o.id !== id));
     setDeletedIds((prev) => new Set(prev).add(id));
     if (editingId === id) { setEditingId(null); setRightPanel('none'); }
     if (selectedId === id) setSelectedId(null);
     if (rackDetailId === id) { setRackDetailId(null); setRightPanel('none'); }
     await deleteSpatialObject(id);
-  }, [editingId, selectedId, rackDetailId]);
+  }, [editingId, selectedId, rackDetailId, objects, placedObjects, pushAction]);
 
   const handleSavePreset = useCallback(async (obj: SpatialObject) => {
     setSaving(true);
@@ -633,6 +767,11 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
   const handleRotate90 = useCallback(async (obj: SpatialObject) => {
     // 90도 회전 시 폭(X)과 깊이(Z)를 스왑 — 랙에 맞게 방향 전환
+    pushAction({
+      type: 'rotate', objectId: obj.id,
+      before: { rotationY: obj.rotationY, scaleX: obj.scaleX, scaleZ: obj.scaleZ },
+      after: { rotationY: obj.rotationY + Math.PI / 2, scaleX: obj.scaleZ, scaleZ: obj.scaleX },
+    });
     const updatedObj: SpatialObject = {
       ...obj,
       rotationY: obj.rotationY + Math.PI / 2,
@@ -641,13 +780,16 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     setPlacedObjects((prev) => prev.map((o) => (o.id === updatedObj.id ? updatedObj : o)));
     await updateSpatialObject(updatedObj.id, { rotationY: updatedObj.rotationY, scaleX: updatedObj.scaleX, scaleZ: updatedObj.scaleZ });
-  }, []);
+  }, [pushAction]);
 
   // === 다중 선택 그룹 삭제 ===
   const handleMultiDelete = useCallback(async (ids: Set<string>) => {
-    ids.forEach((id) => handleDeleteObject(id));
+    const allObjs = [...(objects ?? []), ...placedObjects];
+    const deletedObjs = allObjs.filter((o) => ids.has(o.id));
+    if (deletedObjs.length > 0) pushAction({ type: 'multiDelete', objects: deletedObjs });
+    ids.forEach((id) => handleDeleteObject(id, true));
     setSelectedIds(new Set());
-  }, [handleDeleteObject]);
+  }, [handleDeleteObject, objects, placedObjects, pushAction]);
 
   // === 다중 오브젝트 일괄 크기 수정 ===
   const [bulkResizeIds, setBulkResizeIds] = useState<Set<string> | null>(null);
@@ -725,6 +867,16 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
   // 그룹 이동 확정 — 델타 적용
   const handleGroupMoveDrop = useCallback(async (deltas: Map<string, THREE.Vector3>) => {
+    // 그룹 이동 히스토리 기록
+    const moves: Array<{ objectId: string; from: { x: number; y: number; z: number }; to: { x: number; y: number; z: number } }> = [];
+    for (const [id, delta] of deltas) {
+      const origPos = groupOriginalPositions?.get(id);
+      if (origPos) {
+        moves.push({ objectId: id, from: origPos, to: { x: origPos.x + delta.x, y: origPos.y + delta.y, z: origPos.z + delta.z } });
+      }
+    }
+    if (moves.length > 0) pushAction({ type: 'groupMove', moves });
+
     for (const [id, delta] of deltas) {
       const origPos = groupOriginalPositions?.get(id);
       if (!origPos) continue;
@@ -749,7 +901,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     }
     setGroupMovingIds(null);
     setGroupOriginalPositions(null);
-  }, [groupOriginalPositions, objects]);
+  }, [groupOriginalPositions, objects, pushAction]);
 
   // 그룹 이동 취소
   const handleGroupMoveCancel = useCallback(() => {
@@ -985,16 +1137,18 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   }, []);
 
 
-  // OrbitControls 마우스 버튼 매핑 (좌클릭=패닝, 우클릭=회전, 휠=줌)
+  // OrbitControls 마우스 버튼 매핑 — 도구 모드에 따라 좌클릭 동작 분리
+  // select(포인터): 좌클릭 = 드래그 선택 (OrbitControls 좌클릭 비활성)
+  // move(십자화살표): 좌클릭 = 카메라 패닝
   useEffect(() => {
     if (controlsRef.current) {
       controlsRef.current.mouseButtons = {
-        LEFT: THREE.MOUSE.PAN,
+        LEFT: activeTool === 'move' ? THREE.MOUSE.PAN : -1 as unknown as THREE.MOUSE,
         MIDDLE: THREE.MOUSE.DOLLY,
         RIGHT: THREE.MOUSE.ROTATE,
       };
     }
-  });
+  }, [activeTool]);
 
   // 포인터 이벤트 추적 — 클릭 vs 드래그 구분 (5px 임계값)
   useEffect(() => {
@@ -1021,9 +1175,21 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
   }, []);
 
-  // === ESC 키로 상세 패널 닫기 ===
+  // === 키보드 단축키 (ESC / Delete / Ctrl+Z / Ctrl+Y) ===
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z: Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+      // Ctrl+Y 또는 Ctrl+Shift+Z: Redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey) || (e.key === 'Z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
       // Delete 키로 다중 선택 삭제
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
         selectedIds.forEach((id) => handleDeleteObject(id));
@@ -1064,7 +1230,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleRectDrawCancel]);
+  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleRectDrawCancel, handleUndo, handleRedo]);
 
   // OrbitControls 비활성화 조건
   const orbitEnabled = !placingPreset && !drawingZoneType && !drawingObjectType && !isMoving && !isGroupMoving && !isResizing;
@@ -1081,7 +1247,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   return (
     <div className="flex h-full w-full flex-col bg-[#0D1117]">
       {/* 상단 바 */}
-      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} onSave={onSave} onBack={onBack} />
+      <EditorTopBar activeTool={activeTool} onToolChange={setActiveTool} viewMode={viewMode} onViewModeChange={handleViewModeChange} onTopView2D={() => setTopViewMode(true)} saving={saving} objectCount={activeObjects.length} editLayer={editLayer} onEditLayerChange={setEditLayer} onSave={onSave} onBack={onBack} canUndo={canUndo} canRedo={canRedo} onUndo={handleUndo} onRedo={handleRedo} />
 
       {/* 메인 영역 */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
