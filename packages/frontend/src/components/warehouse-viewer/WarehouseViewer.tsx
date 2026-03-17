@@ -13,6 +13,7 @@ import { KeyboardControlsHandler } from './KeyboardControls';
 import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer } from './BinPlacement';
 import { MoveModeGhost, GroupMoveGhost } from './MoveMode';
+import { BulkRackResizer } from './BulkRackResizer';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
 import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
@@ -103,7 +104,7 @@ type ToolMode = 'select' | 'move' | 'rotate' | 'delete';
 type ViewMode = 'perspective' | 'top' | 'front';
 
 // 우측 패널 모드
-type RightPanelMode = 'none' | 'editor' | 'rackDetail';
+type RightPanelMode = 'none' | 'editor' | 'rackDetail' | 'bulkRackResize';
 
 interface WarehouseViewerProps {
   objects: SpatialObject[];
@@ -606,6 +607,58 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     ids.forEach((id) => handleDeleteObject(id));
     setSelectedIds(new Set());
   }, [handleDeleteObject]);
+
+  // === 다중 랙 일괄 크기 수정 ===
+  const [bulkRackResizeIds, setBulkRackResizeIds] = useState<Set<string> | null>(null);
+
+  const handleBulkRackResize = useCallback((ids: Set<string>) => {
+    setBulkRackResizeIds(ids);
+    setRightPanel('bulkRackResize');
+    setEditingId(null);
+    setRackDetailId(null);
+  }, []);
+
+  // 일괄 크기 수정 대상 랙 목록
+  const bulkRackResizeRacks = useMemo(() => {
+    if (!bulkRackResizeIds) return [];
+    return allObjects.filter((o) => bulkRackResizeIds.has(o.id));
+  }, [bulkRackResizeIds, allObjects]);
+
+  // 일괄 프리뷰 (실시간 반영, DB 저장 없음)
+  const handleBulkRackPreview = useCallback((updatedRacks: SpatialObject[]) => {
+    for (const updated of updatedRacks) {
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === updated.id);
+        if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+        return [...prev, updated];
+      });
+    }
+  }, []);
+
+  // 일괄 저장 (DB 반영)
+  const handleBulkRackSave = useCallback(async (updatedRacks: SpatialObject[]) => {
+    setSaving(true);
+    for (const updated of updatedRacks) {
+      setPlacedObjects((prev) => {
+        const exists = prev.some((o) => o.id === updated.id);
+        if (exists) return prev.map((o) => (o.id === updated.id ? updated : o));
+        return [...prev, updated];
+      });
+      await updateSpatialObject(updated.id, {
+        positionX: updated.positionX, positionY: updated.positionY, positionZ: updated.positionZ,
+        scaleX: updated.scaleX, scaleY: updated.scaleY, scaleZ: updated.scaleZ,
+        metadata: updated.metadata,
+      });
+    }
+    setSaving(false);
+    setBulkRackResizeIds(null);
+    setRightPanel('none');
+  }, []);
+
+  const handleBulkRackResizeClose = useCallback(() => {
+    setBulkRackResizeIds(null);
+    setRightPanel('none');
+  }, []);
 
   // === 다중 선택 그룹 이동 ===
   // 그룹 이동 상태
@@ -1147,9 +1200,29 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         </div>
       )}
 
+      {/* 다중 랙 일괄 크기 수정 패널 */}
+      {rightPanel === 'bulkRackResize' && bulkRackResizeRacks.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4" onClick={handleBulkRackResizeClose}>
+          <div
+            className="h-[80vh] w-80 overflow-hidden rounded-xl border border-[#2A2F38] bg-[#1A1D24] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(245,158,11,0.15)' }}
+          >
+            <BulkRackResizer
+              racks={bulkRackResizeRacks}
+              allObjects={allObjects}
+              onPreview={handleBulkRackPreview}
+              onSave={handleBulkRackSave}
+              onClose={handleBulkRackResizeClose}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 컨텍스트 메뉴 */}
       <ContextMenu
         object={contextState.object} multiSelectedIds={contextState.multiSelectedIds ?? undefined} position={contextState.position} onClose={closeMenu}
+        multiSelectedObjects={contextState.multiSelectedIds ? allObjects.filter((o) => contextState.multiSelectedIds!.has(o.id)) : undefined}
         onEdit={(obj) => {
           closeMenu();
           // setTimeout으로 컨텍스트 메뉴 닫힌 후 모달 열기
@@ -1160,6 +1233,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         onDelete={handleDeleteObject}
         onMultiMove={handleMultiMove}
         onMultiDelete={handleMultiDelete}
+        onBulkRackResize={handleBulkRackResize}
         onResetView={handleResetView}
         onTopView={() => handleViewModeChange('top')} onFrontView={() => handleViewModeChange('front')}
         onToggleGrid={() => setGridVisible((v) => !v)} gridVisible={gridVisible}

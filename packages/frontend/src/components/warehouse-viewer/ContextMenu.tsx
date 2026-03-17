@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Edit3, Copy, RotateCw, Move, Trash2, Maximize, ArrowUp, ArrowRight, Grid3x3 } from 'lucide-react';
+import { Edit3, Copy, RotateCw, Move, Trash2, Maximize, ArrowUp, ArrowRight, Grid3x3, Scaling } from 'lucide-react';
 import type { SpatialObject } from '../../types/spatial';
 
 // 메뉴 크기 상수
@@ -27,6 +27,10 @@ interface ContextMenuProps {
   // 다중 선택 액션
   onMultiMove?: (ids: Set<string>) => void;
   onMultiDelete?: (ids: Set<string>) => void;
+  /** 다중 선택된 오브젝트가 모두 랙일 때 → 일괄 크기 수정 */
+  onBulkRackResize?: (ids: Set<string>) => void;
+  /** 다중 선택된 오브젝트 목록 (랙 판별용) */
+  multiSelectedObjects?: SpatialObject[];
   // 빈 공간 메뉴 액션
   onResetView?: () => void;
   onTopView?: () => void;
@@ -53,7 +57,7 @@ interface MenuItemDef {
 export function ContextMenu({
   object, multiSelectedIds, position, onClose,
   onEdit, onDuplicate, onRotate90, onMove, onDelete,
-  onMultiMove, onMultiDelete,
+  onMultiMove, onMultiDelete, onBulkRackResize, multiSelectedObjects,
   onResetView, onTopView, onFrontView, onToggleGrid, gridVisible = true,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -115,7 +119,16 @@ export function ContextMenu({
         <div style={{ fontSize: 10, color: '#484F58' }}>그룹 작업</div>
       </div>
     );
+    // 모두 랙인지 판별
+    const allRacks = multiSelectedObjects
+      ? multiSelectedObjects.length > 0 && multiSelectedObjects.every((o) => {
+          const meta = o.metadata as Record<string, unknown> | null;
+          return o.type.name === 'RACK' && meta?.levels;
+        })
+      : false;
+
     items = [
+      ...(allRacks ? [{ icon: <Scaling size={13} />, label: '랙 크기 수정', onClick: () => { onBulkRackResize?.(multiSelectedIds); onClose(); }, dividerAfter: true }] : []),
       { icon: <Move size={13} />, label: '그룹 이동', onClick: () => { onMultiMove?.(multiSelectedIds); onClose(); }, dividerAfter: true },
       { icon: <Trash2 size={13} />, label: '그룹 삭제', onClick: () => { onMultiDelete?.(multiSelectedIds); onClose(); }, color: '#F85149' },
     ];
