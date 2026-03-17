@@ -146,27 +146,27 @@ export function generateWarehouseLayout(
       ));
     }
 
-    // 도크 구역
+    // 도크 구역 (바닥 마킹)
     objects.push(obj(
       'zone-dock', TYPES.ZONE, '컨테이너 도크 구역', 'ZONE-DOCK',
-      [W / 2, 1.5, DOCK_Z + DOCK_DEPTH / 2],
-      [W - 4, 3, DOCK_DEPTH],
-      { color: '#1d4ed8', opacity: 0.05 },
+      [W / 2, 0.02, DOCK_Z + DOCK_DEPTH / 2],
+      [W - 4, 0.04, DOCK_DEPTH],
+      { color: '#1d4ed8', opacity: 0.15 },
     ));
   }
 
-  // --- 입고/출고 스테이징 ---
+  // --- 입고/출고 스테이징 (바닥 마킹) ---
   objects.push(obj(
     'zone-inbound', TYPES.ZONE, '입고 스테이징', 'ZONE-IN',
-    [W / 4, rack.height / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [W / 2 - 3, rack.height / 1.5, STAGING_DEPTH],
-    { color: '#3b82f6', opacity: 0.06 },
+    [W / 4, 0.02, STAGING_Z + STAGING_DEPTH / 2],
+    [W / 2 - 3, 0.04, STAGING_DEPTH],
+    { color: '#3b82f6', opacity: 0.2 },
   ));
   objects.push(obj(
     'zone-outbound', TYPES.ZONE, '출고 스테이징', 'ZONE-OUT',
-    [W * 3 / 4, rack.height / 3, STAGING_Z + STAGING_DEPTH / 2],
-    [W / 2 - 3, rack.height / 1.5, STAGING_DEPTH],
-    { color: '#10b981', opacity: 0.06 },
+    [W * 3 / 4, 0.02, STAGING_Z + STAGING_DEPTH / 2],
+    [W / 2 - 3, 0.04, STAGING_DEPTH],
+    { color: '#10b981', opacity: 0.2 },
   ));
 
   // --- 비상 통로 (바닥 마킹) ---
@@ -316,15 +316,15 @@ export function generateWarehouseLayout(
     { metadata: { equipType: 'PACKING' } },
   ));
 
-  // --- 보관 구역 영역 표시 ---
+  // --- 보관 구역 영역 표시 (바닥 마킹) ---
   const totalRacks = isBackToBack ? pairCount * racksPerRow * 2 : pairCount * racksPerRow;
   objects.push(obj(
     'zone-storage', TYPES.ZONE, '보관 구역', 'ZONE-STORAGE',
-    [storageOriginX + rowWidth / 2, rackH / 2, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
-    [rowWidth + 2, rackH + 0.5, storageEndZ - STORAGE_Z + aisleW],
+    [storageOriginX + rowWidth / 2, 0.02, STORAGE_Z + (storageEndZ - STORAGE_Z) / 2],
+    [rowWidth + 2, 0.04, storageEndZ - STORAGE_Z + aisleW],
     {
       color: '#f59e0b',
-      opacity: 0.03,
+      opacity: 0.12,
       metadata: {
         rackStandard: rack.code,
         totalRacks,
