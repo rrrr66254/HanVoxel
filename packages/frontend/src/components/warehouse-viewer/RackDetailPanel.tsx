@@ -333,7 +333,7 @@ export function RackDetailPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 style={{ fontSize: 11, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8, margin: 0, marginBottom: 8 }}>{title}</h4>
+      <h4 style={{ fontSize: 11, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0, marginBottom: 8 }}>{title}</h4>
       {children}
     </div>
   );
