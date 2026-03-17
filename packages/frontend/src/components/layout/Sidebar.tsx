@@ -87,7 +87,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
       {/* 로고 + 접기 버튼 */}
       <div
         style={{
-          padding: collapsed ? '6px 8px' : '2px 20px',
+          padding: collapsed ? '6px 8px' : '0px 20px',
           borderBottom: '1px solid var(--border-muted)',
           display: 'flex',
           alignItems: 'center',
