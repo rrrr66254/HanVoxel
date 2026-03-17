@@ -41,6 +41,7 @@ function App() {
     form: WizardFormData;
     template: WarehouseTemplate;
   } | null>(null);
+  const [currentFloor, setCurrentFloor] = useState(1);
 
   // 플랜 타입 (관리자 모드 시 항상 ENTERPRISE)
   const planType = adminMode ? 'ENTERPRISE' : 'STARTER';
@@ -57,13 +58,14 @@ function App() {
     });
   }, []);
 
-  // 마법사 완료 시 생성된 레이아웃 또는 기존 mock 데이터
+  // 마법사 완료 시 생성된 레이아웃 또는 기존 mock 데이터 (층별 재생성)
+  const floorCount = wizardResult?.form.floorCount ?? 1;
   const objects: SpatialObject[] = useMemo(() => {
     if (wizardResult) {
-      return generateWarehouseLayout(wizardResult.form, wizardResult.template);
+      return generateWarehouseLayout(wizardResult.form, wizardResult.template, currentFloor);
     }
     return MOCK_WAREHOUSE;
-  }, [wizardResult]);
+  }, [wizardResult, currentFloor]);
 
   const handleWizardComplete = (form: WizardFormData, template: WarehouseTemplate) => {
     setWizardResult({ form, template });
@@ -141,7 +143,12 @@ function App() {
         )}
 
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
-          <WarehouseViewer objects={objects} />
+          <WarehouseViewer
+            objects={objects}
+            floorCount={floorCount}
+            currentFloor={currentFloor}
+            onFloorChange={setCurrentFloor}
+          />
         </div>
       </div>
 

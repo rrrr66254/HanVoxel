@@ -468,14 +468,10 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         ref={groupRef}
         position={[object.positionX, object.positionY, object.positionZ]}
         rotation={[object.rotationX, object.rotationY, object.rotationZ]}
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
-        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
-        raycast={isInteractable ? undefined : NOOP_RAYCAST}
+        raycast={NOOP_RAYCAST}
       >
-        {/* 천장 패널 — 하나의 큰 반투명 판 (X-Z 평면에 수평 배치) */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        {/* 천장 패널 — 하나의 큰 반투명 판 (X-Z 평면에 수평 배치, 레이캐스트 통과) */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} raycast={NOOP_RAYCAST}>
           <planeGeometry args={[object.scaleX, object.scaleZ]} />
           <meshStandardMaterial
             color="#2a3040"
