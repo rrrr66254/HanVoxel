@@ -73,9 +73,9 @@ export function EditorTopBar({
         </>
       )}
 
-      {/* 로고 */}
+      {/* 3D 라벨 */}
       <div className="mr-6 flex items-center gap-2">
-        <img src="/logo_nogb.png" alt="HanVoxel" className="h-12" />
+        <span className="text-sm font-semibold text-gray-300">HanVoxel</span>
         <span className="text-[10px] font-normal text-gray-500">3D</span>
       </div>
 
