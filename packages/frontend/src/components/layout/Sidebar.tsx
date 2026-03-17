@@ -16,6 +16,9 @@ import {
   Crown,
   PanelLeftClose,
   PanelLeftOpen,
+  Calendar,
+  Package,
+  Truck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,6 +35,9 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'viewer', icon: Box, labelKey: 'sidebar.viewer', sectionKey: 'sidebar.spatialManagement' },
   { id: 'wizard', icon: Warehouse, labelKey: 'sidebar.wizard', sectionKey: 'sidebar.spatialManagement' },
   { id: 'roi', icon: TrendingUp, labelKey: 'sidebar.roi', sectionKey: 'sidebar.spatialManagement' },
+  { id: 'inout-calendar', icon: Calendar, labelKey: 'sidebar.inoutCalendar', sectionKey: 'sidebar.operations' },
+  { id: 'inbound', icon: Package, labelKey: 'sidebar.inbound', sectionKey: 'sidebar.operations' },
+  { id: 'outbound', icon: Truck, labelKey: 'sidebar.outbound', sectionKey: 'sidebar.operations' },
   { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.operations' },
   { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.operations' },
   { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.operations' },
