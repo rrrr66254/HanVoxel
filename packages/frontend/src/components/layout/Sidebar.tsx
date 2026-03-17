@@ -87,19 +87,18 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
       {/* 로고 + 접기 버튼 */}
       <div
         style={{
-          padding: collapsed ? '6px 8px' : '4px 16px',
+          padding: collapsed ? '6px 8px' : '2px 20px',
           borderBottom: '1px solid var(--border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'space-between',
-          minHeight: 48,
         }}
       >
         {!collapsed && (
           <img
             src="/logo_nogb.png"
             alt="HanVoxel"
-            style={{ height: 36, width: 'auto' }}
+            style={{ width: '70%', height: 'auto' }}
           />
         )}
         {onToggleCollapse && (
