@@ -19,6 +19,7 @@
     "subscription": "Subscription",
     "erp": "ERP Management",
     "trade": "Trade Intelligence",
+    "smartReorder": "Smart Reorder",
     "reorder": "Auto Reorder",
     "connector": "ERP Connector",
     "benchmark": "Industry Benchmark",
