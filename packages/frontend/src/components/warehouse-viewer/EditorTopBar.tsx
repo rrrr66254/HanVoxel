@@ -73,12 +73,6 @@ export function EditorTopBar({
         </>
       )}
 
-      {/* 3D 라벨 */}
-      <div className="mr-6 flex items-center gap-2">
-        <span className="text-sm font-semibold text-gray-300">HanVoxel</span>
-        <span className="text-[10px] font-normal text-gray-500">3D</span>
-      </div>
-
       {/* 구분선 */}
       <div className="mx-2 h-6 w-px bg-[#2A2F38]" />
 

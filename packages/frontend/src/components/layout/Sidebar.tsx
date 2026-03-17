@@ -95,7 +95,11 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
         }}
       >
         {!collapsed && (
-          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>HanVoxel</span>
+          <img
+            src="/logo_nogb.png"
+            alt="HanVoxel"
+            style={{ width: '70%', height: 'auto' }}
+          />
         )}
         {onToggleCollapse && (
           <button
