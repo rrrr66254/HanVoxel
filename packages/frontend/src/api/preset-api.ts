@@ -9,16 +9,19 @@ interface ApiResponse<T> {
   error: { code: string; message: string } | null;
 }
 
-// API 호출 + fallback mock 데이터
+// API 호출 + fallback mock 데이터 (3초 타임아웃)
 async function fetchApi<T>(path: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(`${API_BASE}${path}`);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    const res = await fetch(`${API_BASE}${path}`, { signal: ctrl.signal });
+    clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json: ApiResponse<T> = await res.json();
     if (json.success && json.data) return json.data;
     throw new Error(json.error?.message ?? '알 수 없는 오류');
   } catch {
-    // API 미연결 시 mock 데이터 사용
+    // API 미연결/타임아웃 시 mock 데이터 사용
     console.warn(`[API] ${path} 연결 실패, mock 데이터 사용`);
     return fallback;
   }

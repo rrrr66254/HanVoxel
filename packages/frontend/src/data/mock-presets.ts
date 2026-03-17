@@ -93,6 +93,11 @@ export const MOCK_PRESETS: SpatialPreset[] = [
   p(CAT.FACILITY, 'FACILITY_COLUMN_LARGE',    '건물 기둥 (대형)',       null,'KR',  0.6,0.6,6.0,  { metadata: { facilityType:'COLUMN' },     color:'#9ca3af' }),
   p(CAT.FACILITY, 'FACILITY_ELEC_PANEL',      '배전반',                null,'KR',  0.8,0.3,1.5,  { metadata: { facilityType:'ELEC_PANEL', wallMounted: true, mountHeight: 1.2 }, color:'#6b7280' }),
   p(CAT.FACILITY, 'FACILITY_TRASH_SET',       '분리수거함 세트',        null,'KR',  1.2,0.5,0.9,  { metadata: { facilityType:'TRASH' },      color:'#6b7280' }),
+  p(CAT.FACILITY, 'FACILITY_STAIRS',          '계단',                  null,'INTL',3.0,5.0,8.0,  { metadata: { facilityType:'STAIRS', capacity: 20 }, color:'#6b7280' }),
+  p(CAT.FACILITY, 'FACILITY_STAIRS_SMALL',    '계단 (소형)',            null,'INTL',2.0,3.0,4.0,  { metadata: { facilityType:'STAIRS', capacity: 10 }, color:'#6b7280' }),
+  p(CAT.FACILITY, 'FACILITY_PASSENGER_ELEV',  '승객용 엘리베이터',      null,'INTL',2.0,2.0,8.0,  { metadata: { facilityType:'PASSENGER_ELEVATOR', capacity: 1000 }, color:'#3b82f6' }),
+  p(CAT.FACILITY, 'FACILITY_FREIGHT_LIFT',    '화물 리프트',            null,'INTL',3.0,3.0,8.0,  { metadata: { facilityType:'FREIGHT_LIFT', capacity: 5000 }, color:'#f59e0b' }),
+  p(CAT.FACILITY, 'FACILITY_FREIGHT_LIFT_LG', '화물 리프트 (대형)',     null,'INTL',4.0,4.0,10.0, { metadata: { facilityType:'FREIGHT_LIFT', capacity: 10000 }, color:'#f59e0b' }),
 
   // === 바닥 (width/depth=면적, height=0.02 얇은 바닥) ===
   p(CAT.FLOOR, 'FLOOR_EPOXY_GRAY',  '에폭시 코팅 바닥 (회색)', null,'KR', 10,10,0.02, { floorStyle:'EPOXY_GRAY',  color:'#6B7B8D' }),

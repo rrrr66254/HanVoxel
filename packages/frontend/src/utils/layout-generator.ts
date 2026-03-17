@@ -1,6 +1,6 @@
 import type { SpatialObject, SpatialObjectType } from '../types/spatial';
-import type { WarehouseTemplate } from '../types/warehouse-template';
-import type { WizardFormData } from '../types/warehouse-template';
+import type { WarehouseTemplate, WizardFormData } from '../types/warehouse-template';
+import { getFloorConfig } from '../types/warehouse-template';
 
 // 공간 객체 타입 마스터
 const TYPES: Record<string, SpatialObjectType> = {
@@ -58,9 +58,11 @@ export function generateWarehouseLayout(
   template: WarehouseTemplate,
   floorNumber = 1,
 ): SpatialObject[] {
-  const W = form.areaWidth;
-  const D = form.areaDepth;
-  const H = form.ceilingHeight;
+  // 층별 개별 설정 우선, 없으면 기본값 사용
+  const fc = getFloorConfig(form, floorNumber);
+  const W = fc.areaWidth;
+  const D = fc.areaDepth;
+  const H = fc.ceilingHeight;
   const isMultiFloor = form.floorCount > 1;
   // 층별 고유 ID 접두사
   const fp = isMultiFloor ? `F${floorNumber}-` : '';

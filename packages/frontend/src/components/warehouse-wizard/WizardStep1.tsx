@@ -1,4 +1,5 @@
-import type { WizardFormData } from '../../types/warehouse-template';
+import { useState } from 'react';
+import type { WizardFormData, FloorConfig } from '../../types/warehouse-template';
 import { INDUSTRY_LABELS, INDUSTRY_COLORS } from '../../types/warehouse-template';
 
 interface WizardStep1Props {
@@ -21,14 +22,56 @@ const INDUSTRY_ICONS: Record<string, string> = {
 };
 
 /**
- * 1단계: 창고 기본 정보 입력 — 모던 SaaS UI
+ * 1단계: 창고 기본 정보 입력 — 층수 먼저, 층별 크기 설정
  */
 export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
+  const [activeFloor, setActiveFloor] = useState(1);
+
   const set = (field: keyof WizardFormData, value: string | number) =>
     onChange({ ...form, [field]: value });
 
+  // 층별 설정 가져오기 (개별 설정 없으면 기본값)
+  const getFloor = (floor: number): FloorConfig => {
+    const custom = form.floorConfigs.find((f) => f.floor === floor);
+    if (custom) return custom;
+    return { floor, areaWidth: form.areaWidth, areaDepth: form.areaDepth, ceilingHeight: form.ceilingHeight };
+  };
+
+  // 층별 설정 업데이트
+  const setFloorConfig = (floor: number, field: keyof FloorConfig, value: number) => {
+    const existing = form.floorConfigs.filter((f) => f.floor !== floor);
+    const current = getFloor(floor);
+    const updated = { ...current, [field]: value };
+
+    // 1층이면 기본값도 업데이트
+    if (floor === 1) {
+      const baseUpdate: Partial<WizardFormData> = {};
+      if (field === 'areaWidth') baseUpdate.areaWidth = value;
+      if (field === 'areaDepth') baseUpdate.areaDepth = value;
+      if (field === 'ceilingHeight') baseUpdate.ceilingHeight = value;
+      onChange({ ...form, ...baseUpdate, floorConfigs: [...existing, updated] });
+    } else {
+      onChange({ ...form, floorConfigs: [...existing, updated] });
+    }
+  };
+
+  // 층수 변경 처리
+  const handleFloorCountChange = (count: number) => {
+    // 줄어든 층의 설정 제거
+    const filteredConfigs = form.floorConfigs.filter((f) => f.floor <= count);
+    onChange({ ...form, floorCount: count, floorConfigs: filteredConfigs });
+    if (activeFloor > count) setActiveFloor(count);
+  };
+
   const isValid = form.warehouseName.trim() && form.areaWidth > 0 && form.areaDepth > 0 && form.industry;
-  const totalArea = form.areaWidth * form.areaDepth;
+
+  // 전체 면적 계산
+  const totalArea = Array.from({ length: form.floorCount }, (_, i) => {
+    const fc = getFloor(i + 1);
+    return fc.areaWidth * fc.areaDepth;
+  }).reduce((a, b) => a + b, 0);
+
+  const currentFC = getFloor(activeFloor);
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: 960, padding: '0 16px' }}>
@@ -84,7 +127,50 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
             />
           </div>
 
-          {/* 창고 크기 */}
+          {/* 층수 선택 (먼저 표시) */}
+          <div
+            className="rounded-xl p-5"
+            style={{ background: '#161B22', border: '1px solid #21262D' }}
+          >
+            <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-200">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="3" y1="15" x2="21" y2="15" />
+              </svg>
+              건물 층수
+            </label>
+            <p className="mb-3 text-xs text-gray-500">
+              층수를 먼저 선택한 후 각 층의 크기를 개별 설정할 수 있습니다
+            </p>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => handleFloorCountChange(n)}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold transition-all"
+                  style={{
+                    background: form.floorCount === n ? '#2D7DD2' : '#0D1117',
+                    border: form.floorCount === n ? '1px solid #2D7DD2' : '1px solid #30363D',
+                    color: form.floorCount === n ? '#fff' : '#8B949E',
+                    boxShadow: form.floorCount === n ? '0 0 12px rgba(45,125,210,0.3)' : 'none',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+              <DimensionInput
+                label=""
+                unit="층"
+                value={form.floorCount}
+                min={1}
+                max={10}
+                onChange={handleFloorCountChange}
+              />
+            </div>
+          </div>
+
+          {/* 층별 크기 설정 */}
           <div
             className="rounded-xl p-5"
             style={{ background: '#161B22', border: '1px solid #21262D' }}
@@ -93,57 +179,81 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
-              창고 크기
+              {form.floorCount > 1 ? `${activeFloor}층 크기` : '창고 크기'}
             </label>
 
-            <div className="grid grid-cols-4 gap-3">
+            {/* 층 탭 (다층일 때) */}
+            {form.floorCount > 1 && (
+              <div className="mb-3 flex items-center gap-1">
+                {Array.from({ length: form.floorCount }, (_, i) => i + 1).map((floor) => {
+                  const fc = getFloor(floor);
+                  const hasCustom = form.floorConfigs.some((f) => f.floor === floor);
+                  return (
+                    <button
+                      key={floor}
+                      onClick={() => setActiveFloor(floor)}
+                      className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all"
+                      style={{
+                        background: activeFloor === floor ? '#1F2937' : 'transparent',
+                        border: activeFloor === floor ? '1px solid #374151' : '1px solid transparent',
+                        color: activeFloor === floor ? '#60A5FA' : '#6B7280',
+                      }}
+                    >
+                      {floor}층
+                      {hasCustom && floor > 1 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                      )}
+                      <span className="text-[10px] text-gray-600">
+                        {fc.areaWidth}×{fc.areaDepth}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
               <DimensionInput
                 label="가로"
                 unit="m"
-                value={form.areaWidth}
+                value={currentFC.areaWidth}
                 min={10}
                 max={500}
-                onChange={(v) => set('areaWidth', v)}
+                onChange={(v) => setFloorConfig(activeFloor, 'areaWidth', v)}
               />
               <DimensionInput
                 label="세로"
                 unit="m"
-                value={form.areaDepth}
+                value={currentFC.areaDepth}
                 min={10}
                 max={500}
-                onChange={(v) => set('areaDepth', v)}
+                onChange={(v) => setFloorConfig(activeFloor, 'areaDepth', v)}
               />
               <DimensionInput
                 label="천장 높이"
                 unit="m"
-                value={form.ceilingHeight}
+                value={currentFC.ceilingHeight}
                 min={3}
                 max={30}
                 step={0.5}
-                onChange={(v) => set('ceilingHeight', v)}
-              />
-              <DimensionInput
-                label="층 수"
-                unit="층"
-                value={form.floorCount}
-                min={1}
-                max={10}
-                onChange={(v) => set('floorCount', v)}
+                onChange={(v) => setFloorConfig(activeFloor, 'ceilingHeight', v)}
               />
             </div>
 
-            {/* 면적 표시 바 */}
+            {/* 면적 표시 */}
             {form.areaWidth > 0 && form.areaDepth > 0 && (
               <div
                 className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
                 style={{ background: '#0D1117', border: '1px solid #21262D' }}
               >
                 <span className="text-xs text-gray-500">
-                  {form.floorCount > 1 ? `층당 면적 ${totalArea.toLocaleString()} m² · 총` : '총 면적'}
+                  {form.floorCount > 1
+                    ? `${activeFloor}층 ${(currentFC.areaWidth * currentFC.areaDepth).toLocaleString()} m² · 총`
+                    : '총 면적'}
                 </span>
                 <div className="flex items-baseline gap-1">
                   <span className="font-mono text-lg font-bold text-white">
-                    {(totalArea * form.floorCount).toLocaleString()}
+                    {totalArea.toLocaleString()}
                   </span>
                   <span className="text-xs text-gray-500">m²</span>
                   {form.floorCount > 1 && (
@@ -275,7 +385,7 @@ function DimensionInput({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs text-gray-500">{label}</label>
+      {label && <label className="mb-1.5 block text-xs text-gray-500">{label}</label>}
       <div className="relative">
         <input
           type="number"
