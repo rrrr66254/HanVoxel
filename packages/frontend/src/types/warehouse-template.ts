@@ -64,13 +64,29 @@ export const INDUSTRY_COLORS: Record<string, string> = {
   EXPORT_EU: '#8b5cf6',
 };
 
+// 층별 크기 설정
+export interface FloorConfig {
+  floor: number;        // 층 번호 (1~10)
+  areaWidth: number;    // m
+  areaDepth: number;    // m
+  ceilingHeight: number; // m
+}
+
 // 마법사 입력 데이터
 export interface WizardFormData {
   warehouseName: string;
-  areaWidth: number;   // m
+  areaWidth: number;   // m (기본값 / 1층 기준)
   areaDepth: number;   // m
   ceilingHeight: number; // m
   floorCount: number;  // 층 수 (1~10)
+  floorConfigs: FloorConfig[]; // 층별 개별 설정
   industry: string;
   templateId: string | null;
+}
+
+// 특정 층의 설정 가져오기 (개별 설정 없으면 기본값 사용)
+export function getFloorConfig(form: WizardFormData, floorNumber: number): FloorConfig {
+  const custom = form.floorConfigs.find((f) => f.floor === floorNumber);
+  if (custom) return custom;
+  return { floor: floorNumber, areaWidth: form.areaWidth, areaDepth: form.areaDepth, ceilingHeight: form.ceilingHeight };
 }

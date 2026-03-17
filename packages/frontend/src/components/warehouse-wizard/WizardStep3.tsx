@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { WarehouseViewer } from '../warehouse-viewer';
 import type { SpatialObject } from '../../types/spatial';
 import type { WarehouseTemplate, WizardFormData } from '../../types/warehouse-template';
+import { getFloorConfig } from '../../types/warehouse-template';
 import { generateWarehouseLayout } from '../../utils/layout-generator';
 
 interface WizardStep3Props {
@@ -44,7 +45,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
           <h2 className="text-base font-bold text-white">3D 레이아웃 확인</h2>
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="rounded bg-gray-800 px-2 py-1 font-mono text-gray-300">
-              {form.areaWidth}m × {form.areaDepth}m
+              {(() => { const fc = getFloorConfig(form, currentFloor); return `${fc.areaWidth}m × ${fc.areaDepth}m`; })()}
             </span>
             <span className="text-blue-400 font-semibold">{currentFloor}층</span>
             <span>랙 {rackCount}개</span>
