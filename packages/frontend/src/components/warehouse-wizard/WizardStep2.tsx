@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { WarehouseTemplate, WizardFormData } from '../../types/warehouse-template';
 import { INDUSTRY_LABELS, INDUSTRY_COLORS } from '../../types/warehouse-template';
 import { getWarehouseTemplates } from '../../api/warehouse-template-api';
+import { TemplatePreview } from './TemplatePreview';
 
 interface WizardStep2Props {
   form: WizardFormData;
@@ -31,33 +32,6 @@ const VARIANT_LABELS: Record<string, string> = {
   'eu-standard': 'EU 표준형',
   'container-staging': '컨테이너형',
   'cross-dock': '크로스도크형',
-};
-
-// 레이아웃 타입 아이콘 (미니 SVG 뷰)
-const LAYOUT_ICON = {
-  BACK_TO_BACK: (
-    <svg width="40" height="28" viewBox="0 0 40 28">
-      {/* 등지기 배치 — 두 랙이 등을 맞대고 있는 형태 */}
-      <rect x="2" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      <rect x="10" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      <rect x="24" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      <rect x="32" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      {/* 통로 표시 */}
-      <rect x="17" y="2" width="6" height="24" rx="1" fill="#2D7DD2" opacity="0.2" />
-    </svg>
-  ),
-  SINGLE: (
-    <svg width="40" height="28" viewBox="0 0 40 28">
-      {/* 단열 배치 — 모든 랙 한쪽 방향 */}
-      <rect x="2" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      <rect x="14" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      <rect x="26" y="4" width="6" height="20" rx="1" fill="#3FB950" opacity="0.6" />
-      {/* 통로 표시 */}
-      <rect x="9" y="2" width="4" height="24" rx="1" fill="#2D7DD2" opacity="0.2" />
-      <rect x="21" y="2" width="4" height="24" rx="1" fill="#2D7DD2" opacity="0.2" />
-      <rect x="33" y="2" width="4" height="24" rx="1" fill="#2D7DD2" opacity="0.2" />
-    </svg>
-  ),
 };
 
 /**
@@ -140,7 +114,7 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                   {/* 추천 뱃지 (첫 번째 = 추천) */}
                   {idx === 0 && (
                     <div
-                      className="absolute -top-3 left-4 rounded-full px-3 py-1 text-[10px] font-bold tracking-wider uppercase"
+                      className="absolute -top-3 left-4 z-10 rounded-full px-3 py-1 text-[10px] font-bold tracking-wider uppercase"
                       style={{ background: industryColor, color: '#fff' }}
                     >
                       추천
@@ -150,7 +124,7 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                   {/* 선택 표시 */}
                   {isSelected && (
                     <div
-                      className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
+                      className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full"
                       style={{ background: industryColor }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
@@ -159,17 +133,22 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                     </div>
                   )}
 
-                  {/* 레이아웃 미니 아이콘 */}
-                  <div className="mb-3 flex items-center gap-3">
-                    <div
-                      className="flex items-center justify-center rounded-lg p-1.5"
-                      style={{ background: '#0D1117', border: '1px solid #21262D' }}
-                    >
-                      {LAYOUT_ICON[tpl.rackLayout as keyof typeof LAYOUT_ICON] ?? LAYOUT_ICON.BACK_TO_BACK}
-                    </div>
+                  {/* 2D 탑뷰 프리뷰 */}
+                  <div className="-mx-5 -mt-5 mb-3">
+                    <TemplatePreview
+                      template={tpl}
+                      form={form}
+                      isSelected={isSelected}
+                      industryColor={industryColor}
+                    />
+                  </div>
+
+                  {/* 제목 + 변형 라벨 */}
+                  <div className="mb-2 flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white leading-tight">{tpl.name}</h3>
                     {variantLabel && (
                       <span
-                        className="rounded-md px-2 py-0.5 text-[10px] font-semibold"
+                        className="shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold"
                         style={{
                           background: isSelected ? `${industryColor}20` : '#21262D',
                           color: isSelected ? industryColor : '#8B949E',
@@ -179,9 +158,6 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                       </span>
                     )}
                   </div>
-
-                  {/* 제목 */}
-                  <h3 className="mb-2 text-base font-bold text-white leading-tight">{tpl.name}</h3>
 
                   {/* 설명 */}
                   <p className="mb-4 flex-1 text-xs text-gray-500 leading-relaxed">{tpl.description}</p>
