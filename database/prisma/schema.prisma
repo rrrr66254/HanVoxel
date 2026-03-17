@@ -1466,3 +1466,165 @@ model RoiMonthlySnapshot {
   @@index([companyId, period])
   @@map("roi_monthly_snapshots")
 }
+
+// ============================================================
+// 입출고 관리 — Inbound / Outbound Orders
+// ============================================================
+
+/// 입고 주문
+model InboundOrder {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  /// 자동발주 추천 연동 ID
+  reorderRecommendationId String? @map("reorder_recommendation_id") @db.Uuid
+  /// 공급업체 (Partner) ID
+  vendorId    String?  @map("vendor_id") @db.Uuid
+  /// 공급업체명 (검색·표시용 비정규화)
+  vendorName  String?  @map("vendor_name") @db.VarChar(200)
+  /// 상태: ORDERED → IN_TRANSIT → ARRIVED → QC_PENDING → QC_PASSED → STOCKED
+  status      String   @default("ORDERED") @db.VarChar(20)
+  /// 입고 예상일
+  expectedDate DateTime? @map("expected_date") @db.Date
+  /// 실제 입고일
+  actualDate  DateTime? @map("actual_date") @db.Date
+  /// 비고
+  notes       String?  @db.Text
+
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  items       InboundItem[]
+  calendar    DeliveryCalendar[]
+
+  @@index([siteId, status])
+  @@index([siteId, expectedDate])
+  @@index([vendorId])
+  @@map("inbound_orders")
+}
+
+/// 입고 품목 명세
+model InboundItem {
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inboundOrderId  String  @map("inbound_order_id") @db.Uuid
+  /// 상품 SKU
+  skuCode         String  @map("sku_code") @db.VarChar(100)
+  /// 상품명
+  itemName        String? @map("item_name") @db.VarChar(200)
+  /// 예상 수량
+  expectedQty     Int     @map("expected_qty")
+  /// 실제 수량
+  actualQty       Int?    @map("actual_qty")
+  /// 단가 (원)
+  unitPrice       Int     @default(0) @map("unit_price")
+  /// QC 검수 연동 ID
+  qcInspectionId  String? @map("qc_inspection_id") @db.Uuid
+  /// 배치될 랙/BIN 공간 객체 ID
+  spatialObjectId String? @map("spatial_object_id") @db.Uuid
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  inboundOrder    InboundOrder @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
+
+  @@index([inboundOrderId])
+  @@index([skuCode])
+  @@map("inbound_items")
+}
+
+/// 출고 주문
+model OutboundOrder {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String   @map("site_id") @db.Uuid
+  /// 출고 유형: PICKING | PALLET | CONTAINER | DIRECT | TRANSFER
+  type            String   @default("PICKING") @db.VarChar(20)
+  /// 상태: PLANNED → PICKING → PACKED → DISPATCHED
+  status          String   @default("PLANNED") @db.VarChar(20)
+  /// 출고 예정일
+  scheduledDate   DateTime? @map("scheduled_date") @db.Date
+  /// 실제 출고일
+  dispatchedDate  DateTime? @map("dispatched_date") @db.Date
+  /// 고객명
+  customerName    String?  @map("customer_name") @db.VarChar(200)
+  /// 배송지
+  destination     String?  @db.Text
+  /// 명세표 번호 (OUT-YYYYMMDD-XXXX)
+  manifestNumber  String?  @unique @map("manifest_number") @db.VarChar(30)
+  /// 타임슬롯 (AM / PM / NIGHT / CUSTOM)
+  timeSlot        String?  @map("time_slot") @db.VarChar(20)
+  /// 비고
+  notes           String?  @db.Text
+  /// 컨테이너 규격 (CONTAINER 유형 시)
+  containerSpec   String?  @map("container_spec") @db.VarChar(30)
+  /// HS 코드 (수출 시)
+  hsCode          String?  @map("hs_code") @db.VarChar(10)
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  items           OutboundItem[]
+  calendar        DeliveryCalendar[]
+
+  @@index([siteId, status])
+  @@index([siteId, scheduledDate])
+  @@index([manifestNumber])
+  @@map("outbound_orders")
+}
+
+/// 출고 품목 명세
+model OutboundItem {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  outboundOrderId  String   @map("outbound_order_id") @db.Uuid
+  /// 상품 SKU
+  skuCode          String   @map("sku_code") @db.VarChar(100)
+  /// 상품명
+  itemName         String?  @map("item_name") @db.VarChar(200)
+  /// 수량
+  qty              Int
+  /// 단가 (원)
+  unitPrice        Int      @default(0) @map("unit_price")
+  /// 피킹 담당자
+  pickedBy         String?  @map("picked_by") @db.VarChar(100)
+  /// 피킹 시각
+  pickedAt         DateTime? @map("picked_at") @db.Timestamptz
+  /// 출고 위치 (spatial_objects 참조)
+  spatialObjectId  String?  @map("spatial_object_id") @db.Uuid
+
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  outboundOrder    OutboundOrder @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
+
+  @@index([outboundOrderId])
+  @@index([skuCode])
+  @@map("outbound_items")
+}
+
+/// 입출고 달력
+model DeliveryCalendar {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String   @map("site_id") @db.Uuid
+  /// 유형: INBOUND | OUTBOUND
+  type            String   @db.VarChar(10)
+  /// 입고 주문 ID (INBOUND 시)
+  inboundOrderId  String?  @map("inbound_order_id") @db.Uuid
+  /// 출고 주문 ID (OUTBOUND 시)
+  outboundOrderId String?  @map("outbound_order_id") @db.Uuid
+  /// 예정일
+  scheduledDate   DateTime @map("scheduled_date") @db.Date
+  /// 타임슬롯 (AM / PM / NIGHT / CUSTOM)
+  timeSlot        String?  @map("time_slot") @db.VarChar(20)
+  /// 상태
+  status          String   @default("SCHEDULED") @db.VarChar(20)
+  /// 색상 코드
+  colorCode       String?  @map("color_code") @db.VarChar(7)
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  inboundOrder    InboundOrder?  @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
+  outboundOrder   OutboundOrder? @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, scheduledDate])
+  @@index([siteId, type])
+  @@map("delivery_calendar")
+}
