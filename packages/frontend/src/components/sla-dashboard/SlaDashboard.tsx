@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Truck, AlertTriangle, Target, Clock, TrendingUp, TrendingDown, ArrowLeft, ShieldCheck } from 'lucide-react';
+import {
+  Truck, AlertTriangle, Target, Clock, TrendingUp, TrendingDown,
+  ArrowLeft, ShieldCheck, X, FileText, CheckCircle, XCircle,
+  ChevronRight, Calendar, BarChart3,
+} from 'lucide-react';
 import SlaSettings from './SlaSettings';
 import SlaReport from './SlaReport';
 import type { SlaTargetData, SlaMetricData, SlaViolationData } from '../../api/sla-api';
@@ -14,12 +18,41 @@ const COLORS = {
   hoverRow: '#1C2128',
   text: '#C9D1D9',
   textMuted: '#8B949E',
+  textDim: '#484F58',
   gridLine: '#21262D',
   blue: '#2D7DD2',
   red: '#F85149',
   green: '#3FB950',
   yellow: '#D29922',
+  overlay: 'rgba(0,0,0,0.6)',
 } as const;
+
+// ── localStorage에서 SLA 설정 불러오기 ─────────────────
+const STORAGE_KEY = 'hanvoxel_sla_targets';
+
+interface SavedSlaEntry {
+  id: string;
+  customerId: string;
+  customerName: string;
+  name: string;
+  deliveryOnTimeTarget: number;
+  misshipmentRateLimit: number;
+  pickingAccuracyTarget: number;
+  avgProcessingTimeLimit: number;
+  escalationEnabled: boolean;
+  escalationThreshold: number;
+  escalationEmails: string;
+  savedAt: string;
+}
+
+function loadSavedTargets(): SavedSlaEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 // ── 목 데이터 (오프라인 폴백) ─────────────────────────────
 
@@ -30,7 +63,6 @@ function generateMockMetrics(): SlaMetricData[] {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    // 약간의 변동 + 가끔 위반
     const isViolationDay = i % 7 === 3 || i === 5;
     metrics.push({
       id: `mock-metric-${i}`,
@@ -90,6 +122,34 @@ const METRIC_LABELS: Record<string, string> = {
   avg_processing_time: '평균 처리 시간',
 };
 
+const METRIC_UNITS: Record<string, string> = {
+  delivery_on_time: '%',
+  misshipment_rate: '%',
+  picking_accuracy: '%',
+  avg_processing_time: '분',
+};
+
+const METRIC_DIRECTIONS: Record<string, string> = {
+  delivery_on_time: '이상',
+  misshipment_rate: '이하',
+  picking_accuracy: '이상',
+  avg_processing_time: '이하',
+};
+
+const METRIC_COLORS: Record<string, string> = {
+  delivery_on_time: COLORS.blue,
+  misshipment_rate: COLORS.red,
+  picking_accuracy: COLORS.green,
+  avg_processing_time: COLORS.yellow,
+};
+
+const METRIC_ICONS: Record<string, React.ReactNode> = {
+  delivery_on_time: <Truck size={16} style={{ color: COLORS.blue }} />,
+  misshipment_rate: <AlertTriangle size={16} style={{ color: COLORS.red }} />,
+  picking_accuracy: <Target size={16} style={{ color: COLORS.green }} />,
+  avg_processing_time: <Clock size={16} style={{ color: COLORS.yellow }} />,
+};
+
 // ── 애니메이션 카운터 훅 ─────────────────────────────────
 
 function useAnimatedCounter(end: number, duration: number = 800, decimals: number = 1): string {
@@ -105,7 +165,6 @@ function useAnimatedCounter(end: number, duration: number = 800, decimals: numbe
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutCubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = startVal + (end - startVal) * eased;
       setDisplay(current.toFixed(decimals));
@@ -139,7 +198,6 @@ interface KpiCardProps {
 function KpiCard({ label, value, target, met, unit, direction, accentColor, icon, change, decimals = 1 }: KpiCardProps) {
   const animatedValue = useAnimatedCounter(value, 800, decimals);
   const isPositiveChange = change >= 0;
-  // 오배송률은 낮을수록 좋으므로 change 방향 해석이 반대
   const isGoodChange = direction === 'higher' ? isPositiveChange : !isPositiveChange;
 
   return (
@@ -150,11 +208,8 @@ function KpiCard({ label, value, target, met, unit, direction, accentColor, icon
         border: `1px solid ${COLORS.border}`,
       }}
     >
-      {/* 상단 3px 색상 라인 */}
       <div style={{ height: '3px', backgroundColor: accentColor }} />
-
       <div className="p-5">
-        {/* 아이콘 + 라벨 */}
         <div className="flex items-center gap-2 mb-3">
           <div
             className="flex items-center justify-center w-8 h-8 rounded-lg"
@@ -166,8 +221,6 @@ function KpiCard({ label, value, target, met, unit, direction, accentColor, icon
             {label}
           </span>
         </div>
-
-        {/* 큰 값 */}
         <div className="flex items-baseline gap-1 mb-2">
           <span className="text-3xl font-bold" style={{ color: COLORS.text }}>
             {animatedValue}
@@ -176,8 +229,6 @@ function KpiCard({ label, value, target, met, unit, direction, accentColor, icon
             {unit}
           </span>
         </div>
-
-        {/* 목표 비교 + 변화 지표 */}
         <div className="flex items-center justify-between">
           <span className="text-xs" style={{ color: COLORS.textMuted }}>
             목표: {direction === 'higher' ? '>=' : '<='} {target}{unit}
@@ -192,11 +243,7 @@ function KpiCard({ label, value, target, met, unit, direction, accentColor, icon
             className="flex items-center gap-0.5 text-xs font-medium"
             style={{ color: isGoodChange ? COLORS.green : COLORS.red }}
           >
-            {isPositiveChange ? (
-              <TrendingUp size={12} />
-            ) : (
-              <TrendingDown size={12} />
-            )}
+            {isPositiveChange ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {isPositiveChange ? '+' : ''}{change.toFixed(decimals)}
           </span>
         </div>
@@ -205,7 +252,7 @@ function KpiCard({ label, value, target, met, unit, direction, accentColor, icon
   );
 }
 
-// ── 14일 추세 라인 차트 (recharts 다크 테마) ─────────────
+// ── 14일 추세 라인 차트 ────────────────────────────────
 
 interface TrendChartProps {
   data: Array<{ date: string; value: number }>;
@@ -291,13 +338,265 @@ function SummaryCard({ label, value, unit, color }: SummaryCardProps) {
     >
       <div className="text-xs mb-1" style={{ color: COLORS.textMuted }}>{label}</div>
       <div className="flex items-baseline gap-1">
-        <span
-          className="text-xl font-bold"
-          style={{ color: color ?? COLORS.text }}
-        >
+        <span className="text-xl font-bold" style={{ color: color ?? COLORS.text }}>
           {Number(animatedValue).toLocaleString()}
         </span>
         <span className="text-xs" style={{ color: COLORS.textMuted }}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── 위반 상세 모달 ───────────────────────────────────────
+
+interface ViolationDetailModalProps {
+  violation: SlaViolationData;
+  metrics: SlaMetricData[];
+  target: SlaTargetData;
+  onClose: () => void;
+}
+
+function ViolationDetailModal({ violation, metrics, target, onClose }: ViolationDetailModalProps) {
+  const metricLabel = METRIC_LABELS[violation.metricName] ?? violation.metricName;
+  const metricUnit = METRIC_UNITS[violation.metricName] ?? '';
+  const metricDirection = METRIC_DIRECTIONS[violation.metricName] ?? '';
+  const metricColor = METRIC_COLORS[violation.metricName] ?? COLORS.red;
+  const metricIcon = METRIC_ICONS[violation.metricName] ?? <AlertTriangle size={16} />;
+
+  // 해당 날짜 전후 7일 메트릭
+  const vDate = new Date(violation.violationDate);
+  const contextMetrics = useMemo(() => {
+    const from = new Date(vDate);
+    from.setDate(from.getDate() - 3);
+    const to = new Date(vDate);
+    to.setDate(to.getDate() + 3);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr = to.toISOString().slice(0, 10);
+    return metrics.filter((m) => m.recordDate >= fromStr && m.recordDate <= toStr);
+  }, [metrics, vDate]);
+
+  // 해당 지표의 값 추출
+  const getMetricValue = (m: SlaMetricData): number => {
+    switch (violation.metricName) {
+      case 'delivery_on_time': return m.deliveryOnTimeRate;
+      case 'misshipment_rate': return m.misshipmentRate;
+      case 'picking_accuracy': return m.pickingAccuracy;
+      case 'avg_processing_time': return m.avgProcessingTime;
+      default: return 0;
+    }
+  };
+
+  // 목표값
+  const getTargetValue = (): number => {
+    switch (violation.metricName) {
+      case 'delivery_on_time': return target.deliveryOnTimeTarget;
+      case 'misshipment_rate': return target.misshipmentRateLimit;
+      case 'picking_accuracy': return target.pickingAccuracyTarget;
+      case 'avg_processing_time': return target.avgProcessingTimeLimit;
+      default: return 0;
+    }
+  };
+
+  const targetVal = getTargetValue();
+  const deviation = Math.abs(violation.actualValue - violation.targetValue);
+  const deviationPct = violation.targetValue !== 0 ? (deviation / violation.targetValue * 100).toFixed(1) : '0';
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: COLORS.overlay, display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: COLORS.card, borderRadius: 16, border: `1px solid ${COLORS.border}`,
+          width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 모달 헤더 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', borderBottom: `1px solid ${COLORS.border}`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: `${metricColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {metricIcon}
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>SLA 위반 상세</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted }}>{metricLabel}</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, borderRadius: 6, border: `1px solid ${COLORS.border}`,
+              background: 'transparent', color: COLORS.textMuted, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* 위반 요약 카드 */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12,
+          }}>
+            <div style={{
+              background: COLORS.bg, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+              padding: 14, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>목표</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>
+                {violation.targetValue}
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>{metricUnit}</span>
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 2 }}>{metricDirection}</div>
+            </div>
+            <div style={{
+              background: `${COLORS.red}08`, borderRadius: 10, border: `1px solid ${COLORS.red}30`,
+              padding: 14, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>실측</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.red }}>
+                {violation.actualValue}
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>{metricUnit}</span>
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.red, marginTop: 2 }}>위반</div>
+            </div>
+            <div style={{
+              background: COLORS.bg, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+              padding: 14, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>편차</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.yellow }}>
+                {deviation.toFixed(1)}
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}>{metricUnit}</span>
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 2 }}>{deviationPct}% 차이</div>
+            </div>
+          </div>
+
+          {/* 상세 정보 */}
+          <div style={{
+            background: COLORS.bg, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+            padding: 16,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>상세 정보</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { label: '위반 날짜', value: violation.violationDate, icon: <Calendar size={12} color={COLORS.textMuted} /> },
+                { label: '심각도', value: violation.severity === 'critical' ? '긴급' : '경고',
+                  icon: <AlertTriangle size={12} color={violation.severity === 'critical' ? COLORS.red : COLORS.yellow} />,
+                  color: violation.severity === 'critical' ? COLORS.red : COLORS.yellow,
+                },
+                { label: '에스컬레이션', value: violation.escalated ? '발송됨' : '미발송',
+                  icon: <FileText size={12} color={COLORS.textMuted} />,
+                  color: violation.escalated ? COLORS.red : COLORS.textMuted,
+                },
+                { label: '상태', value: violation.resolvedAt ? `해결 (${violation.resolvedAt.slice(0, 10)})` : '미해결',
+                  icon: violation.resolvedAt ? <CheckCircle size={12} color={COLORS.green} /> : <XCircle size={12} color={COLORS.red} />,
+                  color: violation.resolvedAt ? COLORS.green : COLORS.red,
+                },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {item.icon}
+                  <div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{item.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: item.color ?? COLORS.text }}>{item.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {violation.note && (
+              <div style={{
+                marginTop: 12, padding: '10px 12px', borderRadius: 8,
+                background: COLORS.card, border: `1px solid ${COLORS.border}`,
+              }}>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>메모</div>
+                <div style={{ fontSize: 13, color: COLORS.text }}>{violation.note}</div>
+              </div>
+            )}
+          </div>
+
+          {/* 전후 데이터 추이 */}
+          {contextMetrics.length > 0 && (
+            <div style={{
+              background: COLORS.bg, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+              padding: 16,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                <BarChart3 size={13} color={COLORS.textMuted} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>전후 추이 (±3일)</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {contextMetrics.map((m) => {
+                  const val = getMetricValue(m);
+                  const isViolationDay = m.recordDate === violation.violationDate;
+                  const isViolated = violation.metricName === 'misshipment_rate' || violation.metricName === 'avg_processing_time'
+                    ? val > targetVal
+                    : val < targetVal;
+                  // 바 너비 계산
+                  const maxVal = Math.max(...contextMetrics.map(getMetricValue), targetVal) * 1.1;
+                  const barWidth = maxVal > 0 ? Math.min((val / maxVal) * 100, 100) : 0;
+
+                  return (
+                    <div key={m.recordDate} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '6px 10px', borderRadius: 6,
+                      background: isViolationDay ? `${COLORS.red}10` : 'transparent',
+                      border: isViolationDay ? `1px solid ${COLORS.red}30` : '1px solid transparent',
+                    }}>
+                      <span style={{
+                        fontSize: 11, color: isViolationDay ? COLORS.text : COLORS.textMuted,
+                        fontWeight: isViolationDay ? 600 : 400, width: 80, flexShrink: 0,
+                      }}>
+                        {m.recordDate.slice(5)}
+                      </span>
+                      <div style={{ flex: 1, height: 14, background: COLORS.card, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{
+                          width: `${barWidth}%`, height: '100%', borderRadius: 4,
+                          background: isViolated ? COLORS.red : metricColor,
+                          opacity: isViolationDay ? 1 : 0.6,
+                          transition: 'width 0.3s ease',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: 12, fontWeight: isViolationDay ? 700 : 400,
+                        color: isViolated ? COLORS.red : COLORS.text,
+                        width: 60, textAlign: 'right', flexShrink: 0,
+                      }}>
+                        {val.toFixed(violation.metricName === 'misshipment_rate' ? 2 : 1)}{metricUnit}
+                      </span>
+                      {isViolationDay && (
+                        <ChevronRight size={12} color={COLORS.red} style={{ flexShrink: 0 }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* 목표 라인 표시 */}
+              <div style={{
+                marginTop: 8, display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 11, color: COLORS.textMuted,
+              }}>
+                <div style={{ width: 12, height: 2, background: COLORS.green, borderRadius: 1 }} />
+                목표: {targetVal}{metricUnit} {metricDirection}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -317,14 +616,38 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
   const [metrics, setMetrics] = useState<SlaMetricData[]>([]);
   const [violations, setViolations] = useState<SlaViolationData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedViolation, setSelectedViolation] = useState<SlaViolationData | null>(null);
 
   const companyId = 'demo-company';
   const siteId = 'demo-site';
 
+  // localStorage에서 저장된 설정 반영
+  const applyLocalSettings = useCallback((targetData: SlaTargetData): SlaTargetData => {
+    const saved = loadSavedTargets();
+    if (saved.length > 0) {
+      // 가장 최근 저장된 설정 사용
+      const latest = saved.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())[0];
+      return {
+        ...targetData,
+        name: latest.name,
+        deliveryOnTimeTarget: latest.deliveryOnTimeTarget,
+        misshipmentRateLimit: latest.misshipmentRateLimit,
+        pickingAccuracyTarget: latest.pickingAccuracyTarget,
+        avgProcessingTimeLimit: latest.avgProcessingTimeLimit,
+        escalationEnabled: latest.escalationEnabled,
+        escalationThreshold: latest.escalationThreshold,
+        escalationEmails: latest.escalationEmails.split(',').map((e) => e.trim()).filter(Boolean),
+      };
+    }
+    return targetData;
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const t = await getSlaTarget(companyId, siteId);
-    const targetData = t ?? MOCK_TARGET;
+    let targetData = t ?? MOCK_TARGET;
+    // localStorage 설정 반영
+    targetData = applyLocalSettings(targetData);
     setTarget(targetData);
 
     const m = await getSlaMetrics(targetData.id, { limit: 30 });
@@ -334,43 +657,34 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
     setViolations(v.length > 0 ? v : MOCK_VIOLATIONS);
 
     setLoading(false);
-  }, []);
+  }, [applyLocalSettings]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // 최신 KPI (가장 최근 날짜)
+  // 최신 KPI
   const latest = metrics.length > 0 ? metrics[metrics.length - 1] : null;
-
-  // 변화량 계산 (전일 대비)
   const previous = metrics.length > 1 ? metrics[metrics.length - 2] : null;
   const getChange = (current: number, prev: number | undefined): number => {
     if (prev === undefined) return 0;
     return current - prev;
   };
 
-  // 14일 추세 데이터 생성
+  // 14일 추세
   const last14Metrics = metrics.slice(-14);
   const trendDelivery = last14Metrics.map((m) => ({ date: m.recordDate, value: m.deliveryOnTimeRate }));
   const trendMisshipment = last14Metrics.map((m) => ({ date: m.recordDate, value: m.misshipmentRate }));
   const trendPicking = last14Metrics.map((m) => ({ date: m.recordDate, value: m.pickingAccuracy }));
   const trendProcessing = last14Metrics.map((m) => ({ date: m.recordDate, value: m.avgProcessingTime }));
 
-  // ── 로딩 화면 ──
   if (loading) {
     return (
-      <div
-        className="flex h-screen items-center justify-center"
-        style={{ backgroundColor: COLORS.bg }}
-      >
+      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: COLORS.bg }}>
         <div className="flex flex-col items-center gap-3">
           <div
             className="w-8 h-8 border-2 rounded-full animate-spin"
-            style={{
-              borderColor: COLORS.border,
-              borderTopColor: COLORS.blue,
-            }}
+            style={{ borderColor: COLORS.border, borderTopColor: COLORS.blue }}
           />
           <span style={{ color: COLORS.textMuted }}>로딩 중...</span>
         </div>
@@ -380,15 +694,18 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLORS.bg }}>
-      {/* ── 헤더 ── */}
+      {/* ── 고정 헤더 (sticky) ── */}
       <header
-        className="border-b px-6 py-4"
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
           backgroundColor: COLORS.card,
-          borderColor: COLORS.border,
+          borderBottom: `1px solid ${COLORS.border}`,
+          padding: '0 24px',
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" style={{ height: 56 }}>
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
@@ -400,17 +717,14 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
             </button>
             <div className="flex items-center gap-2">
               <ShieldCheck size={20} style={{ color: COLORS.blue }} />
-              <h1 className="text-xl font-bold" style={{ color: COLORS.text }}>
+              <h1 className="text-lg font-bold" style={{ color: COLORS.text }}>
                 SLA 모니터링
               </h1>
             </div>
             {target && (
               <span
                 className="text-sm px-2 py-0.5 rounded"
-                style={{
-                  color: COLORS.textMuted,
-                  backgroundColor: `${COLORS.border}80`,
-                }}
+                style={{ color: COLORS.textMuted, backgroundColor: `${COLORS.border}80` }}
               >
                 {target.name}
               </span>
@@ -418,10 +732,7 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
           </div>
 
           {/* 탭 네비게이션 */}
-          <div
-            className="flex gap-1 rounded-lg p-1"
-            style={{ backgroundColor: COLORS.bg }}
-          >
+          <div className="flex gap-1 rounded-lg p-1" style={{ backgroundColor: COLORS.bg }}>
             {(['dashboard', 'settings', 'report'] as const).map((t) => (
               <button
                 key={t}
@@ -455,7 +766,7 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
       {tab === 'dashboard' && (
         <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
-          {/* ── 실시간 KPI 카드 4개 ── */}
+          {/* 실시간 KPI 카드 4개 */}
           <section>
             <h2 className="text-sm font-semibold mb-3" style={{ color: COLORS.textMuted }}>
               실시간 KPI
@@ -512,63 +823,35 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
             ) : (
               <div
                 className="rounded-xl p-8 text-center flex flex-col items-center gap-3"
-                style={{
-                  backgroundColor: COLORS.card,
-                  border: `1px solid ${COLORS.border}`,
-                }}
+                style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
               >
                 <ShieldCheck size={32} style={{ color: COLORS.textMuted }} />
-                <span className="text-sm" style={{ color: COLORS.textMuted }}>
-                  KPI 데이터가 없습니다
-                </span>
+                <span className="text-sm" style={{ color: COLORS.textMuted }}>KPI 데이터가 없습니다</span>
               </div>
             )}
           </section>
 
-          {/* ── 14일 추세 라인 차트 ── */}
+          {/* 14일 추세 라인 차트 */}
           <section>
             <h2 className="text-sm font-semibold mb-3" style={{ color: COLORS.textMuted }}>
               추세 (최근 14일)
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <TrendChart
-                data={trendDelivery}
-                label="납기 준수율"
-                color={COLORS.blue}
-                unit="%"
-              />
-              <TrendChart
-                data={trendMisshipment}
-                label="오배송률"
-                color={COLORS.red}
-                unit="%"
-              />
-              <TrendChart
-                data={trendPicking}
-                label="피킹 정확도"
-                color={COLORS.green}
-                unit="%"
-              />
-              <TrendChart
-                data={trendProcessing}
-                label="평균 처리 시간"
-                color={COLORS.yellow}
-                unit="분"
-              />
+              <TrendChart data={trendDelivery} label="납기 준수율" color={COLORS.blue} unit="%" />
+              <TrendChart data={trendMisshipment} label="오배송률" color={COLORS.red} unit="%" />
+              <TrendChart data={trendPicking} label="피킹 정확도" color={COLORS.green} unit="%" />
+              <TrendChart data={trendProcessing} label="평균 처리 시간" color={COLORS.yellow} unit="분" />
             </div>
           </section>
 
-          {/* ── SLA 위반 내역 테이블 ── */}
+          {/* SLA 위반 내역 테이블 (클릭 가능) */}
           <section>
             <h2 className="text-sm font-semibold mb-3 flex items-center" style={{ color: COLORS.textMuted }}>
               SLA 위반 내역
               {violations.filter((v) => !v.resolvedAt).length > 0 && (
                 <span
                   className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{
-                    backgroundColor: `${COLORS.red}20`,
-                    color: COLORS.red,
-                  }}
+                  style={{ backgroundColor: `${COLORS.red}20`, color: COLORS.red }}
                 >
                   미해결 {violations.filter((v) => !v.resolvedAt).length}건
                 </span>
@@ -576,13 +859,9 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
             </h2>
             <div
               className="rounded-xl overflow-hidden"
-              style={{
-                backgroundColor: COLORS.card,
-                border: `1px solid ${COLORS.border}`,
-              }}
+              style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
             >
               {violations.length === 0 ? (
-                /* 빈 상태 */
                 <div className="p-10 text-center flex flex-col items-center gap-3">
                   <ShieldCheck size={40} style={{ color: COLORS.green }} />
                   <span className="text-sm font-medium" style={{ color: COLORS.textMuted }}>
@@ -596,48 +875,37 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ backgroundColor: COLORS.card }}>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        날짜
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        지표
-                      </th>
-                      <th
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        목표
-                      </th>
-                      <th
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        실측
-                      </th>
-                      <th
-                        className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        심각도
-                      </th>
+                      {['날짜', '지표'].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                          style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                      {['목표', '실측'].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
+                          style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                      {['심각도', '에스컬레이션', '상태'].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider"
+                          style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
+                        >
+                          {h}
+                        </th>
+                      ))}
                       <th
                         className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        에스컬레이션
-                      </th>
-                      <th
-                        className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                      >
-                        상태
-                      </th>
+                        style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}`, width: 40 }}
+                      />
                     </tr>
                   </thead>
                   <tbody>
@@ -648,7 +916,9 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
                         style={{
                           backgroundColor: idx % 2 === 0 ? COLORS.card : COLORS.bg,
                           opacity: v.resolvedAt ? 0.5 : 1,
+                          cursor: 'pointer',
                         }}
+                        onClick={() => setSelectedViolation(v)}
                         onMouseEnter={(e) => {
                           (e.currentTarget as HTMLTableRowElement).style.backgroundColor = COLORS.hoverRow;
                         }}
@@ -657,85 +927,55 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
                             idx % 2 === 0 ? COLORS.card : COLORS.bg;
                         }}
                       >
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: COLORS.text, borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3" style={{ color: COLORS.text, borderBottom: `1px solid ${COLORS.border}` }}>
                           {v.violationDate}
                         </td>
-                        <td
-                          className="px-4 py-3 font-medium"
-                          style={{ color: COLORS.text, borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 font-medium" style={{ color: COLORS.text, borderBottom: `1px solid ${COLORS.border}` }}>
                           {METRIC_LABELS[v.metricName] ?? v.metricName}
                         </td>
-                        <td
-                          className="px-4 py-3 text-right"
-                          style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 text-right" style={{ color: COLORS.textMuted, borderBottom: `1px solid ${COLORS.border}` }}>
                           {v.targetValue}
                         </td>
-                        <td
-                          className="px-4 py-3 text-right font-medium"
-                          style={{ color: COLORS.red, borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 text-right font-medium" style={{ color: COLORS.red, borderBottom: `1px solid ${COLORS.border}` }}>
                           {v.actualValue}
                         </td>
-                        <td
-                          className="px-4 py-3 text-center"
-                          style={{ borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
                           <span
                             className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
                             style={{
-                              backgroundColor: v.severity === 'critical'
-                                ? `${COLORS.red}20`
-                                : `${COLORS.yellow}20`,
-                              color: v.severity === 'critical'
-                                ? COLORS.red
-                                : COLORS.yellow,
+                              backgroundColor: v.severity === 'critical' ? `${COLORS.red}20` : `${COLORS.yellow}20`,
+                              color: v.severity === 'critical' ? COLORS.red : COLORS.yellow,
                             }}
                           >
                             {v.severity === 'critical' ? '긴급' : '경고'}
                           </span>
                         </td>
-                        <td
-                          className="px-4 py-3 text-center"
-                          style={{ borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
                           {v.escalated ? (
-                            <span className="text-xs font-medium" style={{ color: COLORS.red }}>
-                              발송됨
-                            </span>
+                            <span className="text-xs font-medium" style={{ color: COLORS.red }}>발송됨</span>
                           ) : (
                             <span className="text-xs" style={{ color: COLORS.textMuted }}>-</span>
                           )}
                         </td>
-                        <td
-                          className="px-4 py-3 text-center"
-                          style={{ borderBottom: `1px solid ${COLORS.border}` }}
-                        >
+                        <td className="px-4 py-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
                           {v.resolvedAt ? (
                             <span
                               className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
-                              style={{
-                                backgroundColor: `${COLORS.green}20`,
-                                color: COLORS.green,
-                              }}
+                              style={{ backgroundColor: `${COLORS.green}20`, color: COLORS.green }}
                             >
                               해결
                             </span>
                           ) : (
                             <span
                               className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
-                              style={{
-                                backgroundColor: `${COLORS.red}20`,
-                                color: COLORS.red,
-                              }}
+                              style={{ backgroundColor: `${COLORS.red}20`, color: COLORS.red }}
                             >
                               미해결
                             </span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                          <ChevronRight size={14} style={{ color: COLORS.textMuted }} />
                         </td>
                       </tr>
                     ))}
@@ -745,37 +985,29 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
             </div>
           </section>
 
-          {/* ── 운영 요약 (30일) ── */}
+          {/* 운영 요약 (30일) */}
           <section>
             <h2 className="text-sm font-semibold mb-3" style={{ color: COLORS.textMuted }}>
               운영 요약 (30일)
             </h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <SummaryCard
-                label="총 주문"
-                value={metrics.reduce((s, m) => s + m.totalOrders, 0)}
-                unit="건"
-              />
-              <SummaryCard
-                label="총 피킹"
-                value={metrics.reduce((s, m) => s + m.totalPicks, 0)}
-                unit="건"
-              />
-              <SummaryCard
-                label="오배송 건수"
-                value={metrics.reduce((s, m) => s + m.misshipmentCount, 0)}
-                unit="건"
-                color={COLORS.red}
-              />
-              <SummaryCard
-                label="SLA 위반일"
-                value={new Set(violations.map((v) => v.violationDate)).size}
-                unit="일"
-                color={COLORS.yellow}
-              />
+              <SummaryCard label="총 주문" value={metrics.reduce((s, m) => s + m.totalOrders, 0)} unit="건" />
+              <SummaryCard label="총 피킹" value={metrics.reduce((s, m) => s + m.totalPicks, 0)} unit="건" />
+              <SummaryCard label="오배송 건수" value={metrics.reduce((s, m) => s + m.misshipmentCount, 0)} unit="건" color={COLORS.red} />
+              <SummaryCard label="SLA 위반일" value={new Set(violations.map((v) => v.violationDate)).size} unit="일" color={COLORS.yellow} />
             </div>
           </section>
         </main>
+      )}
+
+      {/* ── 위반 상세 모달 ── */}
+      {selectedViolation && target && (
+        <ViolationDetailModal
+          violation={selectedViolation}
+          metrics={metrics}
+          target={target}
+          onClose={() => setSelectedViolation(null)}
+        />
       )}
     </div>
   );
