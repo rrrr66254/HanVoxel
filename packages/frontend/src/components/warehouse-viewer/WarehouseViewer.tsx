@@ -377,6 +377,21 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     return { name: 'RACK' };
   }, []);
 
+  // === 뷰 모드 ===
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const target = new THREE.Vector3(15, 0, 20);
+    controls.target.copy(target);
+    switch (mode) {
+      case 'top': controls.object.position.set(15, 50, 20); break;
+      case 'front': controls.object.position.set(15, 5, -15); break;
+      default: controls.object.position.set(30, 20, 35); break;
+    }
+    controls.update();
+  }, []);
+
   // === 프리셋 배치 ===
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
     // 바닥/벽 프리셋은 사각형 드로잉 모드로 진입
@@ -810,21 +825,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     });
   }, [binOccupancy, objects, placedObjects, currentSiteId]);
 
-  // === 뷰 모드 / 줌 ===
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    setViewMode(mode);
-    const controls = controlsRef.current;
-    if (!controls) return;
-    const target = new THREE.Vector3(15, 0, 20);
-    controls.target.copy(target);
-    switch (mode) {
-      case 'top': controls.object.position.set(15, 50, 20); break;
-      case 'front': controls.object.position.set(15, 5, -15); break;
-      default: controls.object.position.set(30, 20, 35); break;
-    }
-    controls.update();
-  }, []);
-
+  // === 줌 ===
   const handleZoomIn = useCallback(() => { const c = controlsRef.current; if (!c) return; const d = new THREE.Vector3().subVectors(c.target, c.object.position).normalize(); c.object.position.addScaledVector(d, 5); c.update(); }, []);
   const handleZoomOut = useCallback(() => { const c = controlsRef.current; if (!c) return; const d = new THREE.Vector3().subVectors(c.target, c.object.position).normalize(); c.object.position.addScaledVector(d, -5); c.update(); }, []);
   const handleResetView = useCallback(() => { handleViewModeChange('perspective'); }, [handleViewModeChange]);
