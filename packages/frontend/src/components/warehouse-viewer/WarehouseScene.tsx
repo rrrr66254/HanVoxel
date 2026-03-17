@@ -24,6 +24,7 @@ const SAFETY_LINE_H = 0.15;
 interface WarehouseSceneProps {
   objects: SpatialObject[];
   selectedId: string | null;
+  selectedIds?: Set<string>;
   onSelect: (object: SpatialObject) => void;
   onDoubleClick?: (object: SpatialObject) => void;
   onContextMenu?: (object: SpatialObject, e: { stopPropagation: () => void; clientX: number; clientY: number }) => void;
@@ -56,7 +57,7 @@ interface WarehouseSceneProps {
  * - 조명: 천장 PointLight 4개 (형광등 배치, 흰색 1.5)
  */
 export function WarehouseScene({
-  objects, selectedId, onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
+  objects, selectedId, selectedIds = new Set(), onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
   editLayer = 'objects', onResize, onResizeStart, onResizeEnd,
   gridVisible = true,
@@ -141,7 +142,7 @@ export function WarehouseScene({
           onSelect={onSelect}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
-          isSelected={obj.id === selectedId}
+          isSelected={obj.id === selectedId || selectedIds.has(obj.id)}
           editLayer={editLayer}
           onResize={onResize}
           onResizeStart={onResizeStart}

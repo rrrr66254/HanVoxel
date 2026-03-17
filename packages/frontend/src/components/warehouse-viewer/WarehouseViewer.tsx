@@ -14,6 +14,7 @@ import { ContextMenu, useContextMenu } from './ContextMenu';
 import { BinOccupancyRenderer } from './BinPlacement';
 import { MoveModeGhost } from './MoveMode';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
+import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
 import type { ZoneConfig, ZoneType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
@@ -119,6 +120,8 @@ interface WarehouseViewerProps {
  */
 export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 1, currentFloor = 1, onFloorChange }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 다중 선택 (드래그 선택 박스)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
   // 층별 독립 오브젝트 관리 (floor → objects[])
   const [placedByFloor, setPlacedByFloor] = useState<Record<number, SpatialObject[]>>({});
@@ -278,7 +281,28 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const handleSelect = useCallback((obj: SpatialObject) => {
     if (isMoving || wasDragRef.current) return;
     setSelectedId(obj.id);
+    setSelectedIds(new Set()); // 싱글클릭 시 다중 선택 해제
   }, [isMoving]);
+
+  // === 드래그 선택 박스 완료 콜백 ===
+  const handleBoxSelectionComplete = useCallback((ids: Set<string>, additive: boolean) => {
+    if (additive) {
+      // Shift 키: 기존 선택에 추가/토글
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => {
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+        });
+        return next;
+      });
+    } else {
+      setSelectedIds(ids);
+    }
+    setSelectedId(null);
+    setEditingId(null);
+    setRightPanel('none');
+  }, []);
 
   // === 더블클릭 콜백 (NativeDoubleClickHandler에서 호출) ===
   const handleNativeDoubleClick = useCallback((objectId: string) => {
@@ -762,6 +786,12 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   // === ESC 키로 상세 패널 닫기 ===
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete 키로 다중 선택 삭제
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
+        selectedIds.forEach((id) => handleDeleteObject(id));
+        setSelectedIds(new Set());
+        return;
+      }
       if (e.key === 'Escape') {
         // 배치 모드 취소
         if (placingPreset) { setPlacingPreset(null); return; }
@@ -769,6 +799,8 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         if (movingObjectId) { setMovingObjectId(null); setOriginalPosition(null); return; }
         // Zone 드로잉 취소
         if (drawingZoneType) { setDrawingZoneType(null); handleViewModeChange('perspective'); return; }
+        // 다중 선택 해제
+        if (selectedIds.size > 0) { setSelectedIds(new Set()); return; }
         // 우측 패널 닫기
         if (rightPanel !== 'none') {
           setEditingId(null);
@@ -781,7 +813,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, handleViewModeChange]);
+  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, selectedIds, handleViewModeChange, handleDeleteObject]);
 
   // OrbitControls 비활성화 조건
   const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isResizing;
@@ -812,7 +844,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             shadows
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
+            onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setSelectedIds(new Set()); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
             onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; openMenu(e); }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -822,6 +854,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             }}
           >
             <OrbitControls ref={controlsRef} makeDefault minDistance={5} maxDistance={120} maxPolarAngle={Math.PI / 2.05} enableDamping dampingFactor={0.08} enabled={orbitEnabled} panSpeed={0.5} rotateSpeed={0.5} zoomSpeed={1.2} />
+            <SelectionCameraSync wrapperRef={wrapperRef} />
             <DynamicRotateSpeed controlsRef={controlsRef} />
             <KeyboardControlsHandler controlsRef={controlsRef} enabled={orbitEnabled} />
             {/* 네이티브 더블클릭 핸들러 (R3F 내부 컴포넌트) */}
@@ -834,7 +867,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             />
 
             <WarehouseScene
-              objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
+              objects={activeObjects} selectedId={selectedId} selectedIds={selectedIds} onSelect={handleSelect}
               onContextMenu={(obj, e) => {
                 if (wasDragRef.current || rightPanel !== 'none') return; // 드래그 또는 상세 패널 열림 시 컨텍스트 메뉴 비활성
                 e.stopPropagation(); objectContextMenuRef.current = true;
@@ -865,6 +898,35 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
               />
             )}
           </Canvas>
+
+          {/* 드래그 선택 박스 오버레이 */}
+          <SelectionBoxOverlay
+            enabled={!placingPreset && !isMoving && !drawingZoneType && !isResizing && activeTool === 'select'}
+            objects={activeObjects}
+            onSelectionComplete={handleBoxSelectionComplete}
+            wrapperRef={wrapperRef}
+          />
+
+          {/* 다중 선택 정보 배너 */}
+          {selectedIds.size > 1 && (
+            <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-blue-500/30 bg-blue-950/80 px-5 py-2.5 text-xs text-blue-300 shadow-lg backdrop-blur">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg>
+              <span className="font-bold text-blue-400">{selectedIds.size}개</span>
+              오브젝트 선택됨
+              <span className="text-gray-500">· Shift+드래그로 추가 선택</span>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700"
+              >
+                선택 해제
+              </button>
+            </div>
+          )}
 
           {/* 층 표시 (항상 표시, 다층일 때 선택 가능) */}
           {onFloorChange && (
