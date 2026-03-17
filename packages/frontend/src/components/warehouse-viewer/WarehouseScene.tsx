@@ -6,8 +6,8 @@ import { SpatialMesh } from './SpatialMesh';
 import { GhostMesh } from './GhostMesh';
 import { BinOccupancyRenderer } from './BinPlacement';
 import type { BinOccupancy } from './BinPlacement';
-import { ZoneRenderer, ZoneDrawer } from './ZoneDrawing';
-import type { ZoneConfig, ZoneType } from './ZoneDrawing';
+import { ZoneRenderer, ZoneDrawer, RectObjectDrawer } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType, DrawObjectType } from './ZoneDrawing';
 import type { SpatialObject } from '../../types/spatial';
 import type { SpatialPreset } from '../../types/preset';
 
@@ -36,6 +36,10 @@ interface WarehouseSceneProps {
   onZoneDrawComplete?: (zone: Omit<ZoneConfig, 'id' | 'name'>) => void;
   onZoneDrawCancel?: () => void;
   onSelectZone?: (zone: ZoneConfig) => void;
+  // 바닥/벽 사각형 드로잉
+  drawingObjectType?: DrawObjectType | null;
+  onRectDrawComplete?: (rect: { startX: number; startZ: number; endX: number; endZ: number }) => void;
+  onRectDrawCancel?: () => void;
   // 편집 레이어
   editLayer?: 'structure' | 'objects';
   onResize?: (object: SpatialObject) => void;
@@ -59,6 +63,7 @@ interface WarehouseSceneProps {
 export function WarehouseScene({
   objects, selectedId, selectedIds = new Set(), onSelect, onDoubleClick, onContextMenu, placingPreset, onPlace,
   zones = [], drawingZoneType, onZoneDrawComplete, onZoneDrawCancel, onSelectZone,
+  drawingObjectType, onRectDrawComplete, onRectDrawCancel,
   editLayer = 'objects', onResize, onResizeStart, onResizeEnd,
   gridVisible = true,
   binOccupancy = [],
@@ -167,6 +172,15 @@ export function WarehouseScene({
           zoneType={drawingZoneType}
           onComplete={onZoneDrawComplete}
           onCancel={onZoneDrawCancel}
+        />
+      )}
+
+      {/* 바닥/벽 사각형 드로잉 모드 */}
+      {drawingObjectType && onRectDrawComplete && onRectDrawCancel && (
+        <RectObjectDrawer
+          drawType={drawingObjectType}
+          onComplete={onRectDrawComplete}
+          onCancel={onRectDrawCancel}
         />
       )}
 

@@ -17,7 +17,7 @@ import { BulkRackResizer } from './BulkRackResizer';
 import { TopViewZoneDrawer } from './TopViewZoneDrawer';
 import { SelectionBoxOverlay, SelectionCameraSync } from './SelectionBox';
 import type { BinOccupancy } from './BinPlacement';
-import type { ZoneConfig, ZoneType } from './ZoneDrawing';
+import type { ZoneConfig, ZoneType, DrawObjectType } from './ZoneDrawing';
 import { createSpatialObject, updateSpatialObject, deleteSpatialObject } from '../../api/spatial-object-api';
 import { createSpatialPreset } from '../../api/preset-api';
 import type { SpatialObject, MeshType } from '../../types/spatial';
@@ -192,6 +192,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   // Zone 시스템 상태
   const [zones, setZones] = useState<ZoneConfig[]>([]);
   const [drawingZoneType, setDrawingZoneType] = useState<ZoneType | null>(null);
+
+  // 바닥/벽 사각형 드로잉 상태
+  const [drawingObjectType, setDrawingObjectType] = useState<DrawObjectType | null>(null);
+  const [drawingPreset, setDrawingPreset] = useState<SpatialPreset | null>(null);
 
   // BIN 적재 시스템
   const [binOccupancy, setBinOccupancy] = useState<BinOccupancy[]>([]);
@@ -370,11 +374,28 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
   // === 프리셋 배치 ===
   const handleSelectPreset = useCallback((preset: SpatialPreset) => {
+    // 바닥/벽 프리셋은 사각형 드로잉 모드로 진입
+    const typeInfo = getTypeFromPreset(preset);
+    const styleMeta = extractStyleMeta(preset);
+    const isFloor = typeInfo.name === 'FLOOR' || !!styleMeta.floorStyle;
+    const isWall = typeInfo.name === 'WALL' && !!styleMeta.wallStyle; // 출입문은 제외
+
+    if (isFloor || isWall) {
+      setDrawingObjectType(isFloor ? 'FLOOR' : 'WALL');
+      setDrawingPreset(preset);
+      setPlacingPreset(null);
+      setSelectedId(null);
+      setEditingId(null);
+      setRightPanel('none');
+      handleViewModeChange('top');
+      return;
+    }
+
     setPlacingPreset(preset);
     setSelectedId(null);
     setEditingId(null);
     setRightPanel('none');
-  }, []);
+  }, [getTypeFromPreset, handleViewModeChange]);
 
   const handlePlace = useCallback(async (position: [number, number, number], rotationY?: number) => {
     if (!placingPreset) return;
@@ -819,6 +840,101 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
   const handleDeleteZone = useCallback((id: string) => { setZones((prev) => prev.filter((z) => z.id !== id)); }, []);
   const handleDrawZone = useCallback((type: ZoneType) => { setDrawingZoneType(type); handleViewModeChange('top'); }, [handleViewModeChange]);
 
+  // === 바닥/벽 사각형 드로잉 완료 ===
+  const handleRectDrawComplete = useCallback(async (rect: { startX: number; startZ: number; endX: number; endZ: number }) => {
+    if (!drawingPreset || !drawingObjectType) return;
+
+    const width = rect.endX - rect.startX;
+    const depth = rect.endZ - rect.startZ;
+    const centerX = (rect.startX + rect.endX) / 2;
+    const centerZ = (rect.startZ + rect.endZ) / 2;
+
+    const typeInfo = getTypeFromPreset(drawingPreset);
+    const styleMeta = extractStyleMeta(drawingPreset);
+    const isFloor = drawingObjectType === 'FLOOR';
+    const isWall = drawingObjectType === 'WALL';
+
+    // 바닥: 얇은 평면, 벽: 높이 있는 박스
+    const objHeight = isFloor ? 0.02 : (drawingPreset.height || 3);
+    const posY = isFloor ? 0.01 : objHeight / 2;
+
+    const code = `${drawingPreset.code}_${Date.now()}`;
+    const localObj: SpatialObject = {
+      id: crypto.randomUUID(), siteId: currentSiteId, typeId: DEFAULT_TYPE_ID,
+      type: { id: DEFAULT_TYPE_ID, name: typeInfo.name, label: drawingPreset.name, description: null, depth: 5 },
+      name: drawingPreset.name, code, status: 'ACTIVE', isActive: true,
+      positionX: centerX, positionY: posY, positionZ: centerZ,
+      rotationX: 0, rotationY: 0, rotationZ: 0,
+      scaleX: width, scaleY: objHeight, scaleZ: depth,
+      color: drawingPreset.color ?? null,
+      opacity: drawingPreset.opacity, visible: true,
+      meshType: (drawingPreset.meshType as MeshType) ?? 'box',
+      metadata: {
+        presetId: drawingPreset.id, presetCode: drawingPreset.code,
+        ...styleMeta,
+      },
+    };
+
+    // 바닥 overlap 제거: 새 바닥과 겹치는 기존 바닥 삭제
+    const overlappingFloorIds: string[] = [];
+    if (isFloor) {
+      const currentObjects = [...(objects ?? []), ...placedObjects];
+      for (const obj of currentObjects) {
+        if (obj.id === localObj.id) continue;
+        const meta = obj.metadata as Record<string, unknown> | null;
+        const isExistingFloor = obj.type.name === 'FLOOR' || !!meta?.floorStyle;
+        if (!isExistingFloor || !obj.isActive) continue;
+
+        // AABB overlap 체크 (XZ 평면)
+        const aLeft = obj.positionX - obj.scaleX / 2;
+        const aRight = obj.positionX + obj.scaleX / 2;
+        const aTop = obj.positionZ - obj.scaleZ / 2;
+        const aBottom = obj.positionZ + obj.scaleZ / 2;
+        const bLeft = rect.startX;
+        const bRight = rect.endX;
+        const bTop = rect.startZ;
+        const bBottom = rect.endZ;
+
+        if (aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop) {
+          overlappingFloorIds.push(obj.id);
+        }
+      }
+    }
+
+    // 겹치는 바닥 제거 후 새 오브젝트 추가
+    setPlacedObjects((prev) => {
+      const filtered = overlappingFloorIds.length > 0
+        ? prev.filter((o) => !overlappingFloorIds.includes(o.id))
+        : prev;
+      return [...filtered, localObj];
+    });
+
+    // DB에서 겹치는 바닥 삭제
+    for (const id of overlappingFloorIds) {
+      await deleteSpatialObject(id);
+    }
+
+    // DB에 새 오브젝트 저장
+    const saved = await createSpatialObject({
+      siteId: currentSiteId, typeId: DEFAULT_TYPE_ID, name: localObj.name, code: localObj.code,
+      positionX: localObj.positionX, positionY: localObj.positionY, positionZ: localObj.positionZ,
+      scaleX: localObj.scaleX, scaleY: localObj.scaleY, scaleZ: localObj.scaleZ,
+      color: localObj.color, opacity: localObj.opacity, meshType: localObj.meshType, metadata: localObj.metadata,
+    });
+    if (saved) {
+      setPlacedObjects((prev) => prev.map((o) => o.id === localObj.id ? { ...localObj, id: saved.id, siteId: saved.siteId, typeId: saved.typeId } : o));
+    }
+
+    // 드로잉 모드 유지 (연속 배치) — ESC로 취소
+    // 계속 그릴 수 있도록 drawingObjectType/drawingPreset 유지
+  }, [drawingPreset, drawingObjectType, currentSiteId, getTypeFromPreset, objects, placedObjects]);
+
+  const handleRectDrawCancel = useCallback(() => {
+    setDrawingObjectType(null);
+    setDrawingPreset(null);
+    handleViewModeChange('perspective');
+  }, [handleViewModeChange]);
+
   // === 드래그 앤 드롭 ===
   const handleDragOver = useCallback((e: React.DragEvent) => { if (e.dataTransfer.types.includes('application/hanvoxel-preset')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }, []);
 
@@ -931,6 +1047,8 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         if (movingObjectId) { setMovingObjectId(null); setOriginalPosition(null); return; }
         // Zone 드로잉 취소
         if (drawingZoneType) { setDrawingZoneType(null); handleViewModeChange('perspective'); return; }
+        // 바닥/벽 드로잉 취소
+        if (drawingObjectType) { handleRectDrawCancel(); return; }
         // 다중 선택 해제
         if (selectedIds.size > 0) { setSelectedIds(new Set()); return; }
         // 우측 패널 닫기
@@ -945,10 +1063,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject]);
+  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleRectDrawCancel]);
 
   // OrbitControls 비활성화 조건
-  const orbitEnabled = !placingPreset && !drawingZoneType && !isMoving && !isGroupMoving && !isResizing;
+  const orbitEnabled = !placingPreset && !drawingZoneType && !drawingObjectType && !isMoving && !isGroupMoving && !isResizing;
 
   // 2D 탑뷰 모드
   if (topViewMode) {
@@ -1016,6 +1134,9 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
               zones={zones} drawingZoneType={drawingZoneType}
               onZoneDrawComplete={handleZoneDrawComplete}
               onZoneDrawCancel={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }}
+              drawingObjectType={drawingObjectType}
+              onRectDrawComplete={handleRectDrawComplete}
+              onRectDrawCancel={handleRectDrawCancel}
               editLayer={editLayer} onResize={handlePreviewUpdate}
               onResizeStart={() => setIsResizing(true)}
               onResizeEnd={() => setIsResizing(false)}
@@ -1049,7 +1170,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
 
           {/* 드래그 선택 박스 오버레이 */}
           <SelectionBoxOverlay
-            enabled={!placingPreset && !isMoving && !isGroupMoving && !drawingZoneType && !isResizing && activeTool === 'select'}
+            enabled={!placingPreset && !isMoving && !isGroupMoving && !drawingZoneType && !drawingObjectType && !isResizing && activeTool === 'select'}
             objects={activeObjects}
             onSelectionComplete={handleBoxSelectionComplete}
             wrapperRef={wrapperRef}
@@ -1146,6 +1267,14 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             <div className="absolute bottom-14 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 px-5 py-2.5 text-xs text-gray-300 shadow-lg">
               클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
               <button onClick={() => { setDrawingZoneType(null); handleViewModeChange('perspective'); }} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
+            </div>
+          )}
+
+          {/* 바닥/벽 드로잉 모드 안내 */}
+          {drawingObjectType && (
+            <div className="absolute bottom-14 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24]/95 px-5 py-2.5 text-xs text-gray-300 shadow-lg">
+              {drawingObjectType === 'FLOOR' ? '바닥' : '벽'}: 클릭으로 시작점 → 클릭으로 끝점 지정 (ESC 취소)
+              <button onClick={handleRectDrawCancel} className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 text-[11px] text-gray-400 transition-colors hover:bg-gray-700">취소</button>
             </div>
           )}
 
