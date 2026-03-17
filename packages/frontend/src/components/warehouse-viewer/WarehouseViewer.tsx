@@ -783,7 +783,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack }: WarehouseVi
             style={{ background: '#0D1117' }}
             gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
             onClick={(e) => { if (e.target === e.currentTarget && !isMoving && !wasDragRef.current) { setSelectedId(null); setEditingId(null); setRightPanel('none'); setRackDetailId(null); } }}
-            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving) return; openMenu(e); }}
+            onContextMenu={(e) => { e.preventDefault(); if (wasDragRef.current || objectContextMenuRef.current || isMoving || rightPanel !== 'none') return; openMenu(e); }}
             onPointerMove={(e) => {
               const rect = (e.target as HTMLElement).getBoundingClientRect();
               const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -806,7 +806,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack }: WarehouseVi
             <WarehouseScene
               objects={activeObjects} selectedId={selectedId} onSelect={handleSelect}
               onContextMenu={(obj, e) => {
-                if (wasDragRef.current) return; // 드래그였으면 컨텍스트 메뉴 표시 안 함
+                if (wasDragRef.current || rightPanel !== 'none') return; // 드래그 또는 상세 패널 열림 시 컨텍스트 메뉴 비활성
                 e.stopPropagation(); objectContextMenuRef.current = true;
                 setTimeout(() => { objectContextMenuRef.current = false; }, 50);
                 openMenu({ clientX: e.clientX, clientY: e.clientY, preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, obj);
