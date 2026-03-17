@@ -290,11 +290,12 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         break;
       }
       case 'multiDelete': {
+        const ids = new Set(action.objects.map((o) => o.id));
         if (isUndo) {
-          // 복원
+          // 일괄 복원 — 한 번의 setState로 처리
+          setPlacedObjects((prev) => [...prev, ...action.objects]);
+          setDeletedIds((prev) => { const next = new Set(prev); ids.forEach((id) => next.delete(id)); return next; });
           action.objects.forEach((obj) => {
-            setPlacedObjects((prev) => [...prev, obj]);
-            setDeletedIds((prev) => { const next = new Set(prev); next.delete(obj.id); return next; });
             createSpatialObject({
               siteId: obj.siteId, typeId: obj.typeId, name: obj.name, code: obj.code,
               positionX: obj.positionX, positionY: obj.positionY, positionZ: obj.positionZ,
@@ -303,12 +304,10 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
             });
           });
         } else {
-          // 재삭제
-          action.objects.forEach((obj) => {
-            setPlacedObjects((prev) => prev.filter((o) => o.id !== obj.id));
-            setDeletedIds((prev) => new Set(prev).add(obj.id));
-            deleteSpatialObject(obj.id);
-          });
+          // 일괄 재삭제 — 한 번의 setState로 처리
+          setPlacedObjects((prev) => prev.filter((o) => !ids.has(o.id)));
+          setDeletedIds((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
+          action.objects.forEach((obj) => deleteSpatialObject(obj.id));
         }
         break;
       }
@@ -787,9 +786,16 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     const allObjs = [...(objects ?? []), ...placedObjects];
     const deletedObjs = allObjs.filter((o) => ids.has(o.id));
     if (deletedObjs.length > 0) pushAction({ type: 'multiDelete', objects: deletedObjs });
-    ids.forEach((id) => handleDeleteObject(id, true));
+    // 일괄 삭제 — 한 번의 setState로 처리
+    setPlacedObjects((prev) => prev.filter((o) => !ids.has(o.id)));
+    setDeletedIds((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
+    if (editingId && ids.has(editingId)) { setEditingId(null); setRightPanel('none'); }
+    if (selectedId && ids.has(selectedId)) setSelectedId(null);
+    if (rackDetailId && ids.has(rackDetailId)) { setRackDetailId(null); setRightPanel('none'); }
     setSelectedIds(new Set());
-  }, [handleDeleteObject, objects, placedObjects, pushAction]);
+    // DB 삭제
+    ids.forEach((id) => deleteSpatialObject(id));
+  }, [objects, placedObjects, pushAction, editingId, selectedId, rackDetailId]);
 
   // === 다중 오브젝트 일괄 크기 수정 ===
   const [bulkResizeIds, setBulkResizeIds] = useState<Set<string> | null>(null);
@@ -1190,10 +1196,9 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
         handleRedo();
         return;
       }
-      // Delete 키로 다중 선택 삭제
+      // Delete 키로 다중 선택 삭제 — handleMultiDelete로 한 번에 처리
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
-        selectedIds.forEach((id) => handleDeleteObject(id));
-        setSelectedIds(new Set());
+        handleMultiDelete(selectedIds);
         return;
       }
       // Delete 키로 싱글 선택 삭제
@@ -1230,7 +1235,7 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleRectDrawCancel, handleUndo, handleRedo]);
+  }, [placingPreset, movingObjectId, drawingZoneType, drawingObjectType, rightPanel, selectedId, selectedIds, isGroupMoving, handleViewModeChange, handleDeleteObject, handleMultiDelete, handleRectDrawCancel, handleUndo, handleRedo]);
 
   // OrbitControls 비활성화 조건
   const orbitEnabled = !placingPreset && !drawingZoneType && !drawingObjectType && !isMoving && !isGroupMoving && !isResizing;
