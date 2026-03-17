@@ -1797,3 +1797,137 @@ model StockCheckRequest {
   @@index([assignedTo, status])
   @@map("stock_check_requests")
 }
+
+// ============================================================
+// 스마트 발주 — 데이터 기반 발주 예측 & 자동화
+// ============================================================
+
+/// 발주 이력 (ML 학습용)
+model PurchaseOrderHistory {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String    @map("site_id") @db.Uuid
+  /// SKU 코드
+  skuCode         String    @map("sku_code") @db.VarChar(100)
+  /// 공급업체 ID
+  vendorId        String?   @map("vendor_id") @db.Uuid
+  /// 발주일
+  orderedAt       DateTime  @map("ordered_at") @db.Timestamptz
+  /// 당시 예상 입고일
+  expectedAt      DateTime? @map("expected_at") @db.Date
+  /// 실제 입고일
+  actualArrivedAt DateTime? @map("actual_arrived_at") @db.Date
+  /// 실제 리드타임 (일)
+  leadTimeDays    Int?      @map("lead_time_days")
+  /// 발주 수량
+  orderedQty      Int       @map("ordered_qty")
+  /// 실제 입고 수량
+  arrivedQty      Int?      @map("arrived_qty")
+  /// 단가 (원)
+  unitPrice       Int       @default(0) @map("unit_price")
+  /// 계절 (1~4분기, 자동 계산)
+  season          Int?
+  /// 비고
+  notes           String?   @db.Text
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([siteId, skuCode])
+  @@index([vendorId])
+  @@index([orderedAt])
+  @@map("purchase_order_history")
+}
+
+/// 공급업체별 리드타임 통계
+model VendorLeadTimeStat {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String    @map("site_id") @db.Uuid
+  /// 공급업체 ID
+  vendorId        String    @map("vendor_id") @db.Uuid
+  /// SKU 코드
+  skuCode         String    @map("sku_code") @db.VarChar(100)
+  /// 데이터 건수
+  sampleCount     Int       @default(0) @map("sample_count")
+  /// 평균 리드타임 (일)
+  avgLeadTime     Float     @map("avg_lead_time")
+  /// 최소 리드타임
+  minLeadTime     Int       @map("min_lead_time")
+  /// 최대 리드타임
+  maxLeadTime     Int       @map("max_lead_time")
+  /// 표준편차
+  stdDeviation    Float     @default(0) @map("std_deviation")
+  /// 90th percentile 리드타임 (안전 기준)
+  p90LeadTime     Int       @map("p90_lead_time")
+
+  lastUpdatedAt   DateTime  @default(now()) @map("last_updated_at") @db.Timestamptz
+
+  @@unique([siteId, vendorId, skuCode])
+  @@index([vendorId])
+  @@index([skuCode])
+  @@map("vendor_lead_time_stats")
+}
+
+/// 수요 예측 고도화 (v2)
+model DemandForecastV2 {
+  id                      String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId                  String   @map("site_id") @db.Uuid
+  /// SKU 코드
+  skuCode                 String   @map("sku_code") @db.VarChar(100)
+  /// 예측 대상 날짜
+  forecastDate            DateTime @map("forecast_date") @db.Date
+  /// 예측 수요량
+  predictedQty            Float    @map("predicted_qty")
+  /// 신뢰구간 하한
+  confidenceIntervalLow   Float    @map("confidence_interval_low")
+  /// 신뢰구간 상한
+  confidenceIntervalHigh  Float    @map("confidence_interval_high")
+  /// 사용 모델 (MOVING_AVG, LINEAR, PROPHET, ENSEMBLE)
+  modelUsed               String   @map("model_used") @db.VarChar(30)
+  /// 예측 정확도 MAPE (%)
+  mapeScore               Float?   @map("mape_score")
+  /// 학습에 사용된 주 수
+  inputWeeks              Int      @default(0) @map("input_weeks")
+
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([siteId, skuCode])
+  @@index([forecastDate])
+  @@map("demand_forecasts_v2")
+}
+
+/// 스마트 발주 스케줄
+model SmartReorderSchedule {
+  id                      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId                  String    @map("site_id") @db.Uuid
+  /// SKU 코드
+  skuCode                 String    @map("sku_code") @db.VarChar(100)
+  /// 공급업체 ID
+  vendorId                String?   @map("vendor_id") @db.Uuid
+  /// 권장 발주일
+  recommendedOrderDate    DateTime  @map("recommended_order_date") @db.Date
+  /// 권장 발주량
+  recommendedQty          Int       @map("recommended_qty")
+  /// 예상 입고일
+  estimatedArrivalDate    DateTime? @map("estimated_arrival_date") @db.Date
+  /// 예상 입고일 신뢰도 (%)
+  arrivalConfidence       Float?    @map("arrival_confidence")
+  /// 최빠른 입고일
+  arrivalRangeMin         DateTime? @map("arrival_range_min") @db.Date
+  /// 최늦은 입고일
+  arrivalRangeMax         DateTime? @map("arrival_range_max") @db.Date
+  /// 발주 안 하면 재고 소진 예상일
+  stockoutRiskDate        DateTime? @map("stockout_risk_date") @db.Date
+  /// 발주 추천 근거 텍스트
+  reason                  String?   @db.Text
+  /// 상태: AUTO_SCHEDULED → CONFIRMED → ORDERED → ARRIVED
+  status                  String    @default("AUTO_SCHEDULED") @db.VarChar(20)
+
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([siteId, status])
+  @@index([siteId, skuCode])
+  @@index([recommendedOrderDate])
+  @@index([stockoutRiskDate])
+  @@map("smart_reorder_schedule")
+}

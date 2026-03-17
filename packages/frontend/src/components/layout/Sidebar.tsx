@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Wrench,
   PackageCheck,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -50,6 +51,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'subscription', icon: CreditCard, labelKey: 'sidebar.subscription', sectionKey: 'sidebar.settings' },
   { id: 'erp', icon: FileText, labelKey: 'sidebar.erp', sectionKey: 'sidebar.intelligence' },
   { id: 'trade', icon: Globe, labelKey: 'sidebar.trade', sectionKey: 'sidebar.intelligence' },
+  { id: 'smart-reorder', icon: Bot, labelKey: 'sidebar.smartReorder', sectionKey: 'sidebar.intelligence' },
   { id: 'reorder', icon: ShoppingCart, labelKey: 'sidebar.reorder', sectionKey: 'sidebar.intelligence' },
   { id: 'connector', icon: Link2, labelKey: 'sidebar.connector', sectionKey: 'sidebar.intelligence' },
   { id: 'benchmark', icon: Shield, labelKey: 'sidebar.benchmark', sectionKey: 'sidebar.intelligence' },
