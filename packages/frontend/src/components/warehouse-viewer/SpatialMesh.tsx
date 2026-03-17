@@ -474,8 +474,8 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
         onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
         raycast={isInteractable ? undefined : NOOP_RAYCAST}
       >
-        {/* 천장 패널 — 반투명 */}
-        <mesh>
+        {/* 천장 패널 — 하나의 큰 반투명 판 (X-Z 평면에 수평 배치) */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[object.scaleX, object.scaleZ]} />
           <meshStandardMaterial
             color="#2a3040"
@@ -487,26 +487,6 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
             depthWrite={false}
           />
         </mesh>
-        {/* 천장 트러스 구조 — 가로 빔 */}
-        {Array.from({ length: Math.floor(object.scaleZ / 6) + 1 }).map((_, i) => {
-          const zPos = -object.scaleZ / 2 + i * 6;
-          return (
-            <mesh key={`truss-z-${i}`} position={[0, -0.15, zPos]}>
-              <boxGeometry args={[object.scaleX, 0.3, 0.12]} />
-              <meshStandardMaterial color="#3a4050" metalness={0.6} roughness={0.4} transparent opacity={0.6} />
-            </mesh>
-          );
-        })}
-        {/* 천장 트러스 구조 — 세로 빔 */}
-        {Array.from({ length: Math.floor(object.scaleX / 8) + 1 }).map((_, i) => {
-          const xPos = -object.scaleX / 2 + i * 8;
-          return (
-            <mesh key={`truss-x-${i}`} position={[xPos, -0.15, 0]}>
-              <boxGeometry args={[0.12, 0.3, object.scaleZ]} />
-              <meshStandardMaterial color="#3a4050" metalness={0.6} roughness={0.4} transparent opacity={0.6} />
-            </mesh>
-          );
-        })}
         {/* 천장 높이 표시 — 호버 시 */}
         {hovered && isInteractable && (
           <Html distanceFactor={15} position={[0, -1, 0]} style={{ pointerEvents: 'none' }}>

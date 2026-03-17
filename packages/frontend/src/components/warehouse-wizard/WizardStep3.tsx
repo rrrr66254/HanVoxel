@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { WarehouseViewer } from '../warehouse-viewer';
 import type { SpatialObject } from '../../types/spatial';
 import type { WarehouseTemplate, WizardFormData } from '../../types/warehouse-template';
@@ -15,17 +15,7 @@ interface WizardStep3Props {
  * 3단계: 3D 뷰어에서 레이아웃 확인 — 윈도우 크기에 자동 맞춤
  */
 export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props) {
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [currentFloor, setCurrentFloor] = useState(1);
-
-  // 윈도우 리사이즈 감지
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // 레이아웃 생성 (form/template/currentFloor 변경 시 재생성)
   const generatedObjects: SpatialObject[] = useMemo(
@@ -38,13 +28,8 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
   const aisleCount = generatedObjects.filter((o) => o.type.name === 'AISLE').length;
   const totalArea = form.areaWidth * form.areaDepth;
 
-  // 상단 바 + 하단 힌트 높이를 제외한 뷰어 영역 계산
-  const topBarHeight = 56;
-  const bottomBarHeight = 36;
-  const viewerHeight = windowSize.height - topBarHeight - bottomBarHeight;
-
   return (
-    <div className="flex flex-col" style={{ width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <div className="flex flex-col" style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* 상단 바 */}
       <div
         className="flex shrink-0 items-center justify-between px-6"
@@ -87,8 +72,8 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
         </div>
       </div>
 
-      {/* 3D 뷰어 — 남은 영역 전체, 윈도우 크기에 맞춤 */}
-      <div style={{ width: '100%', height: viewerHeight, position: 'relative', overflow: 'hidden' }}>
+      {/* 3D 뷰어 — 남은 영역 전체, 부모 컨테이너 크기에 맞춤 */}
+      <div className="min-h-0 flex-1" style={{ width: '100%', position: 'relative', overflow: 'hidden' }}>
         <WarehouseViewer
           objects={generatedObjects}
           onSave={onNext}

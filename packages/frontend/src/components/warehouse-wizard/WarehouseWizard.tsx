@@ -52,7 +52,7 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
   const isFullScreen = step === 2;
 
   return (
-    <div className={`flex h-screen w-screen flex-col bg-gray-950 ${isFullScreen ? '' : 'overflow-auto'}`}>
+    <div className={`flex h-full w-full flex-col bg-gray-950 ${isFullScreen ? '' : 'overflow-auto'}`}>
       {/* 상단 스텝 인디케이터 (3단계 제외) */}
       {!isFullScreen && (
         <div
