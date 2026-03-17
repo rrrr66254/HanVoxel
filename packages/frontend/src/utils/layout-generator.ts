@@ -76,6 +76,14 @@ export function generateWarehouseLayout(
     { metadata: { floorStyle: 'EPOXY_GRAY' } },
   ));
 
+  // --- 천장 (골판 금속 지붕) ---
+  objects.push(obj(
+    'ceiling-main', TYPES.FLOOR, '천장', 'CEILING-MAIN',
+    [W / 2, H, D / 2],
+    [W, 0.05, D],
+    { color: '#1a1d24', opacity: 0.35, metadata: { floorStyle: 'METAL_ROOF', isCeiling: true } },
+  ));
+
   // --- 벽 (샌드위치 패널) ---
   objects.push(obj(
     'wall-back', TYPES.WALL, '뒷벽', 'WALL-BACK',

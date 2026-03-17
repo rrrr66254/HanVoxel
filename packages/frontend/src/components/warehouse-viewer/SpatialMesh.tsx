@@ -414,7 +414,8 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
 
   // 바닥(FLOOR) 모델 렌더링
   const isFloor = typeName === 'FLOOR' || (meta?.floorStyle && typeof meta.floorStyle === 'string');
-  if (isFloor) {
+  const isCeiling = !!(meta?.isCeiling);
+  if (isFloor && !isCeiling) {
     const floorStyle = (meta?.floorStyle as string) ?? 'EPOXY_GRAY';
 
     return (
@@ -449,6 +450,72 @@ export function SpatialMesh({ object, onSelect, onDoubleClick, onContextMenu, is
             }}>
               <span style={{ fontWeight: 700 }}>{object.name}</span>
               <span style={{ color: '#8B949E', marginLeft: 6 }}>바닥</span>
+              <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
+                {object.scaleX}m × {object.scaleZ}m
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
+
+  // 천장(CEILING) 렌더링 — 반투명 골판 금속 지붕
+  if (isCeiling) {
+    return (
+      <group
+        ref={groupRef}
+        position={[object.positionX, object.positionY, object.positionZ]}
+        rotation={[object.rotationX, object.rotationY, object.rotationZ]}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onPointerOver={(e) => { e.stopPropagation(); if (isInteractable) { stableHover(true); document.body.style.cursor = 'pointer'; } }}
+        onPointerOut={() => { stableHover(false); if (!isInteractable) return; document.body.style.cursor = 'default'; }}
+        raycast={isInteractable ? undefined : NOOP_RAYCAST}
+      >
+        {/* 천장 패널 — 반투명 */}
+        <mesh>
+          <planeGeometry args={[object.scaleX, object.scaleZ]} />
+          <meshStandardMaterial
+            color="#2a3040"
+            transparent
+            opacity={object.opacity ?? 0.35}
+            side={2}
+            roughness={0.6}
+            metalness={0.4}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* 천장 트러스 구조 — 가로 빔 */}
+        {Array.from({ length: Math.floor(object.scaleZ / 6) + 1 }).map((_, i) => {
+          const zPos = -object.scaleZ / 2 + i * 6;
+          return (
+            <mesh key={`truss-z-${i}`} position={[0, -0.15, zPos]}>
+              <boxGeometry args={[object.scaleX, 0.3, 0.12]} />
+              <meshStandardMaterial color="#3a4050" metalness={0.6} roughness={0.4} transparent opacity={0.6} />
+            </mesh>
+          );
+        })}
+        {/* 천장 트러스 구조 — 세로 빔 */}
+        {Array.from({ length: Math.floor(object.scaleX / 8) + 1 }).map((_, i) => {
+          const xPos = -object.scaleX / 2 + i * 8;
+          return (
+            <mesh key={`truss-x-${i}`} position={[xPos, -0.15, 0]}>
+              <boxGeometry args={[0.12, 0.3, object.scaleZ]} />
+              <meshStandardMaterial color="#3a4050" metalness={0.6} roughness={0.4} transparent opacity={0.6} />
+            </mesh>
+          );
+        })}
+        {/* 천장 높이 표시 — 호버 시 */}
+        {hovered && isInteractable && (
+          <Html distanceFactor={15} position={[0, -1, 0]} style={{ pointerEvents: 'none' }}>
+            <div style={{
+              background: '#161B22', border: '1px solid #30363D', borderRadius: 8,
+              padding: '6px 10px', whiteSpace: 'nowrap', fontSize: 11,
+              color: '#E6EDF3', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}>
+              <span style={{ fontWeight: 700 }}>천장</span>
+              <span style={{ color: '#8B949E', marginLeft: 6 }}>높이 {object.positionY}m</span>
               <div style={{ color: '#484F58', fontSize: 10, marginTop: 2 }}>
                 {object.scaleX}m × {object.scaleZ}m
               </div>
