@@ -120,8 +120,35 @@ interface WarehouseViewerProps {
 export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 1, currentFloor = 1, onFloorChange }: WarehouseViewerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placingPreset, setPlacingPreset] = useState<SpatialPreset | null>(null);
-  const [placedObjects, setPlacedObjects] = useState<SpatialObject[]>([]);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  // 층별 독립 오브젝트 관리 (floor → objects[])
+  const [placedByFloor, setPlacedByFloor] = useState<Record<number, SpatialObject[]>>({});
+  const [deletedByFloor, setDeletedByFloor] = useState<Record<number, Set<string>>>({});
+
+  // 현재 층 ref (useCallback 내에서 최신 값 참조)
+  const currentFloorRef = useRef(currentFloor);
+  currentFloorRef.current = currentFloor;
+
+  // 현재 층의 placedObjects / deletedIds (접근 헬퍼)
+  const placedObjects = placedByFloor[currentFloor] ?? [];
+  const deletedIds = deletedByFloor[currentFloor] ?? new Set<string>();
+
+  // 층별 setter 래퍼 — ref를 사용하여 항상 최신 층 참조
+  const setPlacedObjects = useCallback((updater: SpatialObject[] | ((prev: SpatialObject[]) => SpatialObject[])) => {
+    const floor = currentFloorRef.current;
+    setPlacedByFloor((prev) => {
+      const current = prev[floor] ?? [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [floor]: next };
+    });
+  }, []);
+  const setDeletedIds = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    const floor = currentFloorRef.current;
+    setDeletedByFloor((prev) => {
+      const current = prev[floor] ?? new Set<string>();
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [floor]: next };
+    });
+  }, []);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -845,7 +872,16 @@ export function WarehouseViewer({ objects, siteId, onSave, onBack, floorCount = 
               {Array.from({ length: floorCount }, (_, i) => i + 1).map((floor) => (
                 <button
                   key={floor}
-                  onClick={() => onFloorChange(floor)}
+                  onClick={() => {
+                    onFloorChange(floor);
+                    // 층 전환 시 선택/편집 상태 초기화
+                    setSelectedId(null);
+                    setEditingId(null);
+                    setRightPanel('none');
+                    setRackDetailId(null);
+                    setMovingObjectId(null);
+                    setOriginalPosition(null);
+                  }}
                   className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
                     currentFloor === floor
                       ? 'bg-blue-600/25 text-blue-400 shadow-sm shadow-blue-500/10'

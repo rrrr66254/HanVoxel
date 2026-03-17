@@ -952,6 +952,9 @@ function drawFacility(
   const isColumn = code.includes('COLUMN');
   const isPanel = code.includes('PANEL');
   const isTrash = code.includes('TRASH');
+  const isStairs = code.includes('STAIRS');
+  const isPassengerElev = code.includes('PASSENGER_ELEV');
+  const isFreightLift = code.includes('FREIGHT_LIFT');
 
   if (isColumn) {
     // 건물 기둥 — 콘크리트/H형강
@@ -1011,5 +1014,170 @@ function drawFacility(
       drawIsoBox(ctx, x - 0.01, h, -d / 2 - 0.01, binW + 0.02, 0.03, d + 0.02, cx, cy, scale,
         adjustColor(colors[i], 1.3), adjustColor(colors[i], 0.9), adjustColor(colors[i], 1.0));
     }
+  } else if (isStairs) {
+    // 계단 — 단계별 스텝 + 난간
+    const concreteColor = '#909090';
+    const railColor = '#707880';
+    const strokeColor = '#505050';
+    const stepCount = Math.max(6, Math.floor(h / 0.3));
+    const stepH = h / stepCount;
+    const stepD = d / stepCount;
+
+    // 계단 스텝 (아래→위)
+    for (let i = 0; i < stepCount; i++) {
+      const sy = i * stepH;
+      const sz = -d / 2 + i * stepD;
+      const shade = 1.0 + (i / stepCount) * 0.15;
+      drawIsoBox(ctx, -w / 2, sy, sz, w, stepH, stepD, cx, cy, scale,
+        adjustColor(concreteColor, shade), adjustColor(concreteColor, shade * 0.7), adjustColor(concreteColor, shade * 0.8), strokeColor);
+    }
+
+    // 좌측 난간 기둥 (3개)
+    for (let i = 0; i < 3; i++) {
+      const t = i / 2;
+      const py = t * h;
+      const pz = -d / 2 + t * d;
+      drawIsoBox(ctx, -w / 2 - 0.03, py, pz - 0.03, 0.06, h * 0.12, 0.06, cx, cy, scale,
+        adjustColor(railColor, 1.2), adjustColor(railColor, 0.8), adjustColor(railColor, 0.9), strokeColor);
+    }
+
+    // 좌측 난간 레일 (대각선 — 하단→상단)
+    const rp1 = isoProject(-w / 2, h * 0.12, -d / 2, cx, cy, scale);
+    const rp2 = isoProject(-w / 2, h + h * 0.12, d / 2, cx, cy, scale);
+    ctx.strokeStyle = railColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rp1[0], rp1[1]);
+    ctx.lineTo(rp2[0], rp2[1]);
+    ctx.stroke();
+
+    // 우측 난간 레일
+    const rp3 = isoProject(w / 2, h * 0.12, -d / 2, cx, cy, scale);
+    const rp4 = isoProject(w / 2, h + h * 0.12, d / 2, cx, cy, scale);
+    ctx.strokeStyle = railColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rp3[0], rp3[1]);
+    ctx.lineTo(rp4[0], rp4[1]);
+    ctx.stroke();
+
+    // 미끄럼방지 마킹 (노란 엣지)
+    for (let i = 0; i < stepCount; i++) {
+      const sy = i * stepH + stepH;
+      const sz = -d / 2 + i * stepD;
+      drawIsoBox(ctx, -w / 2, sy - 0.01, sz - 0.005, w, 0.01, 0.02, cx, cy, scale,
+        '#F5C542', '#C49A30', '#D4A838');
+    }
+  } else if (isPassengerElev) {
+    // 승객용 엘리베이터 — 엘리베이터 샤프트 + 문 + 조작 패널
+    const shaftColor = '#808890';
+    const doorColor = '#A0A8B0';
+    const strokeColor = '#505860';
+
+    // 샤프트 본체
+    drawIsoBox(ctx, -w / 2, 0, -d / 2, w, h, d, cx, cy, scale,
+      adjustColor(shaftColor, 1.1), adjustColor(shaftColor, 0.75), adjustColor(shaftColor, 0.85), strokeColor);
+
+    // 문 (전면 — 양개 슬라이딩)
+    const doorW = w * 0.4;
+    const doorH = h * 0.28;
+    const doorGap = w * 0.02;
+
+    // 좌측 문
+    drawIsoBox(ctx, -w / 2 + w * 0.06, h * 0.02, -d / 2 - 0.01, doorW, doorH, 0.02, cx, cy, scale,
+      adjustColor(doorColor, 1.2), adjustColor(doorColor, 0.85), adjustColor(doorColor, 0.95), strokeColor);
+
+    // 우측 문
+    drawIsoBox(ctx, -w / 2 + w * 0.06 + doorW + doorGap, h * 0.02, -d / 2 - 0.01, doorW, doorH, 0.02, cx, cy, scale,
+      adjustColor(doorColor, 1.2), adjustColor(doorColor, 0.85), adjustColor(doorColor, 0.95), strokeColor);
+
+    // 문 틈새 (중앙 라인)
+    const doorMidX = -w / 2 + w * 0.06 + doorW + doorGap / 2;
+    const dl1 = isoProject(doorMidX, h * 0.03, -d / 2 - 0.015, cx, cy, scale);
+    const dl2 = isoProject(doorMidX, h * 0.02 + doorH - 0.02, -d / 2 - 0.015, cx, cy, scale);
+    ctx.strokeStyle = '#404850';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(dl1[0], dl1[1]);
+    ctx.lineTo(dl2[0], dl2[1]);
+    ctx.stroke();
+
+    // 문 위 층 표시 (▲ ▼ 인디케이터)
+    const indicatorPos = isoProject(0, h * 0.02 + doorH + h * 0.02, -d / 2 - 0.015, cx, cy, scale);
+    ctx.fillStyle = '#22CC44';
+    ctx.font = `bold ${Math.max(8, scale * 0.15)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('▲', indicatorPos[0], indicatorPos[1]);
+
+    // 조작 패널 (문 옆)
+    const panelX = w / 2 - w * 0.12;
+    drawIsoBox(ctx, panelX, h * 0.08, -d / 2 - 0.012, w * 0.06, h * 0.08, 0.015, cx, cy, scale,
+      '#C8CDD3', '#A0A5AB', '#B0B5BB', strokeColor);
+
+    // 버튼 (2개)
+    for (let i = 0; i < 2; i++) {
+      const btnPos = isoProject(panelX + w * 0.03, h * 0.09 + i * h * 0.03, -d / 2 - 0.015, cx, cy, scale);
+      ctx.beginPath();
+      ctx.arc(btnPos[0], btnPos[1], scale * 0.015, 0, Math.PI * 2);
+      ctx.fillStyle = i === 0 ? '#44CC44' : '#FF4444';
+      ctx.fill();
+    }
+  } else if (isFreightLift) {
+    // 화물 리프트 — 강철 프레임 + 대형 게이트 + 경고 마킹
+    const isLarge = code.includes('_LG');
+    const frameColor = isLarge ? '#6B7280' : '#707880';
+    const gateColor = '#F59E0B';
+    const strokeColor = '#404850';
+
+    // 바닥 플랫폼 (두꺼운 강철판)
+    drawIsoBox(ctx, -w / 2 - 0.05, 0, -d / 2 - 0.05, w + 0.1, 0.08, d + 0.1, cx, cy, scale,
+      '#606870', '#484F58', '#505860', strokeColor);
+
+    // 경고 마킹 (바닥 노란 줄)
+    drawIsoBox(ctx, -w / 2 - 0.05, 0.08, -d / 2 - 0.05, w + 0.1, 0.01, 0.08, cx, cy, scale,
+      '#F5C542', '#C49A30', '#D4A838');
+    drawIsoBox(ctx, -w / 2 - 0.05, 0.08, d / 2 - 0.03, w + 0.1, 0.01, 0.08, cx, cy, scale,
+      '#F5C542', '#C49A30', '#D4A838');
+
+    // 프레임 본체 (골격)
+    drawIsoBox(ctx, -w / 2, 0.08, -d / 2, w, h, d, cx, cy, scale,
+      adjustColor(frameColor, 1.1), adjustColor(frameColor, 0.75), adjustColor(frameColor, 0.85), strokeColor);
+
+    // 전면 게이트 (롤업 도어 스타일)
+    const gateH = h * 0.4;
+    const slatCount = Math.floor(gateH / (h * 0.04));
+    for (let i = 0; i < slatCount; i++) {
+      const sy = h * 0.02 + i * (gateH / slatCount);
+      const slatColor = i % 2 === 0 ? gateColor : adjustColor(gateColor, 0.85);
+      drawIsoBox(ctx, -w / 2 + w * 0.04, sy, -d / 2 - 0.015,
+        w - w * 0.08, gateH / slatCount - 0.01, 0.02, cx, cy, scale,
+        adjustColor(slatColor, 1.15), adjustColor(slatColor, 0.75), adjustColor(slatColor, 0.9), '#8B6B00');
+    }
+
+    // 프레임 기둥 (좌우 4개)
+    const postW = w * 0.06;
+    for (const [px, pz] of [[-w / 2, -d / 2], [w / 2 - postW, -d / 2], [-w / 2, d / 2 - postW], [w / 2 - postW, d / 2 - postW]]) {
+      drawIsoBox(ctx, px, 0.08, pz, postW, h, postW, cx, cy, scale,
+        adjustColor(frameColor, 1.3), adjustColor(frameColor, 0.85), adjustColor(frameColor, 1.0), strokeColor);
+    }
+
+    // 상단 거더 (가로 빔)
+    drawIsoBox(ctx, -w / 2, h + 0.08 - 0.06, -d / 2, w, 0.06, postW, cx, cy, scale,
+      adjustColor(frameColor, 1.3), adjustColor(frameColor, 0.85), adjustColor(frameColor, 1.0), strokeColor);
+    drawIsoBox(ctx, -w / 2, h + 0.08 - 0.06, d / 2 - postW, w, 0.06, postW, cx, cy, scale,
+      adjustColor(frameColor, 1.3), adjustColor(frameColor, 0.85), adjustColor(frameColor, 1.0), strokeColor);
+
+    // 적재 중량 표시
+    const labelPos = isoProject(0, h * 0.5, -d / 2 - 0.02, cx, cy, scale);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.max(7, scale * 0.12)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(isLarge ? '10T' : '5T', labelPos[0], labelPos[1]);
+
+    // 경고 표시 (전면 상단)
+    const warnPos = isoProject(0, gateH + h * 0.06, -d / 2 - 0.02, cx, cy, scale);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = `bold ${Math.max(8, scale * 0.1)}px sans-serif`;
+    ctx.fillText('⚠', warnPos[0], warnPos[1]);
   }
 }
