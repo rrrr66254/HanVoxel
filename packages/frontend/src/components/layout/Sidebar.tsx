@@ -14,6 +14,8 @@ import {
   Warehouse,
   Settings,
   Crown,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -54,9 +56,11 @@ interface SidebarProps {
   onModeChange: (mode: string) => void;
   planType?: string;
   onToggleAdmin?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onToggleAdmin }: SidebarProps) {
+export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onToggleAdmin, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { t } = useTranslation();
   const isEnterprise = planType === 'ENTERPRISE';
 
@@ -69,7 +73,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
   return (
     <aside
       style={{
-        width: 260,
+        width: collapsed ? 64 : 260,
         height: '100vh',
         background: 'var(--bg-primary)',
         borderRight: '1px solid var(--border-muted)',
@@ -77,20 +81,44 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
         flexDirection: 'column',
         flexShrink: 0,
         overflow: 'hidden',
+        transition: 'width 0.2s ease',
       }}
     >
-      {/* 로고 */}
+      {/* 로고 + 접기 버튼 */}
       <div
         style={{
-          padding: '8px 24px 8px',
+          padding: collapsed ? '6px 8px' : '4px 16px',
           borderBottom: '1px solid var(--border-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          minHeight: 48,
         }}
       >
-        <img
-          src="/logo_nogb.png"
-          alt="HanVoxel"
-          style={{ width: '100%', height: 'auto' }}
-        />
+        {!collapsed && (
+          <img
+            src="/logo_nogb.png"
+            alt="HanVoxel"
+            style={{ height: 36, width: 'auto' }}
+          />
+        )}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              border: '1px solid var(--border-muted)', background: 'transparent',
+              color: 'var(--text-secondary)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            title={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
+          >
+            {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+          </button>
+        )}
       </div>
 
       {/* 메뉴 */}
@@ -98,24 +126,26 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '8px 12px',
+          padding: collapsed ? '8px 6px' : '8px 12px',
         }}
       >
         {grouped.map((group, gi) => (
           <div key={group.sectionKey}>
             {gi > 0 && (
-              <div style={{ height: 1, background: 'var(--border-muted)', margin: '8px 8px' }} />
+              <div style={{ height: 1, background: 'var(--border-muted)', margin: collapsed ? '8px 4px' : '8px 8px' }} />
             )}
-            <div style={{
-              fontSize: 10,
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              padding: '8px 20px 6px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}>
-              {t(group.sectionKey)}
-            </div>
+            {!collapsed && (
+              <div style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--text-muted)',
+                padding: '8px 20px 6px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                {t(group.sectionKey)}
+              </div>
+            )}
             {group.items.map((item) => {
               const isActive = activeMode === item.id;
               const Icon = item.icon;
@@ -123,17 +153,19 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
                 <button
                   key={item.id}
                   onClick={() => onModeChange(item.id)}
+                  title={collapsed ? t(item.labelKey) : undefined}
                   style={{
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 20px',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    gap: collapsed ? 0 : 12,
+                    padding: collapsed ? '10px 0' : '10px 20px',
                     marginBottom: 2,
                     borderRadius: 8,
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: isActive ? 600 : 400,
                     letterSpacing: '0.3px',
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -160,7 +192,7 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
                     size={18}
                     style={{ color: isActive ? 'var(--accent-blue)' : 'var(--text-icon)', flexShrink: 0 }}
                   />
-                  {t(item.labelKey)}
+                  {!collapsed && t(item.labelKey)}
                 </button>
               );
             })}
@@ -169,74 +201,84 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
       </nav>
 
       {/* 하단 설정 + 플랜 배지 */}
-      <div style={{ borderTop: '1px solid var(--border-muted)', padding: '12px' }}>
+      <div style={{ borderTop: '1px solid var(--border-muted)', padding: collapsed ? '8px 6px' : '8px 12px' }}>
         <button
           onClick={() => onModeChange('settings')}
+          title={collapsed ? t('sidebar.settings') : undefined}
           style={{
             width: '100%',
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '12px 20px',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: collapsed ? 0 : 12,
+            padding: collapsed ? '10px 0' : '10px 20px',
             borderRadius: 8,
             border: 'none',
             cursor: 'pointer',
-            fontSize: 14,
-            color: 'var(--text-secondary)',
-            background: 'transparent',
+            fontSize: 13,
+            color: activeMode === 'settings' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            background: activeMode === 'settings' ? 'var(--bg-hover)' : 'transparent',
+            borderLeft: activeMode === 'settings' ? '3px solid var(--accent-blue)' : '3px solid transparent',
             fontFamily: 'inherit',
             transition: 'all 0.15s ease',
             textAlign: 'left',
             letterSpacing: '0.3px',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+          onMouseEnter={(e) => { if (activeMode !== 'settings') e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+          onMouseLeave={(e) => { if (activeMode !== 'settings') e.currentTarget.style.background = 'transparent'; }}
         >
-          <Settings size={18} style={{ color: 'var(--text-icon)' }} />
-          {t('sidebar.settings')}
+          <Settings size={18} style={{ color: activeMode === 'settings' ? 'var(--accent-blue)' : 'var(--text-icon)', flexShrink: 0 }} />
+          {!collapsed && t('sidebar.settings')}
         </button>
 
         {/* 플랜 배지 */}
-        <div
-          style={{
-            margin: '8px 8px 4px',
-            padding: '12px 16px',
-            borderRadius: 12,
-            background: isEnterprise
-              ? 'linear-gradient(135deg, rgba(240,180,41,0.12), rgba(240,180,41,0.04))'
-              : 'var(--bg-secondary)',
-            border: isEnterprise
-              ? '1px solid rgba(240,180,41,0.3)'
-              : '1px solid var(--border-default)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isEnterprise && (
-              <Crown size={14} style={{ color: '#F0B429' }} />
-            )}
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('sidebar.currentPlan')}</span>
-          </div>
-          <span
+        {!collapsed && (
+          <div
             style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: isEnterprise ? '#F0B429' : planType === 'GROWTH' ? 'var(--accent-green)' : 'var(--accent-blue)',
-              padding: '3px 10px',
-              borderRadius: 6,
+              margin: '6px 8px 4px',
+              padding: '10px 14px',
+              borderRadius: 10,
               background: isEnterprise
-                ? 'rgba(240,180,41,0.15)'
-                : planType === 'GROWTH'
-                  ? 'rgba(63,185,80,0.15)'
-                  : 'rgba(45,125,210,0.15)',
-              letterSpacing: '0.5px',
+                ? 'linear-gradient(135deg, rgba(240,180,41,0.12), rgba(240,180,41,0.04))'
+                : 'var(--bg-secondary)',
+              border: isEnterprise
+                ? '1px solid rgba(240,180,41,0.3)'
+                : '1px solid var(--border-default)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}
           >
-            {planType}
-          </span>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isEnterprise && (
+                <Crown size={14} style={{ color: '#F0B429' }} />
+              )}
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('sidebar.currentPlan')}</span>
+            </div>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: isEnterprise ? '#F0B429' : planType === 'GROWTH' ? 'var(--accent-green)' : 'var(--accent-blue)',
+                padding: '3px 10px',
+                borderRadius: 6,
+                background: isEnterprise
+                  ? 'rgba(240,180,41,0.15)'
+                  : planType === 'GROWTH'
+                    ? 'rgba(63,185,80,0.15)'
+                    : 'rgba(45,125,210,0.15)',
+                letterSpacing: '0.5px',
+              }}
+            >
+              {planType}
+            </span>
+          </div>
+        )}
+        {collapsed && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0' }}>
+            {isEnterprise && <Crown size={16} style={{ color: '#F0B429' }} />}
+          </div>
+        )}
       </div>
     </aside>
   );

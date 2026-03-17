@@ -44,6 +44,8 @@ function App() {
     template: WarehouseTemplate;
   } | null>(null);
   const [currentFloor, setCurrentFloor] = useState(1);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebar = useCallback(() => setSidebarCollapsed((v) => !v), []);
 
   // 플랜 타입 (관리자 모드 시 항상 ENTERPRISE)
   const planType = adminMode ? 'ENTERPRISE' : 'STARTER';
@@ -114,7 +116,7 @@ function App() {
   if (subPage && mode !== 'viewer') {
     return (
       <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--bg-primary)' }}>
-        <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
+        <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginLeft: 24 }}>
           <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} isEnterprise={adminMode} onNavigateSettings={() => setMode('settings')} />
           <div style={{ flex: 1, overflow: 'auto' }}>
@@ -131,10 +133,10 @@ function App() {
   // 메인 3D 뷰어 모드
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--bg-primary)' }}>
-      <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
+      <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} />
+        <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} isEnterprise={adminMode} onNavigateSettings={() => setMode('settings')} />
 
         {!adminMode && (
           <TrialBanner
