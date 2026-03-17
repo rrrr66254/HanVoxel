@@ -1388,11 +1388,12 @@ function DynamicRotateSpeed({ controlsRef }: { controlsRef: React.RefObject<Orbi
     // 카메라-타겟 거리 계산
     const dist = camera.position.distanceTo(controls.target);
 
-    // 거리에 비례하여 회전 속도 조절 (가까울수록 느리게)
-    // 거리 5~120m → rotateSpeed 0.1~0.5 (로그 스케일)
-    const minSpeed = 0.08;
+    // 거리에 비례하여 회전 속도 조절 (가까울수록 공전 최소화)
+    // 거리 5m → 0.02 / 15m → 0.08 / 40m → 0.25 / 120m → 0.5
+    const minSpeed = 0.02;
     const maxSpeed = 0.5;
-    const speed = minSpeed + (maxSpeed - minSpeed) * Math.min(1, Math.log(dist / 5 + 1) / Math.log(25));
+    const t = Math.min(1, Math.max(0, (dist - 5) / 115));
+    const speed = minSpeed + (maxSpeed - minSpeed) * (t * t);
     controls.rotateSpeed = speed;
   });
 
