@@ -46,7 +46,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
             <span className="rounded bg-gray-800 px-2 py-1 font-mono text-gray-300">
               {form.areaWidth}m × {form.areaDepth}m
             </span>
-            {form.floorCount > 1 && <span className="text-blue-400 font-semibold">{currentFloor}층</span>}
+            <span className="text-blue-400 font-semibold">{currentFloor}층</span>
             <span>랙 {rackCount}개</span>
             <span>통로 {aisleCount}개</span>
             <span>{totalArea.toLocaleString()} m²</span>

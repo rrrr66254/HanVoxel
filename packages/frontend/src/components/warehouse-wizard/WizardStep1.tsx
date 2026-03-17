@@ -138,12 +138,17 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                 className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
                 style={{ background: '#0D1117', border: '1px solid #21262D' }}
               >
-                <span className="text-xs text-gray-500">총 면적</span>
+                <span className="text-xs text-gray-500">
+                  {form.floorCount > 1 ? `층당 면적 ${totalArea.toLocaleString()} m² · 총` : '총 면적'}
+                </span>
                 <div className="flex items-baseline gap-1">
                   <span className="font-mono text-lg font-bold text-white">
-                    {totalArea.toLocaleString()}
+                    {(totalArea * form.floorCount).toLocaleString()}
                   </span>
                   <span className="text-xs text-gray-500">m²</span>
+                  {form.floorCount > 1 && (
+                    <span className="ml-1 text-xs text-blue-400">({form.floorCount}개 층)</span>
+                  )}
                 </div>
               </div>
             )}

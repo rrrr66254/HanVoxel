@@ -347,38 +347,36 @@ export function generateWarehouseLayout(
     },
   ));
 
-  // --- 다층 건물: 엘레베이터 + 계단 ---
-  if (isMultiFloor) {
-    // 공장용 화물 리프트 (도크 근처, 우측벽 쪽) — 3m × 3m
-    const liftX = W - 3;
-    const liftZ = DOCK_Z + 3;
-    objects.push(obj(
-      `freight-lift`, TYPES.WORKSTATION, `화물 리프트 (${floorNumber}층)`, 'LIFT-FREIGHT',
-      [liftX, H / 2, liftZ],
-      [3, H, 3],
-      { color: '#f59e0b', opacity: 0.85, metadata: { facilityType: 'FREIGHT_LIFT', floor: floorNumber, capacity: 5000 } },
-    ));
+  // --- 엘레베이터 + 계단 (모든 창고에 기본 배치) ---
+  // 공장용 화물 리프트 (도크 근처, 우측벽 쪽) — 3m × 3m
+  const liftX = W - 3;
+  const liftZ = DOCK_Z + 3;
+  objects.push(obj(
+    `freight-lift`, TYPES.WORKSTATION, `화물 리프트 (${floorNumber}층)`, 'LIFT-FREIGHT',
+    [liftX, H / 2, liftZ],
+    [3, H, 3],
+    { color: '#f59e0b', opacity: 0.85, metadata: { facilityType: 'FREIGHT_LIFT', floor: floorNumber, capacity: 5000 } },
+  ));
 
-    // 사람용 엘레베이터 (좌측벽 쪽, 직원 출입문 근처) — 2m × 2m
-    const elevX = 2;
-    const elevZ = D / 2 + 3;
-    objects.push(obj(
-      `passenger-elevator`, TYPES.WORKSTATION, `승객용 엘레베이터 (${floorNumber}층)`, 'ELEV-PASSENGER',
-      [elevX, H / 2, elevZ],
-      [2, H, 2],
-      { color: '#3b82f6', opacity: 0.85, metadata: { facilityType: 'PASSENGER_ELEVATOR', floor: floorNumber, capacity: 1000 } },
-    ));
+  // 사람용 엘레베이터 (좌측벽 쪽, 직원 출입문 근처) — 2m × 2m
+  const elevX = 2;
+  const elevZ = D / 2 + 3;
+  objects.push(obj(
+    `passenger-elevator`, TYPES.WORKSTATION, `승객용 엘레베이터 (${floorNumber}층)`, 'ELEV-PASSENGER',
+    [elevX, H / 2, elevZ],
+    [2, H, 2],
+    { color: '#3b82f6', opacity: 0.85, metadata: { facilityType: 'PASSENGER_ELEVATOR', floor: floorNumber, capacity: 1000 } },
+  ));
 
-    // 계단 (좌측벽 쪽, 엘레베이터 옆) — 3m × 5m
-    const stairX = 2.5;
-    const stairZ = D / 2 - 3;
-    objects.push(obj(
-      `stairs`, TYPES.WORKSTATION, `계단 (${floorNumber}층)`, 'STAIRS-MAIN',
-      [stairX, H / 2, stairZ],
-      [3, H, 5],
-      { color: '#6b7280', opacity: 0.85, metadata: { facilityType: 'STAIRS', floor: floorNumber } },
-    ));
-  }
+  // 계단 (좌측벽 쪽, 엘레베이터 옆) — 3m × 5m
+  const stairX = 2.5;
+  const stairZ = D / 2 - 3;
+  objects.push(obj(
+    `stairs`, TYPES.WORKSTATION, `계단 (${floorNumber}층)`, 'STAIRS-MAIN',
+    [stairX, H / 2, stairZ],
+    [3, H, 5],
+    { color: '#6b7280', opacity: 0.85, metadata: { facilityType: 'STAIRS', floor: floorNumber } },
+  ));
 
   // 층 접두사 적용 (다층일 때만)
   if (fp) {

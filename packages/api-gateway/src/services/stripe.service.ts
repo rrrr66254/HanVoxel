@@ -4,11 +4,17 @@
 import Stripe from 'stripe';
 import prisma from './prisma';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY);
+// Stripe 인스턴스 지연 초기화 — API 키 없으면 null (결제 기능 비활성)
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe | null {
+  if (!STRIPE_SECRET_KEY) return null;
+  if (!_stripe) _stripe = new Stripe(STRIPE_SECRET_KEY);
+  return _stripe;
+}
 
 // ── Checkout 세션 생성 ─────────────────────────────────
 
@@ -31,10 +37,13 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
 
   if (!priceId) throw new Error('Stripe Price ID가 설정되지 않았습니다');
 
+  const s = getStripe();
+  if (!s) throw new Error('Stripe API 키가 설정되지 않았습니다 (STRIPE_SECRET_KEY)');
+
   // Stripe 고객 생성 또는 기존 고객 사용
   let customerId = company.stripeCustomerId;
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await s.customers.create({
       name: company.name,
       metadata: { companyId: company.id, companyCode: company.code },
     });
@@ -45,7 +54,7 @@ export async function createCheckoutSession(input: CreateCheckoutInput) {
     });
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await s.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
@@ -73,8 +82,11 @@ export async function cancelSubscription(companyId: string) {
   const company = await prisma.company.findUnique({ where: { id: companyId } });
   if (!company?.stripeSubscriptionId) throw new Error('활성 구독이 없습니다');
 
+  const s = getStripe();
+  if (!s) throw new Error('Stripe API 키가 설정되지 않았습니다 (STRIPE_SECRET_KEY)');
+
   // 기간 종료 시 취소 (즉시 취소 아님)
-  const subscription = await stripe.subscriptions.update(company.stripeSubscriptionId, {
+  const subscription = await s.subscriptions.update(company.stripeSubscriptionId, {
     cancel_at_period_end: true,
   });
 
@@ -105,10 +117,13 @@ export async function upgradeSubscription(companyId: string, newPlanCode: string
 
   if (!newPriceId) throw new Error('Stripe Price ID가 설정되지 않았습니다');
 
-  const subscription = await stripe.subscriptions.retrieve(company.stripeSubscriptionId);
+  const s = getStripe();
+  if (!s) throw new Error('Stripe API 키가 설정되지 않았습니다 (STRIPE_SECRET_KEY)');
+
+  const subscription = await s.subscriptions.retrieve(company.stripeSubscriptionId);
   const currentItem = subscription.items.data[0];
 
-  await stripe.subscriptions.update(company.stripeSubscriptionId, {
+  await s.subscriptions.update(company.stripeSubscriptionId, {
     items: [{ id: currentItem.id, price: newPriceId }],
     proration_behavior: 'create_prorations',
     metadata: { planCode: newPlanCode },
@@ -186,7 +201,9 @@ export async function getPaymentHistory(companyId: string, limit = 20) {
 // ── Webhook 처리 ───────────────────────────────────────
 
 export function constructWebhookEvent(payload: Buffer, signature: string) {
-  return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
+  const s = getStripe();
+  if (!s) throw new Error('Stripe API 키가 설정되지 않았습니다 (STRIPE_SECRET_KEY)');
+  return s.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
 }
 
 export async function handleWebhookEvent(event: Stripe.Event) {
