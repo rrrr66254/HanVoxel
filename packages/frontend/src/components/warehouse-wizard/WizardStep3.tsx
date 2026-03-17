@@ -34,7 +34,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
       <div
         className="flex shrink-0 items-center justify-between px-6"
         style={{
-          height: topBarHeight,
+          height: 56,
           borderBottom: '1px solid #30363D',
           background: 'rgba(13,17,23,0.95)',
           backdropFilter: 'blur(8px)',
@@ -88,7 +88,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
       <div
         className="flex shrink-0 items-center justify-center text-[11px] text-gray-600"
         style={{
-          height: bottomBarHeight,
+          height: 36,
           borderTop: '1px solid #21262D',
           background: 'rgba(13,17,23,0.95)',
         }}
