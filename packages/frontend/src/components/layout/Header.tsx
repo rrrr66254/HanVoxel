@@ -1,21 +1,22 @@
+import { useTranslation } from 'react-i18next';
 import { Bell, ChevronRight } from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 
-// 모드별 한국어 라벨
-const MODE_LABELS: Record<string, string> = {
-  viewer: '3D 창고 뷰어',
-  wizard: '새 창고 만들기',
-  roi: 'ROI 계산기',
-  sla: 'SLA 모니터링',
-  qc: '품질 검수',
-  picking: '모바일 피킹',
-  subscription: '구독 관리',
-  erp: 'ERP 관리',
-  trade: '무역 인텔리전스',
-  reorder: '자동 발주',
-  connector: 'ERP 커넥터',
-  benchmark: '업계 벤치마크',
-  settings: '설정',
+// 모드별 i18n 키 매핑
+const MODE_LABEL_KEYS: Record<string, string> = {
+  viewer: 'sidebar.viewer',
+  wizard: 'sidebar.wizard',
+  roi: 'sidebar.roi',
+  sla: 'sidebar.sla',
+  qc: 'sidebar.qc',
+  picking: 'sidebar.picking',
+  subscription: 'sidebar.subscription',
+  erp: 'sidebar.erp',
+  trade: 'sidebar.trade',
+  reorder: 'sidebar.reorder',
+  connector: 'sidebar.connector',
+  benchmark: 'sidebar.benchmark',
+  settings: 'sidebar.settings',
 };
 
 interface HeaderProps {
@@ -27,12 +28,14 @@ interface HeaderProps {
 }
 
 export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise = true, onNavigateSettings }: HeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <header
       style={{
         height: 60,
-        background: '#161B22',
-        borderBottom: '1px solid #30363D',
+        background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-default)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -43,9 +46,9 @@ export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise 
       {/* 브레드크럼 */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
         <img src="/logo_nogb.png" alt="HanVoxel" style={{ height: 40 }} />
-        <ChevronRight size={14} style={{ color: '#484F58' }} />
-        <span style={{ color: '#E6EDF3', fontWeight: 600 }}>
-          {MODE_LABELS[activeMode] ?? activeMode}
+        <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+          {MODE_LABEL_KEYS[activeMode] ? t(MODE_LABEL_KEYS[activeMode]) : activeMode}
         </span>
       </nav>
 
@@ -59,9 +62,9 @@ export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise 
             width: 36,
             height: 36,
             borderRadius: 8,
-            border: '1px solid #30363D',
+            border: '1px solid var(--border-default)',
             background: 'transparent',
-            color: '#8B949E',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -69,12 +72,12 @@ export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise 
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#21262D';
-            e.currentTarget.style.color = '#E6EDF3';
+            e.currentTarget.style.background = 'var(--bg-tertiary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#8B949E';
+            e.currentTarget.style.color = 'var(--text-secondary)';
           }}
         >
           <Bell size={16} />
@@ -87,14 +90,14 @@ export function Header({ activeMode, alertCount = 3, onAlertClick, isEnterprise 
                 width: 18,
                 height: 18,
                 borderRadius: '50%',
-                background: '#F85149',
+                background: 'var(--accent-red)',
                 color: '#fff',
                 fontSize: 10,
                 fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #161B22',
+                border: '2px solid var(--bg-secondary)',
               }}
             >
               {alertCount}

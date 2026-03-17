@@ -16,10 +16,12 @@ import { ConnectorDashboard } from './components/connector-dashboard';
 import { BenchmarkDashboard } from './components/benchmark-dashboard';
 import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { MOCK_WAREHOUSE } from './data/mock-warehouse';
 import { generateWarehouseLayout } from './utils/layout-generator';
 import type { WizardFormData, WarehouseTemplate } from './types/warehouse-template';
 import type { SpatialObject } from './types/spatial';
+import './i18n';
 import './index.css';
 
 type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'settings';
@@ -111,7 +113,7 @@ function App() {
   const subPage = renderSubPage();
   if (subPage && mode !== 'viewer') {
     return (
-      <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
+      <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--bg-primary)' }}>
         <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', marginLeft: 24 }}>
           <Header activeMode={mode} onAlertClick={() => setAlertOpen(true)} isEnterprise={adminMode} onNavigateSettings={() => setMode('settings')} />
@@ -128,7 +130,7 @@ function App() {
 
   // 메인 3D 뷰어 모드
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', background: '#0D1117' }}>
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--bg-primary)' }}>
       <Sidebar activeMode={mode} onModeChange={(m) => setMode(m as AppMode)} planType={planType} onToggleAdmin={toggleAdmin} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -158,4 +160,13 @@ function App() {
   );
 }
 
-export default App;
+// ThemeProvider로 감싸는 래퍼
+function AppWrapper() {
+  return (
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  );
+}
+
+export default AppWrapper;

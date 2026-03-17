@@ -1,0 +1,112 @@
+{
+  "sidebar": {
+    "spatialManagement": "Spatial",
+    "operations": "Operations",
+    "intelligence": "Intelligence",
+    "settings": "Settings",
+    "viewer": "3D Warehouse Viewer",
+    "wizard": "Create Warehouse",
+    "roi": "ROI Calculator",
+    "sla": "SLA Monitoring",
+    "qc": "Quality Control",
+    "picking": "Mobile Picking",
+    "subscription": "Subscription",
+    "erp": "ERP Management",
+    "trade": "Trade Intelligence",
+    "reorder": "Auto Reorder",
+    "connector": "ERP Connector",
+    "benchmark": "Industry Benchmark",
+    "currentPlan": "Current Plan"
+  },
+  "header": {
+    "alerts": "Alerts"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "apikeys": "API Keys",
+      "notifications": "Notifications",
+      "security": "Security"
+    },
+    "general": {
+      "basicSettings": "Basic Settings",
+      "language": "Language",
+      "languageDesc": "Interface display language",
+      "theme": "Theme",
+      "themeDesc": "UI theme selection",
+      "darkMode": "Dark Mode",
+      "lightMode": "Light Mode",
+      "timezone": "Timezone",
+      "timezoneDesc": "Date/time display reference",
+      "viewer3d": "3D Viewer",
+      "grid": "Show Grid",
+      "gridDesc": "Show grid lines in 3D viewer",
+      "fog": "Fog Effect",
+      "fogDesc": "Distance fog effect",
+      "shadows": "Shadows",
+      "shadowsDesc": "Real-time shadow rendering"
+    },
+    "apikeys": {
+      "description": "Manage API keys for external service integrations. Keys are stored encrypted in the browser.",
+      "connectionTest": "Test Connection",
+      "testing": "Testing...",
+      "connected": "Connected",
+      "error": "Error",
+      "copy": "Copy",
+      "delete": "Delete",
+      "stripDesc": "Payment processing (Stripe Secret Key)",
+      "comtradeDesc": "Global trade data API",
+      "customsDesc": "UNI-PASS import/export data",
+      "douzonDesc": "ERP connector authentication key",
+      "mlDesc": "Anomaly detection / demand forecasting service"
+    },
+    "notifications": {
+      "channels": "Notification Channels",
+      "email": "Email Notifications",
+      "emailDesc": "Send email on anomaly detection / SLA violation",
+      "browser": "Browser Notifications",
+      "browserDesc": "Receive push notifications",
+      "slack": "Slack Integration",
+      "slackDesc": "Send notifications to Slack channel",
+      "types": "Notification Types",
+      "inventory": "Inventory Anomaly",
+      "inventoryDesc": "Alert on sudden inventory changes",
+      "slaViolation": "SLA Violation",
+      "slaViolationDesc": "Alert when delivery compliance rate drops",
+      "qcDefect": "QC Defect",
+      "qcDefectDesc": "Alert when QC defect rate exceeds threshold",
+      "reorderRec": "Reorder Recommendation",
+      "reorderRecDesc": "Alert when auto-reorder recommendation is generated"
+    },
+    "security": {
+      "auth": "Authentication",
+      "twoFactor": "Two-Factor Auth (2FA)",
+      "twoFactorDesc": "Google Authenticator or SMS verification",
+      "sessionTimeout": "Session Timeout",
+      "sessionTimeoutDesc": "Auto logout on inactivity",
+      "min15": "15 min",
+      "min30": "30 min",
+      "hour1": "1 hour",
+      "disabled": "Disabled",
+      "accessLog": "Access Log",
+      "accessLogDesc": "Recent access logs will be displayed here. (Enterprise plan only)"
+    }
+  },
+  "profile": {
+    "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "logout": "Logout",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "phonePlaceholder": "010-1234-5678",
+    "cancel": "Cancel",
+    "save": "Save",
+    "korean": "한국어",
+    "english": "English",
+    "japanese": "日本語"
+  }
+}

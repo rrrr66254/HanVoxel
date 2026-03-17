@@ -14,8 +14,8 @@ body,
   height: 100%;
   overflow: hidden;
   font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-  background: #0D1117;
-  color: #E6EDF3;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* 스크롤바 스타일 */
@@ -24,33 +24,69 @@ body,
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0D1117;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #30363D;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #484F58;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* 다크 테마 디자인 토큰 */
-:root {
+/* 다크 테마 디자인 토큰 (기본) */
+:root,
+[data-theme="dark"] {
   --bg-primary: #0D1117;
   --bg-secondary: #161B22;
   --bg-tertiary: #21262D;
+  --bg-hover: #1C2A3A;
   --border-default: #30363D;
   --border-muted: #21262D;
   --text-primary: #E6EDF3;
   --text-secondary: #8B949E;
   --text-muted: #484F58;
+  --text-icon: #6E7681;
   --accent-blue: #2D7DD2;
+  --accent-blue-hover: #3A8FE0;
   --accent-green: #3FB950;
   --accent-orange: #D29922;
   --accent-red: #F85149;
   --accent-purple: #A371F7;
   --glow-blue: rgba(45, 125, 210, 0.15);
   --glow-green: rgba(63, 185, 80, 0.15);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
+  --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --scrollbar-track: #0D1117;
+  --scrollbar-thumb: #30363D;
+  --scrollbar-thumb-hover: #484F58;
+}
+
+/* 라이트 테마 디자인 토큰 */
+[data-theme="light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F6F8FA;
+  --bg-tertiary: #E8ECF0;
+  --bg-hover: #D0D7DE;
+  --border-default: #D0D7DE;
+  --border-muted: #E8ECF0;
+  --text-primary: #1F2328;
+  --text-secondary: #656D76;
+  --text-muted: #8C959F;
+  --text-icon: #656D76;
+  --accent-blue: #0969DA;
+  --accent-blue-hover: #0860CA;
+  --accent-green: #1A7F37;
+  --accent-orange: #BF8700;
+  --accent-red: #CF222E;
+  --accent-purple: #8250DF;
+  --glow-blue: rgba(9, 105, 218, 0.12);
+  --glow-green: rgba(26, 127, 55, 0.12);
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --scrollbar-track: #F6F8FA;
+  --scrollbar-thumb: #D0D7DE;
+  --scrollbar-thumb-hover: #8C959F;
 }
 
 /* 카드 기본 스타일 */
