@@ -192,6 +192,16 @@ export function ProfileDropdown({ isEnterprise = true, onNavigateSettings }: Pro
             <ProfileMenuItem
               icon={<Globe size={15} />}
               label={`${t('profile.language')}: ${LANGUAGE_LABELS[i18n.language] ?? i18n.language}`}
+              onClick={() => {
+                // 언어 순환: ko → en → ja → ko
+                const langs = ['ko', 'en', 'ja'];
+                const idx = langs.indexOf(i18n.language);
+                const next = langs[(idx + 1) % langs.length];
+                i18n.changeLanguage(next);
+                const updated = { ...profile, language: next };
+                setProfile(updated);
+                saveProfile(updated);
+              }}
             />
             <ProfileMenuItem
               icon={theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
