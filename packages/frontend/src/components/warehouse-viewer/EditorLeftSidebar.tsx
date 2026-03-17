@@ -131,7 +131,7 @@ export function EditorLeftSidebar({
           {/* 패널 헤더 */}
           <div className="flex items-center justify-between border-b border-[#2A2F38] px-4 py-3">
             <h3 className="text-sm font-semibold text-white">
-              {activeTab === 'catalog' && '표준 규격'}
+              {activeTab === 'catalog' && '카탈로그'}
               {activeTab === 'zones' && '구역 관리'}
               {activeTab === 'layers' && '레이어'}
             </h3>
