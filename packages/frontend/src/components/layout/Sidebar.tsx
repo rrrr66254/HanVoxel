@@ -19,6 +19,9 @@ import {
   Calendar,
   Package,
   Truck,
+  ClipboardList,
+  Wrench,
+  PackageCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +41,9 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'inout-calendar', icon: Calendar, labelKey: 'sidebar.inoutCalendar', sectionKey: 'sidebar.operations' },
   { id: 'inbound', icon: Package, labelKey: 'sidebar.inbound', sectionKey: 'sidebar.operations' },
   { id: 'outbound', icon: Truck, labelKey: 'sidebar.outbound', sectionKey: 'sidebar.operations' },
+  { id: 'sales-order', icon: ClipboardList, labelKey: 'sidebar.salesOrder', sectionKey: 'sidebar.operations' },
+  { id: 'bom', icon: Wrench, labelKey: 'sidebar.bom', sectionKey: 'sidebar.operations' },
+  { id: 'stock-check', icon: PackageCheck, labelKey: 'sidebar.stockCheck', sectionKey: 'sidebar.operations' },
   { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.operations' },
   { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.operations' },
   { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.operations' },
