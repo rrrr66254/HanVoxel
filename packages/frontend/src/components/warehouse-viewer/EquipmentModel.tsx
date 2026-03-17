@@ -474,3 +474,211 @@ export function ExitSignModel({ width, depth, height, isSelected, isHovered }: E
     </group>
   );
 }
+
+// ===== 10. 계단 (Stairs) =====
+export function StairsModel({ width, depth, height, isSelected, isHovered }: EquipmentProps) {
+  const stepCount = Math.max(6, Math.floor(height / 0.2));
+  const stepH = height / stepCount;
+  const stepD = depth / stepCount;
+
+  const stepMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#8B9DAF', isSelected, isHovered), metalness: 0.4, roughness: 0.5,
+  }), [isSelected, isHovered]);
+
+  const railMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#505860', isSelected, isHovered), metalness: 0.6, roughness: 0.3,
+  }), [isSelected, isHovered]);
+
+  const railGeo = useMemo(() => new THREE.CylinderGeometry(0.025, 0.025, height * 1.1, 8), [height]);
+
+  return (
+    <group>
+      {/* 계단 스텝 */}
+      {Array.from({ length: stepCount }).map((_, i) => (
+        <mesh key={i} position={[0, stepH * (i + 0.5), -depth / 2 + stepD * (i + 0.5)]} material={stepMat} castShadow>
+          <boxGeometry args={[width, stepH * 0.9, stepD * 0.95]} />
+        </mesh>
+      ))}
+
+      {/* 좌측 난간 기둥 */}
+      <mesh position={[-width / 2 + 0.03, height * 0.55, 0]} geometry={railGeo} material={railMat} />
+      {/* 우측 난간 기둥 */}
+      <mesh position={[width / 2 - 0.03, height * 0.55, 0]} geometry={railGeo} material={railMat} />
+
+      {/* 좌측 난간 (대각선 — 경사진 핸드레일) */}
+      <mesh position={[-width / 2 + 0.03, height / 2 + 0.5, 0]} rotation={[Math.atan2(height, depth), 0, 0]} material={railMat}>
+        <boxGeometry args={[0.04, 0.04, Math.sqrt(height * height + depth * depth)]} />
+      </mesh>
+      {/* 우측 난간 */}
+      <mesh position={[width / 2 - 0.03, height / 2 + 0.5, 0]} rotation={[Math.atan2(height, depth), 0, 0]} material={railMat}>
+        <boxGeometry args={[0.04, 0.04, Math.sqrt(height * height + depth * depth)]} />
+      </mesh>
+
+      {/* 계단 바닥판 */}
+      <mesh position={[0, 0.01, 0]} material={stepMat}>
+        <boxGeometry args={[width, 0.02, depth]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ===== 11. 사람용 엘레베이터 (Passenger Elevator) =====
+export function PassengerElevatorModel({ width, depth, height, isSelected, isHovered }: EquipmentProps) {
+  const wallThick = 0.08;
+  const doorH = Math.min(height * 0.35, 2.4);
+  const doorW = width * 0.7;
+
+  const shaftMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#4A5568', isSelected, isHovered), metalness: 0.5, roughness: 0.4,
+  }), [isSelected, isHovered]);
+
+  const doorMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#94A3B8', isSelected, isHovered), metalness: 0.7, roughness: 0.2,
+  }), [isSelected, isHovered]);
+
+  const indicatorMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#22C55E', emissive: '#22C55E', emissiveIntensity: 0.5, metalness: 0.1, roughness: 0.3,
+  }), []);
+
+  return (
+    <group>
+      {/* 엘리베이터 샤프트 — 4면 벽 */}
+      {/* 뒷벽 */}
+      <mesh position={[0, height / 2, depth / 2 - wallThick / 2]} material={shaftMat} castShadow>
+        <boxGeometry args={[width, height, wallThick]} />
+      </mesh>
+      {/* 좌측벽 */}
+      <mesh position={[-width / 2 + wallThick / 2, height / 2, 0]} material={shaftMat} castShadow>
+        <boxGeometry args={[wallThick, height, depth]} />
+      </mesh>
+      {/* 우측벽 */}
+      <mesh position={[width / 2 - wallThick / 2, height / 2, 0]} material={shaftMat} castShadow>
+        <boxGeometry args={[wallThick, height, depth]} />
+      </mesh>
+      {/* 앞면 — 문 좌우 벽 */}
+      <mesh position={[-width / 2 + wallThick + (width / 2 - doorW / 2 - wallThick) / 2, height / 2, -depth / 2 + wallThick / 2]} material={shaftMat}>
+        <boxGeometry args={[(width / 2 - doorW / 2 - wallThick), height, wallThick]} />
+      </mesh>
+      <mesh position={[width / 2 - wallThick - (width / 2 - doorW / 2 - wallThick) / 2, height / 2, -depth / 2 + wallThick / 2]} material={shaftMat}>
+        <boxGeometry args={[(width / 2 - doorW / 2 - wallThick), height, wallThick]} />
+      </mesh>
+      {/* 앞면 — 문 위 벽 */}
+      <mesh position={[0, doorH + (height - doorH) / 2, -depth / 2 + wallThick / 2]} material={shaftMat}>
+        <boxGeometry args={[doorW + 0.1, height - doorH, wallThick]} />
+      </mesh>
+
+      {/* 엘리베이터 문 (좌/우 슬라이딩) */}
+      <mesh position={[-doorW / 4 - 0.01, doorH / 2, -depth / 2 + 0.01]} material={doorMat}>
+        <boxGeometry args={[doorW / 2 - 0.02, doorH - 0.02, 0.03]} />
+      </mesh>
+      <mesh position={[doorW / 4 + 0.01, doorH / 2, -depth / 2 + 0.01]} material={doorMat}>
+        <boxGeometry args={[doorW / 2 - 0.02, doorH - 0.02, 0.03]} />
+      </mesh>
+
+      {/* 층 표시등 */}
+      <mesh position={[0, doorH + 0.3, -depth / 2 - 0.01]} material={indicatorMat}>
+        <boxGeometry args={[0.2, 0.1, 0.02]} />
+      </mesh>
+
+      {/* 바닥 */}
+      <mesh position={[0, 0.02, 0]}>
+        <boxGeometry args={[width - wallThick * 2, 0.04, depth - wallThick * 2]} />
+        <meshStandardMaterial color="#6B7280" metalness={0.3} roughness={0.6} />
+      </mesh>
+
+      {/* 천장 */}
+      <mesh position={[0, height - 0.02, 0]} material={shaftMat}>
+        <boxGeometry args={[width, 0.04, depth]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ===== 12. 화물 리프트 (Freight Lift) =====
+export function FreightLiftModel({ width, depth, height, isSelected, isHovered }: EquipmentProps) {
+  const wallThick = 0.1;
+  const doorH = Math.min(height * 0.4, 3.5);
+  const doorW = width * 0.8;
+  const railW = 0.08;
+
+  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#D97706', isSelected, isHovered), metalness: 0.6, roughness: 0.3,
+  }), [isSelected, isHovered]);
+
+  const wallMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#374151', isSelected, isHovered), metalness: 0.4, roughness: 0.5,
+  }), [isSelected, isHovered]);
+
+  const doorMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: resolveColor('#9CA3AF', isSelected, isHovered), metalness: 0.6, roughness: 0.3,
+  }), [isSelected, isHovered]);
+
+  const warningMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#FBBF24', emissive: '#F59E0B', emissiveIntensity: 0.3, metalness: 0.1, roughness: 0.5,
+  }), []);
+
+  return (
+    <group>
+      {/* 리프트 프레임 — 노란 강철 골조 */}
+      {/* 4 수직 기둥 */}
+      {[
+        [-width / 2 + railW / 2, height / 2, -depth / 2 + railW / 2],
+        [width / 2 - railW / 2, height / 2, -depth / 2 + railW / 2],
+        [-width / 2 + railW / 2, height / 2, depth / 2 - railW / 2],
+        [width / 2 - railW / 2, height / 2, depth / 2 - railW / 2],
+      ].map(([x, y, z], i) => (
+        <mesh key={`col-${i}`} position={[x, y, z]} material={frameMat} castShadow>
+          <boxGeometry args={[railW, height, railW]} />
+        </mesh>
+      ))}
+
+      {/* 상단 프레임 연결 */}
+      <mesh position={[0, height - railW / 2, -depth / 2 + railW / 2]} material={frameMat}>
+        <boxGeometry args={[width, railW, railW]} />
+      </mesh>
+      <mesh position={[0, height - railW / 2, depth / 2 - railW / 2]} material={frameMat}>
+        <boxGeometry args={[width, railW, railW]} />
+      </mesh>
+      <mesh position={[-width / 2 + railW / 2, height - railW / 2, 0]} material={frameMat}>
+        <boxGeometry args={[railW, railW, depth]} />
+      </mesh>
+      <mesh position={[width / 2 - railW / 2, height - railW / 2, 0]} material={frameMat}>
+        <boxGeometry args={[railW, railW, depth]} />
+      </mesh>
+
+      {/* 뒷벽 패널 */}
+      <mesh position={[0, height / 2, depth / 2 - wallThick / 2]} material={wallMat} castShadow>
+        <boxGeometry args={[width - railW * 2, height - railW, wallThick]} />
+      </mesh>
+      {/* 좌측벽 패널 */}
+      <mesh position={[-width / 2 + wallThick / 2, height / 2, 0]} material={wallMat} castShadow>
+        <boxGeometry args={[wallThick, height - railW, depth - railW * 2]} />
+      </mesh>
+      {/* 우측벽 패널 */}
+      <mesh position={[width / 2 - wallThick / 2, height / 2, 0]} material={wallMat} castShadow>
+        <boxGeometry args={[wallThick, height - railW, depth - railW * 2]} />
+      </mesh>
+
+      {/* 화물 도어 (롤링 셔터 스타일) */}
+      <mesh position={[0, doorH / 2, -depth / 2 + 0.02]} material={doorMat}>
+        <boxGeometry args={[doorW, doorH, 0.05]} />
+      </mesh>
+      {/* 도어 위 경고 바 */}
+      <mesh position={[0, doorH + 0.06, -depth / 2 + 0.01]} material={warningMat}>
+        <boxGeometry args={[doorW + 0.2, 0.12, 0.04]} />
+      </mesh>
+
+      {/* 리프트 플랫폼 (바닥) */}
+      <mesh position={[0, 0.04, 0]}>
+        <boxGeometry args={[width - wallThick * 2, 0.08, depth - wallThick * 2]} />
+        <meshStandardMaterial color="#555555" metalness={0.5} roughness={0.4} />
+      </mesh>
+
+      {/* 하중 표시판 */}
+      <mesh position={[width / 2 - 0.01, doorH + 0.4, -depth / 2 + railW + 0.01]}>
+        <boxGeometry args={[0.01, 0.15, 0.25]} />
+        <meshStandardMaterial color="#FFFFFF" metalness={0.1} roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}

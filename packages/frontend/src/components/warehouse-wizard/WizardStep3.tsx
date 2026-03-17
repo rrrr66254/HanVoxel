@@ -16,6 +16,7 @@ interface WizardStep3Props {
  */
 export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props) {
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [currentFloor, setCurrentFloor] = useState(1);
 
   // 윈도우 리사이즈 감지
   useEffect(() => {
@@ -26,10 +27,10 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 레이아웃 생성 (form/template 변경 시 재생성)
+  // 레이아웃 생성 (form/template/currentFloor 변경 시 재생성)
   const generatedObjects: SpatialObject[] = useMemo(
-    () => generateWarehouseLayout(form, template),
-    [form, template],
+    () => generateWarehouseLayout(form, template, currentFloor),
+    [form, template, currentFloor],
   );
 
   // 레이아웃 통계
@@ -60,6 +61,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
             <span className="rounded bg-gray-800 px-2 py-1 font-mono text-gray-300">
               {form.areaWidth}m × {form.areaDepth}m
             </span>
+            {form.floorCount > 1 && <span className="text-blue-400 font-semibold">{currentFloor}층</span>}
             <span>랙 {rackCount}개</span>
             <span>통로 {aisleCount}개</span>
             <span>{totalArea.toLocaleString()} m²</span>
@@ -87,7 +89,14 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
 
       {/* 3D 뷰어 — 남은 영역 전체, 윈도우 크기에 맞춤 */}
       <div style={{ width: '100%', height: viewerHeight, position: 'relative', overflow: 'hidden' }}>
-        <WarehouseViewer objects={generatedObjects} onSave={onNext} onBack={onBack} />
+        <WarehouseViewer
+          objects={generatedObjects}
+          onSave={onNext}
+          onBack={onBack}
+          floorCount={form.floorCount}
+          currentFloor={currentFloor}
+          onFloorChange={setCurrentFloor}
+        />
       </div>
 
       {/* 하단 힌트 */}
