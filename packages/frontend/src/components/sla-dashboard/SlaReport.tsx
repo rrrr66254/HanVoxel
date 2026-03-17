@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { FileText, Download, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import type { SlaTargetData, SlaMetricData, SlaViolationData } from '../../api/sla-api';
 
 const METRIC_LABELS: Record<string, string> = {
@@ -6,6 +7,25 @@ const METRIC_LABELS: Record<string, string> = {
   misshipment_rate: '오배송률',
   picking_accuracy: '피킹 정확도',
   avg_processing_time: '평균 처리 시간',
+};
+
+/* 다크 테마 색상 (SlaDashboard와 동일) */
+const C = {
+  bg: '#0D1117',
+  card: '#161B22',
+  border: '#30363D',
+  text: '#C9D1D9',
+  textMuted: '#8B949E',
+  textDim: '#484F58',
+  blue: '#2D7DD2',
+  green: '#3FB950',
+  greenBg: 'rgba(63,185,80,0.1)',
+  red: '#F85149',
+  redBg: 'rgba(248,81,73,0.1)',
+  yellow: '#D29922',
+  yellowBg: 'rgba(210,153,34,0.1)',
+  row: '#161B22',
+  rowAlt: '#1C2129',
 };
 
 interface SlaReportProps {
@@ -79,54 +99,75 @@ export default function SlaReport({ target, metrics, violations }: SlaReportProp
     return Math.round(score * 10) / 10;
   }, [summary, target]);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = () => { window.print(); };
+
+  const scoreColor = overallScore >= 90 ? C.green : overallScore >= 70 ? C.yellow : C.red;
+  const scoreBg = overallScore >= 90 ? C.greenBg : overallScore >= 70 ? C.yellowBg : C.redBg;
+  const scoreLabel = overallScore >= 90 ? '우수' : overallScore >= 70 ? '보통' : '미달';
+
+  const thStyle: React.CSSProperties = {
+    padding: '10px 14px', fontSize: 12, fontWeight: 600,
+    color: C.textMuted, borderBottom: `1px solid ${C.border}`, textAlign: 'left',
+  };
+  const tdStyle: React.CSSProperties = {
+    padding: '10px 14px', fontSize: 13, color: C.text,
+    borderBottom: `1px solid ${C.border}`,
   };
 
-  const periodLabel = periodType === 'weekly' ? '주간' : '월간';
-
   return (
-    <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
-      {/* 기간 선택 + 출력 */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPeriodType('weekly')}
-            className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
-              periodType === 'weekly'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            주간 리포트
-          </button>
-          <button
-            onClick={() => setPeriodType('monthly')}
-            className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
-              periodType === 'monthly'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            월간 리포트
-          </button>
+    <main style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
+      {/* 기간 선택 + PDF */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 4, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}` }}>
+          {(['weekly', 'monthly'] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriodType(p)}
+              style={{
+                padding: '7px 18px', borderRadius: 8, border: 'none',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                background: periodType === p ? C.blue : 'transparent',
+                color: periodType === p ? '#fff' : C.textMuted,
+                transition: 'all 0.15s',
+              }}
+            >
+              {p === 'weekly' ? '주간 리포트' : '월간 리포트'}
+            </button>
+          ))}
         </div>
         <button
           onClick={handlePrint}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 8,
+            border: `1px solid ${C.border}`, background: C.card,
+            color: C.text, fontSize: 13, cursor: 'pointer',
+            transition: 'border-color 0.15s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = C.blue}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
         >
+          <Download size={14} />
           PDF 다운로드
         </button>
       </div>
 
-      {/* 리포트 본문 (print 영역) */}
-      <div className="bg-white rounded-xl border p-8 print:shadow-none print:border-none print:rounded-none space-y-8">
+      {/* 리포트 본문 */}
+      <div style={{
+        background: C.card, borderRadius: 14, border: `1px solid ${C.border}`,
+        padding: 28, display: 'flex', flexDirection: 'column', gap: 28,
+      }}>
         {/* 리포트 헤더 */}
-        <div className="text-center border-b pb-6">
-          <h2 className="text-xl font-bold text-gray-800">SLA {periodLabel} 리포트</h2>
-          <p className="text-sm text-gray-500 mt-1">{target.name}</p>
+        <div style={{ textAlign: 'center', paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
+            <FileText size={18} color={C.blue} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>
+              SLA {periodType === 'weekly' ? '주간' : '월간'} 리포트
+            </h2>
+          </div>
+          <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>{target.name}</p>
           {filteredMetrics.length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
+            <p style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>
               기간: {filteredMetrics[0].recordDate} ~ {filteredMetrics[filteredMetrics.length - 1].recordDate}
               ({filteredMetrics.length}일)
             </p>
@@ -134,71 +175,68 @@ export default function SlaReport({ target, metrics, violations }: SlaReportProp
         </div>
 
         {/* 종합 점수 */}
-        <div className="flex items-center justify-center">
-          <div className="text-center">
-            <div className={`text-5xl font-bold ${
-              overallScore >= 90 ? 'text-green-600' : overallScore >= 70 ? 'text-yellow-600' : 'text-red-600'
-            }`}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{
+            textAlign: 'center', padding: '24px 48px', borderRadius: 16,
+            background: scoreBg, border: `1px solid ${scoreColor}30`,
+          }}>
+            <div style={{ fontSize: 52, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
               {overallScore}
             </div>
-            <div className="text-sm text-gray-500 mt-1">종합 달성 점수 / 100</div>
-            <div className={`text-xs mt-1 px-3 py-1 rounded-full inline-block ${
-              overallScore >= 90 ? 'bg-green-100 text-green-700' : overallScore >= 70 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-            }`}>
-              {overallScore >= 90 ? '우수' : overallScore >= 70 ? '보통' : '미달'}
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8 }}>종합 달성 점수 / 100</div>
+            <div style={{
+              display: 'inline-block', marginTop: 8,
+              padding: '4px 14px', borderRadius: 20,
+              background: `${scoreColor}20`, color: scoreColor,
+              fontSize: 12, fontWeight: 600,
+            }}>
+              {scoreLabel}
             </div>
           </div>
         </div>
 
-        {/* KPI 요약 테이블 */}
+        {/* KPI 요약 */}
         {summary && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-3">KPI 요약</h3>
-            <table className="w-full text-sm border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left border">지표</th>
-                  <th className="px-4 py-2 text-right border">목표</th>
-                  <th className="px-4 py-2 text-right border">평균 실측</th>
-                  <th className="px-4 py-2 text-center border">달성</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="px-4 py-2 border">납기 준수율</td>
-                  <td className="px-4 py-2 text-right border">&ge; {target.deliveryOnTimeTarget}%</td>
-                  <td className="px-4 py-2 text-right border font-medium">{summary.avgDelivery}%</td>
-                  <td className={`px-4 py-2 text-center border font-medium ${summary.deliveryMet ? 'text-green-600' : 'text-red-600'}`}>
-                    {summary.deliveryMet ? '달성' : '미달'}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 border">오배송률</td>
-                  <td className="px-4 py-2 text-right border">&le; {target.misshipmentRateLimit}%</td>
-                  <td className="px-4 py-2 text-right border font-medium">{summary.avgMisship}%</td>
-                  <td className={`px-4 py-2 text-center border font-medium ${summary.misshipMet ? 'text-green-600' : 'text-red-600'}`}>
-                    {summary.misshipMet ? '달성' : '미달'}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 border">피킹 정확도</td>
-                  <td className="px-4 py-2 text-right border">&ge; {target.pickingAccuracyTarget}%</td>
-                  <td className="px-4 py-2 text-right border font-medium">{summary.avgPick}%</td>
-                  <td className={`px-4 py-2 text-center border font-medium ${summary.pickMet ? 'text-green-600' : 'text-red-600'}`}>
-                    {summary.pickMet ? '달성' : '미달'}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 border">평균 처리 시간</td>
-                  <td className="px-4 py-2 text-right border">&le; {target.avgProcessingTimeLimit}분</td>
-                  <td className="px-4 py-2 text-right border font-medium">{summary.avgProc}분</td>
-                  <td className={`px-4 py-2 text-center border font-medium ${summary.procMet ? 'text-green-600' : 'text-red-600'}`}>
-                    {summary.procMet ? '달성' : '미달'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="flex gap-6 mt-3 text-xs text-gray-500">
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>KPI 요약</h3>
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: C.bg }}>
+                    <th style={thStyle}>지표</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>목표</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>평균 실측</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>달성</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: '납기 준수율', target: `≥ ${target.deliveryOnTimeTarget}%`, actual: `${summary.avgDelivery}%`, met: summary.deliveryMet },
+                    { label: '오배송률', target: `≤ ${target.misshipmentRateLimit}%`, actual: `${summary.avgMisship}%`, met: summary.misshipMet },
+                    { label: '피킹 정확도', target: `≥ ${target.pickingAccuracyTarget}%`, actual: `${summary.avgPick}%`, met: summary.pickMet },
+                    { label: '평균 처리 시간', target: `≤ ${target.avgProcessingTimeLimit}분`, actual: `${summary.avgProc}분`, met: summary.procMet },
+                  ].map((row, i) => (
+                    <tr key={row.label} style={{ background: i % 2 === 0 ? C.row : C.rowAlt }}>
+                      <td style={tdStyle}>{row.label}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', color: C.textMuted }}>{row.target}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{row.actual}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                          background: row.met ? C.greenBg : C.redBg,
+                          color: row.met ? C.green : C.red,
+                        }}>
+                          {row.met ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                          {row.met ? '달성' : '미달'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: 20, marginTop: 10, fontSize: 12, color: C.textMuted }}>
               <span>총 주문: {summary.totalOrders.toLocaleString()}건</span>
               <span>총 피킹: {summary.totalPicks.toLocaleString()}건</span>
             </div>
@@ -207,89 +245,119 @@ export default function SlaReport({ target, metrics, violations }: SlaReportProp
 
         {/* 일별 KPI */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-600 mb-3">일별 KPI</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-1.5 text-left border">날짜</th>
-                  <th className="px-2 py-1.5 text-right border">납기 준수율</th>
-                  <th className="px-2 py-1.5 text-right border">오배송률</th>
-                  <th className="px-2 py-1.5 text-right border">피킹 정확도</th>
-                  <th className="px-2 py-1.5 text-right border">처리 시간</th>
-                  <th className="px-2 py-1.5 text-right border">주문</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMetrics.map((m) => {
-                  const dViolation = m.deliveryOnTimeRate < target.deliveryOnTimeTarget;
-                  const mViolation = m.misshipmentRate > target.misshipmentRateLimit;
-                  const pViolation = m.pickingAccuracy < target.pickingAccuracyTarget;
-                  const tViolation = m.avgProcessingTime > target.avgProcessingTimeLimit;
-                  return (
-                    <tr key={m.id}>
-                      <td className="px-2 py-1.5 border">{m.recordDate}</td>
-                      <td className={`px-2 py-1.5 text-right border ${dViolation ? 'text-red-600 font-medium' : ''}`}>
-                        {m.deliveryOnTimeRate.toFixed(1)}%
-                      </td>
-                      <td className={`px-2 py-1.5 text-right border ${mViolation ? 'text-red-600 font-medium' : ''}`}>
-                        {m.misshipmentRate.toFixed(2)}%
-                      </td>
-                      <td className={`px-2 py-1.5 text-right border ${pViolation ? 'text-red-600 font-medium' : ''}`}>
-                        {m.pickingAccuracy.toFixed(1)}%
-                      </td>
-                      <td className={`px-2 py-1.5 text-right border ${tViolation ? 'text-red-600 font-medium' : ''}`}>
-                        {m.avgProcessingTime.toFixed(0)}분
-                      </td>
-                      <td className="px-2 py-1.5 text-right border text-gray-500">{m.totalOrders}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 12px' }}>일별 KPI</h3>
+          <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: C.bg }}>
+                    <th style={thStyle}>날짜</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>납기 준수율</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>오배송률</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>피킹 정확도</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>처리 시간</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>주문</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMetrics.map((m, i) => {
+                    const dV = m.deliveryOnTimeRate < target.deliveryOnTimeTarget;
+                    const mV = m.misshipmentRate > target.misshipmentRateLimit;
+                    const pV = m.pickingAccuracy < target.pickingAccuracyTarget;
+                    const tV = m.avgProcessingTime > target.avgProcessingTimeLimit;
+                    return (
+                      <tr key={m.id} style={{ background: i % 2 === 0 ? C.row : C.rowAlt }}>
+                        <td style={{ ...tdStyle, fontSize: 12, color: C.textMuted }}>{m.recordDate}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: dV ? C.red : C.text, fontWeight: dV ? 600 : 400 }}>
+                          {m.deliveryOnTimeRate.toFixed(1)}%
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: mV ? C.red : C.text, fontWeight: mV ? 600 : 400 }}>
+                          {m.misshipmentRate.toFixed(2)}%
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: pV ? C.red : C.text, fontWeight: pV ? 600 : 400 }}>
+                          {m.pickingAccuracy.toFixed(1)}%
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: tV ? C.red : C.text, fontWeight: tV ? 600 : 400 }}>
+                          {m.avgProcessingTime.toFixed(0)}분
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: C.textMuted }}>{m.totalOrders}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* 위반 목록 */}
         {filteredViolations.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-3">
-              SLA 위반 ({filteredViolations.length}건)
-            </h3>
-            <table className="w-full text-xs border">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-1.5 text-left border">날짜</th>
-                  <th className="px-3 py-1.5 text-left border">지표</th>
-                  <th className="px-3 py-1.5 text-right border">목표</th>
-                  <th className="px-3 py-1.5 text-right border">실측</th>
-                  <th className="px-3 py-1.5 text-center border">심각도</th>
-                  <th className="px-3 py-1.5 text-center border">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredViolations.map((v) => (
-                  <tr key={v.id}>
-                    <td className="px-3 py-1.5 border">{v.violationDate}</td>
-                    <td className="px-3 py-1.5 border">{METRIC_LABELS[v.metricName] ?? v.metricName}</td>
-                    <td className="px-3 py-1.5 text-right border">{v.targetValue}</td>
-                    <td className="px-3 py-1.5 text-right border text-red-600 font-medium">{v.actualValue}</td>
-                    <td className="px-3 py-1.5 text-center border">
-                      {v.severity === 'critical' ? '긴급' : '경고'}
-                    </td>
-                    <td className="px-3 py-1.5 text-center border">
-                      {v.resolvedAt ? '해결' : '미해결'}
-                    </td>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <AlertTriangle size={14} color={C.yellow} />
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: 0 }}>
+                SLA 위반
+              </h3>
+              <span style={{
+                padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: C.redBg, color: C.red,
+              }}>
+                {filteredViolations.length}건
+              </span>
+            </div>
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: C.bg }}>
+                    <th style={thStyle}>날짜</th>
+                    <th style={thStyle}>지표</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>목표</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>실측</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>심각도</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>상태</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredViolations.map((v, i) => (
+                    <tr key={v.id} style={{ background: i % 2 === 0 ? C.row : C.rowAlt }}>
+                      <td style={{ ...tdStyle, fontSize: 12, color: C.textMuted }}>{v.violationDate}</td>
+                      <td style={tdStyle}>{METRIC_LABELS[v.metricName] ?? v.metricName}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', color: C.textMuted }}>{v.targetValue}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', color: C.red, fontWeight: 600 }}>{v.actualValue}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+                          fontSize: 11, fontWeight: 600,
+                          background: v.severity === 'critical' ? C.redBg : C.yellowBg,
+                          color: v.severity === 'critical' ? C.red : C.yellow,
+                        }}>
+                          {v.severity === 'critical' ? '긴급' : '경고'}
+                        </span>
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 20,
+                          fontSize: 11, fontWeight: 600,
+                          background: v.resolvedAt ? C.greenBg : C.redBg,
+                          color: v.resolvedAt ? C.green : C.red,
+                        }}>
+                          {v.resolvedAt ? '해결' : '미해결'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {/* 푸터 */}
-        <div className="text-center text-xs text-gray-400 pt-4 border-t">
-          Generated by HanVoxel SLA Monitor &mdash; {new Date().toLocaleDateString('ko-KR')}
+        <div style={{
+          textAlign: 'center', fontSize: 11, color: C.textDim,
+          paddingTop: 16, borderTop: `1px solid ${C.border}`,
+        }}>
+          Generated by HanVoxel SLA Monitor — {new Date().toLocaleDateString('ko-KR')}
         </div>
       </div>
     </main>
