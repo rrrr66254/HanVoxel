@@ -82,6 +82,13 @@ const MOCK_MRP_RESULTS: MrpResult[] = [
   { id: 'mrp-3', salesOrderId: 'so-2', materialSku: 'MAT-CO-001', materialName: '코발트 분말 (Co)', requiredQty: 100, currentStock: 30, shortageQty: 70, reorderTriggered: false, checkedBy: null, checkedAt: null, status: 'PENDING' },
 ];
 
+// MOQ 데이터 (실제로는 DB에서 조회)
+const MOCK_MOQ: Record<string, { moq: number; unitName: string; vendorName: string; leadTimeDays: number }> = {
+  'MAT-LI-001': { moq: 100, unitName: 'kg', vendorName: '포스코케미칼', leadTimeDays: 14 },
+  'MAT-NI-001': { moq: 200, unitName: 'kg', vendorName: 'LG화학', leadTimeDays: 7 },
+  'MAT-CO-001': { moq: 50, unitName: 'kg', vendorName: '삼성SDI', leadTimeDays: 10 },
+};
+
 interface SalesOrderDashboardProps {
   onBack: () => void;
 }
@@ -93,6 +100,9 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [mrpResults, setMrpResults] = useState<MrpResult[]>([]);
   const [mrpLoading, setMrpLoading] = useState(false);
+  const [mrpViewMode, setMrpViewMode] = useState<'analysis' | 'results'>('analysis');
+  // 선택 발주용 체크박스 상태
+  const [selectedForReorder, setSelectedForReorder] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -114,9 +124,12 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
     return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
   };
 
+  // MRP 분석 실행 (새로 분석 시작)
   const handleRunMrp = useCallback(async (order: SalesOrder) => {
     setSelectedOrder(order);
+    setMrpViewMode('analysis');
     setMrpLoading(true);
+    setSelectedForReorder(new Set());
     try {
       const { runMrp } = await import('../../api/sales-order-api');
       const res = await runMrp(order.id);
@@ -128,9 +141,12 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
     setMrpLoading(false);
   }, []);
 
+  // MRP 결과 조회 (기존 결과 확인)
   const handleViewMrp = useCallback(async (order: SalesOrder) => {
     setSelectedOrder(order);
+    setMrpViewMode('results');
     setMrpLoading(true);
+    setSelectedForReorder(new Set());
     try {
       const { getMrpResults } = await import('../../api/sales-order-api');
       const res = await getMrpResults(order.id);
@@ -141,28 +157,80 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
     setMrpLoading(false);
   }, []);
 
-  const handleTriggerReorders = useCallback(async () => {
-    if (!selectedOrder) return;
+  // 선택한 자재만 발주 처리
+  const handleTriggerSelectedReorders = useCallback(async () => {
+    if (!selectedOrder || selectedForReorder.size === 0) return;
     try {
       const { triggerReorders } = await import('../../api/sales-order-api');
       await triggerReorders(selectedOrder.id);
     } catch { /* mock */ }
-    setMrpResults((prev) => prev.map((r) => r.shortageQty > 0 ? { ...r, reorderTriggered: true, status: 'REORDERED' } : r));
-  }, [selectedOrder]);
+    setMrpResults((prev) => prev.map((r) =>
+      selectedForReorder.has(r.id) && r.shortageQty > 0
+        ? { ...r, reorderTriggered: true, status: 'REORDERED' }
+        : r
+    ));
+    setSelectedForReorder(new Set());
+  }, [selectedOrder, selectedForReorder]);
 
-  // MRP 결과 패널
+  // 전체 선택/해제
+  const shortageItems = mrpResults.filter((r) => r.shortageQty > 0 && !r.reorderTriggered);
+  const toggleSelectAll = useCallback(() => {
+    if (selectedForReorder.size === shortageItems.length) {
+      setSelectedForReorder(new Set());
+    } else {
+      setSelectedForReorder(new Set(shortageItems.map((r) => r.id)));
+    }
+  }, [shortageItems, selectedForReorder]);
+
+  const toggleReorderItem = useCallback((id: string) => {
+    setSelectedForReorder((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // MRP 패널 (분석 / 결과 분리)
   if (selectedOrder && !showCreate) {
+    const isAnalysisMode = mrpViewMode === 'analysis';
     return (
       <div style={{ padding: '24px 28px', background: C.bg, minHeight: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
+          <button onClick={() => { setSelectedOrder(null); setMrpResults([]); }} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
             <ArrowLeft size={20} />
           </button>
           <Package size={20} style={{ color: C.purple }} />
           <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>
-            MRP 소요 분석 — {selectedOrder.orderNo}
+            {isAnalysisMode ? 'MRP 소요 분석' : 'MRP 분석 결과'} — {selectedOrder.orderNo}
           </h2>
           <span style={{ fontSize: 12, color: C.textMuted }}>{selectedOrder.customerName}</span>
+        </div>
+
+        {/* 모드 탭 */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+          <button
+            onClick={() => setMrpViewMode('analysis')}
+            style={{
+              padding: '6px 16px', fontSize: 12, borderRadius: 6,
+              border: `1px solid ${mrpViewMode === 'analysis' ? C.purple : C.border}`,
+              background: mrpViewMode === 'analysis' ? `${C.purple}22` : 'transparent',
+              color: mrpViewMode === 'analysis' ? C.purple : C.textMuted, cursor: 'pointer', fontWeight: 600,
+            }}
+          >
+            <Play size={11} style={{ marginRight: 4 }} />MRP 분석
+          </button>
+          <button
+            onClick={() => setMrpViewMode('results')}
+            style={{
+              padding: '6px 16px', fontSize: 12, borderRadius: 6,
+              border: `1px solid ${mrpViewMode === 'results' ? C.accent : C.border}`,
+              background: mrpViewMode === 'results' ? `${C.accent}22` : 'transparent',
+              color: mrpViewMode === 'results' ? C.accent : C.textMuted, cursor: 'pointer', fontWeight: 600,
+            }}
+          >
+            <Package size={11} style={{ marginRight: 4 }} />발주 현황
+          </button>
         </div>
 
         {/* 수주 요약 */}
@@ -178,62 +246,198 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
         {mrpLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Loader2 size={24} style={{ color: C.accent, animation: 'spin 1s linear infinite' }} />
-            <div style={{ fontSize: 13, color: C.textMuted, marginTop: 8 }}>MRP 소요량 계산 중...</div>
+            <div style={{ fontSize: 13, color: C.textMuted, marginTop: 8 }}>
+              {isAnalysisMode ? 'MRP 소요량 계산 중...' : 'MRP 결과 조회 중...'}
+            </div>
           </div>
-        ) : (
+        ) : isAnalysisMode ? (
+          /* ── MRP 분석 모드: 소요량 분석 + 부족자재 선택 발주 ── */
           <>
-            {/* MRP 결과 테이블 */}
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: '#1C2128' }}>
-                    {['상태', '자재 SKU', '자재명', '필요량', '현재고', '부족량', '발주'].map((h) => (
+                    {['', '상태', '자재 SKU', '자재명', '필요량', '현재고', '부족량', 'MOQ', '공급업체', '리드타임'].map((h) => (
+                      <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: C.textMuted, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {mrpResults.map((r) => {
+                    const moqInfo = MOCK_MOQ[r.materialSku];
+                    const isShortage = r.shortageQty > 0;
+                    const isReordered = r.reorderTriggered;
+                    const isChecked = selectedForReorder.has(r.id);
+
+                    return (
+                      <tr key={r.id} style={{ borderBottom: `1px solid ${C.border}20`, background: isShortage ? `${C.red}08` : 'transparent' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                          {isShortage && !isReordered && (
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleReorderItem(r.id)}
+                              style={{ cursor: 'pointer', accentColor: C.accent }}
+                            />
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>
+                          {isShortage
+                            ? <AlertTriangle size={14} style={{ color: C.red }} />
+                            : <CheckCircle2 size={14} style={{ color: C.green }} />
+                          }
+                        </td>
+                        <td style={{ padding: '8px 10px', color: C.text, fontWeight: 600 }}>{r.materialSku}</td>
+                        <td style={{ padding: '8px 10px', color: C.text }}>{r.materialName ?? '—'}</td>
+                        <td style={{ padding: '8px 10px', color: C.text }}>{r.requiredQty.toLocaleString()}</td>
+                        <td style={{ padding: '8px 10px', color: C.text }}>{r.currentStock.toLocaleString()}</td>
+                        <td style={{ padding: '8px 10px', color: isShortage ? C.red : C.green, fontWeight: 600 }}>
+                          {isShortage ? `-${r.shortageQty.toLocaleString()}` : '충분'}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: C.yellow, fontWeight: 600 }}>
+                          {moqInfo ? `${moqInfo.moq} ${moqInfo.unitName}` : '—'}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: C.text, fontSize: 11 }}>
+                          {moqInfo?.vendorName ?? '—'}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: C.textMuted, fontSize: 11 }}>
+                          {moqInfo ? `${moqInfo.leadTimeDays}일` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 선택 발주 액션 */}
+            {shortageItems.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={toggleSelectAll}
+                    style={{
+                      padding: '6px 14px', fontSize: 12, borderRadius: 6,
+                      border: `1px solid ${C.border}`, background: 'transparent',
+                      color: C.textMuted, cursor: 'pointer',
+                    }}
+                  >
+                    {selectedForReorder.size === shortageItems.length ? '전체 해제' : '전체 선택'}
+                  </button>
+                  <span style={{ fontSize: 12, color: C.textMuted }}>
+                    {selectedForReorder.size}건 선택됨
+                  </span>
+                </div>
+                <button
+                  onClick={handleTriggerSelectedReorders}
+                  disabled={selectedForReorder.size === 0}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    background: selectedForReorder.size > 0 ? C.orange : C.border,
+                    color: selectedForReorder.size > 0 ? '#fff' : C.textMuted,
+                    border: 'none', cursor: selectedForReorder.size > 0 ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <ShoppingCart size={14} /> 선택 자재 발주 추천 ({selectedForReorder.size}건)
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── MRP 결과(발주 현황) 모드: 발주 상태 + 조달 진행률 ── */
+          <>
+            {/* 발주 진행 요약 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>발주 완료</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: C.green }}>
+                  {mrpResults.filter((r) => r.reorderTriggered).length}
+                  <span style={{ fontSize: 12, fontWeight: 400, color: C.textMuted }}>건</span>
+                </div>
+              </div>
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>발주 대기</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: C.yellow }}>
+                  {mrpResults.filter((r) => r.shortageQty > 0 && !r.reorderTriggered).length}
+                  <span style={{ fontSize: 12, fontWeight: 400, color: C.textMuted }}>건</span>
+                </div>
+              </div>
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>재고 충분</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: C.accent }}>
+                  {mrpResults.filter((r) => r.shortageQty === 0).length}
+                  <span style={{ fontSize: 12, fontWeight: 400, color: C.textMuted }}>건</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 발주 진행률 바 */}
+            {mrpResults.length > 0 && (
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 18px', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>조달 진행률</div>
+                <div style={{ height: 8, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 4,
+                    background: `linear-gradient(90deg, ${C.green}, ${C.accent})`,
+                    width: `${Math.round(((mrpResults.filter((r) => r.shortageQty === 0 || r.reorderTriggered).length) / mrpResults.length) * 100)}%`,
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+                <div style={{ fontSize: 12, color: C.text, marginTop: 4, textAlign: 'right', fontWeight: 600 }}>
+                  {Math.round(((mrpResults.filter((r) => r.shortageQty === 0 || r.reorderTriggered).length) / mrpResults.length) * 100)}%
+                </div>
+              </div>
+            )}
+
+            {/* 발주 현황 테이블 */}
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#1C2128' }}>
+                    {['자재 SKU', '자재명', '부족량', 'MOQ', '공급업체', '리드타임', '발주 상태'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.textMuted, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {mrpResults.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: `1px solid ${C.border}20`, background: r.shortageQty > 0 ? `${C.red}08` : 'transparent' }}>
-                      <td style={{ padding: '8px 12px' }}>
-                        {r.shortageQty > 0
-                          ? <AlertTriangle size={14} style={{ color: C.red }} />
-                          : <CheckCircle2 size={14} style={{ color: C.green }} />
-                        }
-                      </td>
-                      <td style={{ padding: '8px 12px', color: C.text, fontWeight: 600 }}>{r.materialSku}</td>
-                      <td style={{ padding: '8px 12px', color: C.text }}>{r.materialName ?? '—'}</td>
-                      <td style={{ padding: '8px 12px', color: C.text }}>{r.requiredQty.toLocaleString()}</td>
-                      <td style={{ padding: '8px 12px', color: C.text }}>{r.currentStock.toLocaleString()}</td>
-                      <td style={{ padding: '8px 12px', color: r.shortageQty > 0 ? C.red : C.green, fontWeight: 600 }}>
-                        {r.shortageQty > 0 ? `-${r.shortageQty.toLocaleString()}` : '충분'}
-                      </td>
-                      <td style={{ padding: '8px 12px' }}>
-                        {r.reorderTriggered
-                          ? <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: `${C.green}22`, color: C.green }}>발주완료</span>
-                          : r.shortageQty > 0
-                            ? <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: `${C.yellow}22`, color: C.yellow }}>대기</span>
-                            : '—'
-                        }
+                  {mrpResults.filter((r) => r.shortageQty > 0).map((r) => {
+                    const moqInfo = MOCK_MOQ[r.materialSku];
+                    return (
+                      <tr key={r.id} style={{ borderBottom: `1px solid ${C.border}20` }}>
+                        <td style={{ padding: '8px 12px', color: C.text, fontWeight: 600 }}>{r.materialSku}</td>
+                        <td style={{ padding: '8px 12px', color: C.text }}>{r.materialName ?? '—'}</td>
+                        <td style={{ padding: '8px 12px', color: C.red, fontWeight: 600 }}>
+                          {r.shortageQty.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: C.yellow, fontWeight: 600 }}>
+                          {moqInfo ? `${moqInfo.moq} ${moqInfo.unitName}` : '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: C.text, fontSize: 11 }}>
+                          {moqInfo?.vendorName ?? '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px', color: C.textMuted, fontSize: 11 }}>
+                          {moqInfo ? `${moqInfo.leadTimeDays}일` : '—'}
+                        </td>
+                        <td style={{ padding: '8px 12px' }}>
+                          {r.reorderTriggered
+                            ? <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 4, background: `${C.green}22`, color: C.green, fontWeight: 600 }}>발주완료</span>
+                            : <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 4, background: `${C.yellow}22`, color: C.yellow, fontWeight: 600 }}>대기</span>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {mrpResults.filter((r) => r.shortageQty > 0).length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: 30, textAlign: 'center', color: C.textMuted }}>
+                        부족 자재가 없습니다 — 모든 자재 재고 충분
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
-
-            {/* 액션 버튼 */}
-            {mrpResults.some((r) => r.shortageQty > 0 && !r.reorderTriggered) && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button onClick={handleTriggerReorders} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                  background: C.orange, color: '#fff', border: 'none', cursor: 'pointer',
-                }}>
-                  <ShoppingCart size={14} /> 부족 자재 일괄 발주 추천
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -276,10 +480,10 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
       {/* 요약 카드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: '전체', count: MOCK_ORDERS.length, color: C.accent },
-          { label: '접수 대기', count: MOCK_ORDERS.filter((o) => o.status === 'RECEIVED').length, color: C.yellow },
-          { label: 'MRP 완료', count: MOCK_ORDERS.filter((o) => o.status === 'MRP_CHECKED').length, color: C.purple },
-          { label: '출하 완료', count: MOCK_ORDERS.filter((o) => o.status === 'SHIPPED').length, color: C.green },
+          { label: '전체', count: orders.length, color: C.accent },
+          { label: '접수 대기', count: orders.filter((o) => o.status === 'RECEIVED').length, color: C.yellow },
+          { label: 'MRP 완료', count: orders.filter((o) => o.status === 'MRP_CHECKED').length, color: C.purple },
+          { label: '출하 완료', count: orders.filter((o) => o.status === 'SHIPPED').length, color: C.green },
         ].map((s) => (
           <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 18px' }}>
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>{s.label}</div>

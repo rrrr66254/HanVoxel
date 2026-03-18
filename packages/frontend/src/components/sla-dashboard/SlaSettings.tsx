@@ -387,7 +387,7 @@ export default function SlaSettings({ target, onSaved }: SlaSettingsProps) {
           {metrics.map((m) => (
             <div key={m.key} style={{
               background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`,
-              padding: 16,
+              padding: 16, overflow: 'hidden',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, height: 20 }}>
                 <div style={{
@@ -396,7 +396,7 @@ export default function SlaSettings({ target, onSaved }: SlaSettingsProps) {
                 }}>
                   {m.icon}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, lineHeight: '20px' }}>{m.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: C.textMuted, lineHeight: '20px', whiteSpace: 'nowrap' }}>{m.label}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input
@@ -413,7 +413,7 @@ export default function SlaSettings({ target, onSaved }: SlaSettingsProps) {
                   onFocus={(e) => e.currentTarget.style.borderColor = m.color}
                   onBlur={(e) => e.currentTarget.style.borderColor = C.border}
                 />
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, width: 24, textAlign: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {m.suffix}
                 </span>
               </div>

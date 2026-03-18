@@ -220,10 +220,10 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
       {/* 요약 카드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: '전체', count: MOCK_ORDERS.length, color: C.accent },
-          { label: '출고 예정', count: MOCK_ORDERS.filter((o) => o.status === 'PLANNED').length, color: C.accent },
-          { label: '진행 중', count: MOCK_ORDERS.filter((o) => ['PICKING', 'PACKED'].includes(o.status)).length, color: C.yellow },
-          { label: '출고 완료', count: MOCK_ORDERS.filter((o) => o.status === 'DISPATCHED').length, color: C.green },
+          { label: '전체', count: orders.length, color: C.accent },
+          { label: '출고 예정', count: orders.filter((o) => o.status === 'PLANNED').length, color: C.accent },
+          { label: '진행 중', count: orders.filter((o) => ['PICKING', 'PACKED'].includes(o.status)).length, color: C.yellow },
+          { label: '출고 완료', count: orders.filter((o) => o.status === 'DISPATCHED').length, color: C.green },
         ].map((s) => (
           <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 18px' }}>
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>{s.label}</div>
