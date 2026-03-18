@@ -22,6 +22,9 @@
     "reorder": "自動発注",
     "connector": "ERP コネクタ",
     "benchmark": "業界ベンチマーク",
+    "partner": "取引先管理",
+    "partnerDashboard": "取引状況",
+    "driver": "ドライバー管理",
     "currentPlan": "現在のプラン"
   },
   "header": {

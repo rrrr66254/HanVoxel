@@ -23,6 +23,8 @@ import {
 import { BulkOutboundUpload } from './BulkOutboundUpload';
 import type { OutboundOrder } from '../../api/outbound-api';
 import { ManifestPdf } from './ManifestPdf';
+import { OutboundDetailModal } from './OutboundDetailModal';
+import type { OutboundOrderData } from './OutboundDetailModal';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -97,6 +99,34 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-17T11:00:00Z', updatedAt: '2026-03-17T11:00:00Z',
   },
 ];
+
+// OutboundOrder → OutboundOrderData 변환 헬퍼
+function toDetailData(order: OutboundOrder): OutboundOrderData {
+  const statusSteps = ['PLANNED', 'PICKING', 'PACKED', 'DISPATCHED'];
+  const stepLabels = ['출고 주문 생성', '피킹 진행', '포장 완료', '출고 완료'];
+  const currentIdx = statusSteps.indexOf(order.status);
+  return {
+    id: order.id,
+    orderNo: order.manifestNumber ?? order.id.toUpperCase(),
+    type: order.type,
+    customerName: order.customerName ?? '고객 미지정',
+    status: order.status,
+    scheduledDate: order.scheduledDate ?? '-',
+    dispatchedDate: order.dispatchedDate ?? undefined,
+    destination: order.destination ?? '-',
+    items: order.items.map((i) => ({
+      skuCode: i.skuCode,
+      itemName: i.itemName ?? i.skuCode,
+      qty: i.qty,
+      unitPrice: i.unitPrice,
+    })),
+    timeline: stepLabels.map((label, idx) => ({
+      date: idx <= currentIdx ? (order.updatedAt ?? '') : '',
+      label,
+      status: idx < currentIdx ? 'done' as const : idx === currentIdx ? 'current' as const : 'pending' as const,
+    })),
+  };
+}
 
 interface OutboundManagementProps {
   onBack: () => void;
@@ -239,7 +269,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
           const dday = getDDay(order.scheduledDate);
 
           return (
-            <div key={order.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px' }}>
+            <div key={order.id} onClick={() => setSelectedOrder(order)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -301,6 +331,12 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
           </div>
         )}
       </div>
+
+      {/* 상세 슬라이드 패널 */}
+      <OutboundDetailModal
+        order={selectedOrder ? toDetailData(selectedOrder) : null}
+        onClose={() => setSelectedOrder(null)}
+      />
 
       {/* 생성 모달 */}
       {showCreateModal && (

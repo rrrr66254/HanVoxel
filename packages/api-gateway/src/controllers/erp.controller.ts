@@ -79,6 +79,112 @@ export async function getPartnerStats(req: Request, res: Response) {
   }
 }
 
+// ── 거래처 비활성화 ──────────────────────────────────────
+
+export async function deletePartner(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const partner = await partnerService.deletePartner(id);
+    res.json(successResponse(partner));
+  } catch (err) {
+    console.error('거래처 비활성화 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '거래처 비활성화에 실패했습니다'));
+  }
+}
+
+// ── 거래처 자동완성 검색 ─────────────────────────────────
+
+export async function searchPartners(req: Request, res: Response) {
+  try {
+    const companyId = req.query.companyId as string;
+    const q = req.query.q as string;
+    if (!companyId || !q) {
+      res.status(400).json(errorResponse('BAD_REQUEST', 'companyId와 q 파라미터가 필요합니다'));
+      return;
+    }
+    const partners = await partnerService.searchPartners(companyId, q);
+    res.json(successResponse(partners));
+  } catch (err) {
+    console.error('거래처 검색 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '거래처 검색에 실패했습니다'));
+  }
+}
+
+// ── 거래처 대시보드 통계 ─────────────────────────────────
+
+export async function getPartnerDashboard(req: Request, res: Response) {
+  try {
+    const companyId = req.query.companyId as string;
+    if (!companyId) {
+      res.status(400).json(errorResponse('BAD_REQUEST', 'companyId 파라미터가 필요합니다'));
+      return;
+    }
+    const stats = await partnerService.getPartnerDashboardStats(companyId);
+    res.json(successResponse(stats));
+  } catch (err) {
+    console.error('거래처 대시보드 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '거래처 대시보드 조회에 실패했습니다'));
+  }
+}
+
+// ── 거래액 랭킹 ─────────────────────────────────────────
+
+export async function getPartnerRanking(req: Request, res: Response) {
+  try {
+    const companyId = req.query.companyId as string;
+    const type = req.query.type as 'SUPPLIER' | 'CUSTOMER';
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+    if (!companyId || !type) {
+      res.status(400).json(errorResponse('BAD_REQUEST', 'companyId와 type 파라미터가 필요합니다'));
+      return;
+    }
+    const ranking = await partnerService.getPartnerRanking(companyId, type, limit);
+    res.json(successResponse(ranking));
+  } catch (err) {
+    console.error('거래액 랭킹 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '거래액 랭킹 조회에 실패했습니다'));
+  }
+}
+
+// ── 거래 실적 집계 ──────────────────────────────────────
+
+export async function getPartnerTransactionSummary(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const summary = await partnerService.getPartnerTransactionSummary(partnerId);
+    res.json(successResponse(summary));
+  } catch (err) {
+    console.error('거래 실적 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '거래 실적 조회에 실패했습니다'));
+  }
+}
+
+// ── 담당자 등록 ─────────────────────────────────────────
+
+export async function createPartnerContact(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const contact = await partnerService.createPartnerContact({ ...req.body, partnerId });
+    res.status(201).json(successResponse(contact));
+  } catch (err) {
+    console.error('담당자 등록 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '담당자 등록에 실패했습니다'));
+  }
+}
+
+// ── 담당자 목록 ─────────────────────────────────────────
+
+export async function getPartnerContacts(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const contacts = await partnerService.getPartnerContacts(partnerId);
+    res.json(successResponse(contacts));
+  } catch (err) {
+    console.error('담당자 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '담당자 조회에 실패했습니다'));
+  }
+}
+
 // ── 전표 ───────────────────────────────────────────────
 
 export async function createVoucher(req: Request, res: Response) {

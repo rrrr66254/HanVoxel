@@ -22,6 +22,9 @@
     "reorder": "Auto Reorder",
     "connector": "ERP Connector",
     "benchmark": "Industry Benchmark",
+    "partner": "Partners",
+    "partnerDashboard": "Transaction Overview",
+    "driver": "Driver Management",
     "currentPlan": "Current Plan"
   },
   "header": {

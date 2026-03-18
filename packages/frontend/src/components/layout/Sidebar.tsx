@@ -22,6 +22,8 @@ import {
   ClipboardList,
   Wrench,
   PackageCheck,
+  Building2,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +40,9 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'viewer', icon: Box, labelKey: 'sidebar.viewer', sectionKey: 'sidebar.spatialManagement' },
   { id: 'wizard', icon: Warehouse, labelKey: 'sidebar.wizard', sectionKey: 'sidebar.spatialManagement' },
   { id: 'roi', icon: TrendingUp, labelKey: 'sidebar.roi', sectionKey: 'sidebar.spatialManagement' },
+  { id: 'partner', icon: Building2, labelKey: 'sidebar.partner', sectionKey: 'sidebar.operations' },
+  { id: 'partner-dashboard', icon: BarChart3, labelKey: 'sidebar.partnerDashboard', sectionKey: 'sidebar.operations' },
+  { id: 'driver', icon: Users, labelKey: 'sidebar.driver', sectionKey: 'sidebar.operations' },
   { id: 'inout-calendar', icon: Calendar, labelKey: 'sidebar.inoutCalendar', sectionKey: 'sidebar.operations' },
   { id: 'inbound', icon: Package, labelKey: 'sidebar.inbound', sectionKey: 'sidebar.operations' },
   { id: 'outbound', icon: Truck, labelKey: 'sidebar.outbound', sectionKey: 'sidebar.operations' },

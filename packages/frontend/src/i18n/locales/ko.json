@@ -22,6 +22,9 @@
     "reorder": "자동 발주",
     "connector": "ERP 커넥터",
     "benchmark": "업계 벤치마크",
+    "partner": "업체 관리",
+    "partnerDashboard": "거래 현황",
+    "driver": "기사 관리",
     "currentPlan": "현재 플랜"
   },
   "header": {

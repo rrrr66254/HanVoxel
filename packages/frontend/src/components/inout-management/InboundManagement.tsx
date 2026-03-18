@@ -20,6 +20,8 @@ import {
   X,
 } from 'lucide-react';
 import type { InboundOrder } from '../../api/inbound-api';
+import { InboundDetailModal } from './InboundDetailModal';
+import type { InboundOrderData } from './InboundDetailModal';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -78,6 +80,34 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-05T09:00:00Z', updatedAt: '2026-03-10T16:00:00Z',
   },
 ];
+
+// InboundOrder → InboundOrderData 변환 헬퍼
+function toDetailData(order: InboundOrder): InboundOrderData {
+  const statusSteps = ['ORDERED', 'IN_TRANSIT', 'ARRIVED', 'QC_PENDING', 'QC_PASSED', 'STOCKED'];
+  const stepLabels = ['발주 생성', '운송 시작', '창고 도착', 'QC 검수 대기', 'QC 통과', '입고 적재 완료'];
+  const currentIdx = statusSteps.indexOf(order.status);
+  return {
+    id: order.id,
+    orderNo: order.id.toUpperCase(),
+    vendorName: order.vendorName ?? '공급업체 미지정',
+    status: order.status,
+    expectedDate: order.expectedDate ?? '-',
+    actualDate: order.actualDate ?? undefined,
+    notes: order.notes ?? undefined,
+    items: order.items.map((i) => ({
+      skuCode: i.skuCode,
+      itemName: i.itemName ?? i.skuCode,
+      expectedQty: i.expectedQty,
+      actualQty: i.actualQty ?? undefined,
+      unitPrice: i.unitPrice,
+    })),
+    timeline: stepLabels.map((label, idx) => ({
+      date: idx <= currentIdx ? (order.updatedAt ?? '') : '',
+      label,
+      status: idx < currentIdx ? 'done' as const : idx === currentIdx ? 'current' as const : 'pending' as const,
+    })),
+  };
+}
 
 interface InboundManagementProps {
   onBack: () => void;
@@ -275,78 +305,11 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
         )}
       </div>
 
-      {/* 상세 모달 */}
-      {selectedOrder && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, width: 560, maxHeight: '80vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ color: C.text, margin: 0, fontSize: 16 }}>입고 주문 상세</h3>
-              <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: '공급업체', value: selectedOrder.vendorName ?? '-' },
-                { label: '상태', value: STATUS_MAP[selectedOrder.status]?.label ?? selectedOrder.status },
-                { label: '입고 예상일', value: selectedOrder.expectedDate ?? '-' },
-                { label: '실제 입고일', value: selectedOrder.actualDate ?? '-' },
-              ].map((f) => (
-                <div key={f.label}>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>{f.label}</div>
-                  <div style={{ fontSize: 13, color: C.text }}>{f.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* 품목 테이블 */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {['SKU', '품명', '예상 수량', '실제 수량', '단가', '금액'].map((h) => (
-                    <th key={h} style={{ padding: '8px 6px', textAlign: 'left', color: C.textMuted, fontWeight: 500 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {selectedOrder.items.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: `1px solid ${C.border}22` }}>
-                    <td style={{ padding: '8px 6px', color: C.accent }}>{item.skuCode}</td>
-                    <td style={{ padding: '8px 6px', color: C.text }}>{item.itemName ?? '-'}</td>
-                    <td style={{ padding: '8px 6px', color: C.text }}>{item.expectedQty}</td>
-                    <td style={{ padding: '8px 6px', color: item.actualQty !== null && item.actualQty !== item.expectedQty ? C.yellow : C.text }}>
-                      {item.actualQty ?? '-'}
-                      {item.actualQty !== null && item.actualQty !== item.expectedQty && (
-                        <span style={{ fontSize: 10, marginLeft: 4 }}>
-                          ({item.actualQty - item.expectedQty > 0 ? '+' : ''}{item.actualQty - item.expectedQty})
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '8px 6px', color: C.text }}>₩{item.unitPrice.toLocaleString()}</td>
-                    <td style={{ padding: '8px 6px', color: C.text, fontWeight: 600 }}>
-                      ₩{((item.actualQty ?? item.expectedQty) * item.unitPrice).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div style={{ textAlign: 'right', marginTop: 12, fontSize: 14, fontWeight: 700, color: C.text }}>
-              합계: ₩{calcTotal(selectedOrder.items).toLocaleString()}
-            </div>
-
-            {selectedOrder.notes && (
-              <div style={{ marginTop: 12, padding: 10, background: C.bg, borderRadius: 6, fontSize: 12, color: C.textMuted }}>
-                📝 {selectedOrder.notes}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* 상세 슬라이드 패널 */}
+      <InboundDetailModal
+        order={selectedOrder ? toDetailData(selectedOrder) : null}
+        onClose={() => setSelectedOrder(null)}
+      />
 
       {/* 생성 모달 */}
       {showCreateModal && (

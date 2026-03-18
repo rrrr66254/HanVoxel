@@ -809,13 +809,50 @@ model Partner {
   /// 메모
   note        String?  @db.Text
 
+  /// 담당자 연락처
+  contactPhone   String?  @map("contact_phone") @db.VarChar(30)
+  /// 담당자 이메일
+  contactEmail   String?  @map("contact_email") @db.VarChar(255)
+  /// 대표 전화
+  mainPhone      String?  @map("main_phone") @db.VarChar(30)
+  /// 팩스
+  fax            String?  @db.VarChar(30)
+  /// 우편번호
+  zipCode        String?  @map("zip_code") @db.VarChar(10)
+  /// 상세 주소
+  addressDetail  String?  @map("address_detail") @db.Text
+  /// 배송지
+  deliveryAddress String? @map("delivery_address") @db.Text
+  /// 배송 메모
+  deliveryMemo   String?  @map("delivery_memo") @db.Text
+  /// 여신 한도 (만원)
+  creditLimit    Int?     @map("credit_limit")
+  /// 거래 통화
+  currency       String   @default("KRW") @db.VarChar(3)
+  /// 과세 유형 (TAX: 과세, EXEMPT: 면세, ZERO: 영세율)
+  taxType        String   @default("TAX") @map("tax_type") @db.VarChar(10)
+  /// 기본 리드타임 일수 (공급업체)
+  leadTimeDays   Int?     @map("lead_time_days")
+  /// 최소 발주량
+  minOrderQty    Int?     @map("min_order_qty")
+  /// 품질 등급 (A/B/C/D)
+  qualityGrade   String?  @map("quality_grade") @db.VarChar(1)
+  /// 비고
+  memo           String?  @db.Text
+  /// 태그 (JSON 배열)
+  tags           Json?    @db.JsonB
+
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company     Company   @relation(fields: [companyId], references: [id])
-  vouchers    Voucher[]
-  leadTimes   SupplierLeadTime[]
+  company              Company   @relation(fields: [companyId], references: [id])
+  vouchers             Voucher[]
+  leadTimes            SupplierLeadTime[]
+  contacts             PartnerContact[]
+  bankAccounts         PartnerBankAccount[]
+  attachments          PartnerAttachment[]
+  transactionSummaries PartnerTransactionSummary[]
 
   @@unique([companyId, code])
   @@index([companyId, type])
@@ -1490,15 +1527,30 @@ model InboundOrder {
   /// 비고
   notes       String?  @db.Text
 
+  /// 배송 기사 ID
+  driverId       String?  @map("driver_id") @db.Uuid
+  /// 배송 기사명
+  driverName     String?  @map("driver_name") @db.VarChar(100)
+  /// 배송 기사 연락처
+  driverPhone    String?  @map("driver_phone") @db.VarChar(30)
+  /// 운송사
+  carrierCompany String?  @map("carrier_company") @db.VarChar(100)
+  /// 차량 번호
+  vehicleNo      String?  @map("vehicle_no") @db.VarChar(30)
+  /// 배송 추적 URL
+  trackingUrl    String?  @map("tracking_url") @db.Text
+
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   items       InboundItem[]
   calendar    DeliveryCalendar[]
+  driver      DeliveryDriver? @relation(fields: [driverId], references: [id])
 
   @@index([siteId, status])
   @@index([siteId, expectedDate])
   @@index([vendorId])
+  @@index([driverId])
   @@map("inbound_orders")
 }
 
@@ -1558,15 +1610,55 @@ model OutboundOrder {
   /// HS 코드 (수출 시)
   hsCode          String?  @map("hs_code") @db.VarChar(10)
 
+  /// 거래처 (고객사) ID
+  customerId      String?  @map("customer_id") @db.Uuid
+  /// 수령인 이름
+  receiverName    String?  @map("receiver_name") @db.VarChar(100)
+  /// 수령인 연락처
+  receiverPhone   String?  @map("receiver_phone") @db.VarChar(30)
+  /// 수령인 주소
+  receiverAddress String?  @map("receiver_address") @db.Text
+
+  /// 배송 기사 ID
+  driverId        String?  @map("driver_id") @db.Uuid
+  /// 배송 기사명
+  driverName      String?  @map("driver_name") @db.VarChar(100)
+  /// 배송 기사 연락처
+  driverPhone     String?  @map("driver_phone") @db.VarChar(30)
+  /// 운송사
+  carrierCompany  String?  @map("carrier_company") @db.VarChar(100)
+  /// 차량 번호
+  vehicleNo       String?  @map("vehicle_no") @db.VarChar(30)
+  /// 배송 추적 URL
+  trackingUrl     String?  @map("tracking_url") @db.Text
+
+  /// 팔레트 수량
+  palletCount     Int?     @map("pallet_count")
+  /// 팔레트 유형
+  palletType      String?  @map("pallet_type") @db.VarChar(20)
+  /// 컨테이너 번호
+  containerNo     String?  @map("container_no") @db.VarChar(30)
+  /// 컨테이너 유형
+  containerType   String?  @map("container_type") @db.VarChar(20)
+  /// 총 중량 (kg)
+  totalWeightKg   Float?   @map("total_weight_kg")
+  /// 총 부피 (CBM)
+  totalVolumeCbm  Float?   @map("total_volume_cbm")
+  /// 특수 지시사항
+  specialInstructions String? @map("special_instructions") @db.Text
+
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   items           OutboundItem[]
   calendar        DeliveryCalendar[]
+  driver          DeliveryDriver? @relation(fields: [driverId], references: [id])
 
   @@index([siteId, status])
   @@index([siteId, scheduledDate])
   @@index([manifestNumber])
+  @@index([customerId])
+  @@index([driverId])
   @@map("outbound_orders")
 }
 
@@ -1796,4 +1888,145 @@ model StockCheckRequest {
   @@index([mrpResultId])
   @@index([assignedTo, status])
   @@map("stock_check_requests")
+}
+
+// ============================================================
+// 거래처 확장 — 연락처 / 계좌 / 첨부파일 / 거래 요약
+// ============================================================
+
+/// 거래처 담당자 연락처
+model PartnerContact {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 거래처 ID
+  partnerId   String   @map("partner_id") @db.Uuid
+  /// 담당자명
+  name        String   @db.VarChar(100)
+  /// 부서
+  department  String?  @db.VarChar(100)
+  /// 직위
+  position    String?  @db.VarChar(100)
+  /// 연락처
+  phone       String?  @db.VarChar(30)
+  /// 이메일
+  email       String?  @db.VarChar(255)
+  /// 주 담당자 여부
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  /// 메모
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("partner_contacts")
+}
+
+/// 거래처 계좌 정보
+model PartnerBankAccount {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 거래처 ID
+  partnerId      String   @map("partner_id") @db.Uuid
+  /// 은행명
+  bankName       String   @map("bank_name") @db.VarChar(100)
+  /// 계좌번호
+  accountNo      String   @map("account_no") @db.VarChar(50)
+  /// 예금주
+  accountHolder  String   @map("account_holder") @db.VarChar(100)
+  /// 주 계좌 여부
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  partner        Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("partner_bank_accounts")
+}
+
+/// 거래처 첨부파일 (사업자등록증, 통장사본, 계약서 등)
+model PartnerAttachment {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 거래처 ID
+  partnerId   String   @map("partner_id") @db.Uuid
+  /// 파일 유형 (사업자등록증/통장사본/계약서/기타)
+  fileType    String   @map("file_type") @db.VarChar(30)
+  /// 파일명
+  fileName    String   @map("file_name") @db.VarChar(500)
+  /// 파일 URL
+  fileUrl     String   @map("file_url") @db.Text
+  /// 업로드 일시
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+  @@map("partner_attachments")
+}
+
+/// 거래처 월별 거래 요약
+model PartnerTransactionSummary {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 거래처 ID
+  partnerId         String    @map("partner_id") @db.Uuid
+  /// 연도
+  year              Int
+  /// 월
+  month             Int
+  /// 총 매입액 (만원)
+  totalPurchaseAmt  Int       @default(0) @map("total_purchase_amt")
+  /// 총 매출액 (만원)
+  totalSalesAmt     Int       @default(0) @map("total_sales_amt")
+  /// 매입 건수
+  purchaseCount     Int       @default(0) @map("purchase_count")
+  /// 매출 건수
+  salesCount        Int       @default(0) @map("sales_count")
+  /// 평균 리드타임 (일)
+  avgLeadTime       Float?    @map("avg_lead_time")
+  /// 납기 준수율 (%)
+  onTimeRate        Float?    @map("on_time_rate")
+  /// 반품 건수
+  returnCount       Int       @default(0) @map("return_count")
+  /// 최근 거래 일시
+  lastTransactionAt DateTime? @map("last_transaction_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  partner           Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, year, month])
+  @@index([partnerId])
+  @@map("partner_transaction_summaries")
+}
+
+// ============================================================
+// 배송 기사 관리
+// ============================================================
+
+/// 배송 기사
+model DeliveryDriver {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 사이트 ID
+  siteId          String   @map("site_id") @db.Uuid
+  /// 기사명
+  name            String   @db.VarChar(100)
+  /// 연락처
+  phone           String   @db.VarChar(30)
+  /// 운송사
+  carrierCompany  String?  @map("carrier_company") @db.VarChar(100)
+  /// 차량 번호
+  vehicleNo       String?  @map("vehicle_no") @db.VarChar(30)
+  /// 차량 종류
+  vehicleType     String?  @map("vehicle_type") @db.VarChar(30)
+  /// 전담 기사 여부
+  isRegular       Boolean  @default(false) @map("is_regular")
+  /// 메모
+  memo            String?  @db.Text
+  /// 활성 상태
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  inboundOrders   InboundOrder[]
+  outboundOrders  OutboundOrder[]
+
+  @@index([siteId])
+  @@map("delivery_drivers")
 }

@@ -5,11 +5,18 @@ const router = Router();
 
 // ── 거래처 ─────────────────────────────────────────────
 router.post('/erp/partners', erpController.createPartner);
-router.patch('/erp/partners/:id', erpController.updatePartner);
 router.get('/erp/partners', erpController.listPartners);
+router.get('/erp/partners/search', erpController.searchPartners);
 router.get('/erp/partners/stats', erpController.getPartnerStats);
+router.get('/erp/partners/dashboard', erpController.getPartnerDashboard);
+router.get('/erp/partners/ranking', erpController.getPartnerRanking);
 router.get('/erp/partners/:id', erpController.getPartner);
+router.patch('/erp/partners/:id', erpController.updatePartner);
+router.delete('/erp/partners/:id', erpController.deletePartner);
 router.get('/erp/partners/:id/history', erpController.getPartnerHistory);
+router.get('/erp/partners/:id/summary', erpController.getPartnerTransactionSummary);
+router.post('/erp/partners/:id/contacts', erpController.createPartnerContact);
+router.get('/erp/partners/:id/contacts', erpController.getPartnerContacts);
 
 // ── 전표 ───────────────────────────────────────────────
 router.post('/erp/vouchers', erpController.createVoucher);

@@ -16,6 +16,7 @@ import { ConnectorDashboard } from './components/connector-dashboard';
 import { BenchmarkDashboard } from './components/benchmark-dashboard';
 import { InOutCalendar, InboundManagement, OutboundManagement } from './components/inout-management';
 import { SalesOrderDashboard, BomManager, StockCheckDashboard } from './components/sales-order';
+import { PartnerList, PartnerDetail, PartnerForm, PartnerDashboard, DriverManager } from './components/partner';
 import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -26,7 +27,7 @@ import type { SpatialObject } from './types/spatial';
 import './i18n';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'settings';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partner' | 'partner-detail' | 'partner-form' | 'partner-dashboard' | 'driver' | 'settings';
 
 // 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
 // localStorage에서 adminMode 확인, 없으면 기본 true
@@ -47,6 +48,7 @@ function App() {
   } | null>(null);
   const [currentFloor, setCurrentFloor] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const toggleSidebar = useCallback(() => setSidebarCollapsed((v) => !v), []);
 
   // 플랜 타입 (관리자 모드 시 항상 ENTERPRISE)
@@ -86,6 +88,16 @@ function App() {
     switch (mode) {
       case 'settings':
         return <SettingsPage onBack={goBack} />;
+      case 'driver':
+        return <DriverManager onBack={goBack} />;
+      case 'partner-dashboard':
+        return <PartnerDashboard onBack={goBack} />;
+      case 'partner-form':
+        return <PartnerForm partnerId={selectedPartnerId ?? undefined} onBack={() => setMode('partner')} onSave={() => setMode('partner')} />;
+      case 'partner-detail':
+        return <PartnerDetail partnerId={selectedPartnerId ?? ''} onBack={() => setMode('partner')} onEdit={(id) => { setSelectedPartnerId(id); setMode('partner-form'); }} />;
+      case 'partner':
+        return <PartnerList onBack={goBack} onSelectPartner={(id) => { setSelectedPartnerId(id); setMode('partner-detail'); }} onAddPartner={() => { setSelectedPartnerId(null); setMode('partner-form'); }} />;
       case 'outbound':
         return <OutboundManagement onBack={goBack} />;
       case 'sales-order':
