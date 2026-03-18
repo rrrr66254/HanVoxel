@@ -8,6 +8,7 @@ const router = Router();
 router.post('/outbound/orders', outboundCtrl.createHandler);
 router.get('/outbound/orders', outboundCtrl.listHandler);
 router.get('/outbound/orders/:id', outboundCtrl.detailHandler);
+router.patch('/outbound/orders/:id', outboundCtrl.updateHandler);
 
 // ── 상태 변경 ────────────────────────────────────
 router.patch('/outbound/orders/:id/dispatch', outboundCtrl.dispatchHandler);

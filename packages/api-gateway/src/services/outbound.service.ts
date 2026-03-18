@@ -133,6 +133,40 @@ export async function getOutboundOrders(
   return { orders, total, page, limit };
 }
 
+// ── 출고 주문 수정 ──────────────────────────────
+
+export async function updateOutboundOrder(
+  id: string,
+  input: {
+    type?: string;
+    status?: string;
+    scheduledDate?: string;
+    timeSlot?: string;
+    customerName?: string;
+    destination?: string;
+    notes?: string;
+    containerSpec?: string;
+    hsCode?: string;
+  },
+) {
+  const data: Record<string, unknown> = {};
+  if (input.type !== undefined) data.type = input.type;
+  if (input.status !== undefined) data.status = input.status;
+  if (input.scheduledDate !== undefined) data.scheduledDate = input.scheduledDate ? new Date(input.scheduledDate) : null;
+  if (input.timeSlot !== undefined) data.timeSlot = input.timeSlot || null;
+  if (input.customerName !== undefined) data.customerName = input.customerName || null;
+  if (input.destination !== undefined) data.destination = input.destination || null;
+  if (input.notes !== undefined) data.notes = input.notes || null;
+  if (input.containerSpec !== undefined) data.containerSpec = input.containerSpec || null;
+  if (input.hsCode !== undefined) data.hsCode = input.hsCode || null;
+
+  return prisma.outboundOrder.update({
+    where: { id },
+    data,
+    include: { items: true },
+  });
+}
+
 // ── 출고 주문 상세 조회 ───────────────────────────
 
 export async function getOutboundOrder(id: string) {

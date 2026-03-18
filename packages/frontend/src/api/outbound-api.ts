@@ -91,6 +91,30 @@ export async function createOutboundOrder(data: {
   return json.data;
 }
 
+export async function updateOutboundOrder(
+  id: string,
+  data: {
+    type?: string;
+    status?: string;
+    scheduledDate?: string;
+    timeSlot?: string;
+    customerName?: string;
+    destination?: string;
+    notes?: string;
+    containerSpec?: string;
+    hsCode?: string;
+  },
+): Promise<OutboundOrder> {
+  const resp = await fetch(`${API_BASE}/outbound/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await resp.json();
+  if (!resp.ok) throw new Error(json.error?.message ?? `HTTP ${resp.status}`);
+  return json.data;
+}
+
 export async function getOutboundOrders(
   siteId: string,
   status?: string,
