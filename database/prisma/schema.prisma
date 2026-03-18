@@ -18,56 +18,58 @@ datasource db {
 
 /// 회사 (최상위 테넌트)
 model Company {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name      String   @db.VarChar(200)
-  code      String   @unique @db.VarChar(50)
-  isActive  Boolean  @default(true) @map("is_active")
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name     String  @db.VarChar(200)
+  code     String  @unique @db.VarChar(50)
+  isActive Boolean @default(true) @map("is_active")
 
   // --- 업종/규모 (벤치마크용) ---
   /// 업종 (AUTO_PARTS, FOOD_BEVERAGE, ELECTRONICS, PHARMA, CHEMICAL, GENERAL, COLD_CHAIN)
-  industry     String?  @db.VarChar(50)
+  industry    String? @db.VarChar(50)
   /// 회사 규모 (SMALL: ~50명, MEDIUM: 50~300명, LARGE: 300명~)
-  companySize  String?  @map("company_size") @db.VarChar(20)
+  companySize String? @map("company_size") @db.VarChar(20)
 
   // --- SaaS 과금 ---
   /// 현재 플랜 (STARTER, GROWTH, ENTERPRISE)
-  planType     String    @default("STARTER") @map("plan_type") @db.VarChar(20)
+  planType             String    @default("STARTER") @map("plan_type") @db.VarChar(20)
   /// 트라이얼 종료일
-  trialEndsAt  DateTime? @map("trial_ends_at") @db.Timestamptz
+  trialEndsAt          DateTime? @map("trial_ends_at") @db.Timestamptz
   /// Stripe 고객 ID
-  stripeCustomerId String? @map("stripe_customer_id") @db.VarChar(100)
+  stripeCustomerId     String?   @map("stripe_customer_id") @db.VarChar(100)
   /// Stripe 구독 ID
-  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(100)
+  stripeSubscriptionId String?   @map("stripe_subscription_id") @db.VarChar(100)
   /// 구독 상태 (trialing, active, past_due, canceled, unpaid)
-  subscriptionStatus String @default("trialing") @map("subscription_status") @db.VarChar(30)
+  subscriptionStatus   String    @default("trialing") @map("subscription_status") @db.VarChar(30)
   /// 결제 주기 (monthly, yearly)
-  billingInterval String @default("monthly") @map("billing_interval") @db.VarChar(10)
+  billingInterval      String    @default("monthly") @map("billing_interval") @db.VarChar(10)
   /// 현재 결제 기간 종료일
-  currentPeriodEnd DateTime? @map("current_period_end") @db.Timestamptz
+  currentPeriodEnd     DateTime? @map("current_period_end") @db.Timestamptz
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  sites    Site[]
-  users    User[]
-  payments PaymentHistory[]
-  partners Partner[]
+  sites         Site[]
+  users         User[]
+  payments      PaymentHistory[]
+  partners      Partner[]
   erpConnectors ErpConnectorConfig[]
+  slaTargets    SlaTarget[]
+  hsCodeWatches HsCodeWatch[]
 
   @@map("companies")
 }
 
 /// SaaS 요금제
 model Plan {
-  id           String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                 String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 플랜 코드 (STARTER, GROWTH, ENTERPRISE)
-  code         String  @unique @db.VarChar(20)
-  name         String  @db.VarChar(100)
-  description  String? @db.Text
+  code               String  @unique @db.VarChar(20)
+  name               String  @db.VarChar(100)
+  description        String? @db.Text
   /// 월 가격 (원)
-  priceMonthly Int     @default(0) @map("price_monthly")
+  priceMonthly       Int     @default(0) @map("price_monthly")
   /// 연 가격 (원)
-  priceYearly  Int     @default(0) @map("price_yearly")
+  priceYearly        Int     @default(0) @map("price_yearly")
   /// Stripe Price ID (월)
   stripePriceMonthly String? @map("stripe_price_monthly") @db.VarChar(100)
   /// Stripe Price ID (연)
@@ -75,53 +77,53 @@ model Plan {
 
   // --- 플랜 제한 ---
   /// 최대 사이트 수
-  maxSites     Int @default(1) @map("max_sites")
+  maxSites   Int @default(1) @map("max_sites")
   /// 최대 사용자 수
-  maxUsers     Int @default(3) @map("max_users")
+  maxUsers   Int @default(3) @map("max_users")
   /// 최대 공간 객체 수
-  maxObjects   Int @default(500) @map("max_objects")
+  maxObjects Int @default(500) @map("max_objects")
   /// 트라이얼 기간 (일)
-  trialDays    Int @default(14) @map("trial_days")
+  trialDays  Int @default(14) @map("trial_days")
 
   /// 기능 플래그 (JSON)
-  features     Json? @db.JsonB
+  features Json? @db.JsonB
 
-  sortOrder    Int      @default(0) @map("sort_order")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("plans")
 }
 
 /// 결제 내역
 model PaymentHistory {
-  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId      String   @map("company_id") @db.Uuid
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId             String   @map("company_id") @db.Uuid
   /// Stripe Invoice ID
-  stripeInvoiceId String? @unique @map("stripe_invoice_id") @db.VarChar(100)
+  stripeInvoiceId       String?  @unique @map("stripe_invoice_id") @db.VarChar(100)
   /// Stripe Payment Intent ID
-  stripePaymentIntentId String? @map("stripe_payment_intent_id") @db.VarChar(100)
+  stripePaymentIntentId String?  @map("stripe_payment_intent_id") @db.VarChar(100)
   /// 결제 금액 (원)
-  amount         Int
+  amount                Int
   /// 통화 (krw)
-  currency       String   @default("krw") @db.VarChar(10)
+  currency              String   @default("krw") @db.VarChar(10)
   /// 상태 (paid, failed, refunded, pending)
-  status         String   @db.VarChar(20)
+  status                String   @db.VarChar(20)
   /// 플랜 코드
-  planCode       String   @map("plan_code") @db.VarChar(20)
+  planCode              String   @map("plan_code") @db.VarChar(20)
   /// 결제 주기
-  billingInterval String  @map("billing_interval") @db.VarChar(10)
+  billingInterval       String   @map("billing_interval") @db.VarChar(10)
   /// 결제 기간 시작
-  periodStart    DateTime @map("period_start") @db.Timestamptz
+  periodStart           DateTime @map("period_start") @db.Timestamptz
   /// 결제 기간 종료
-  periodEnd      DateTime @map("period_end") @db.Timestamptz
+  periodEnd             DateTime @map("period_end") @db.Timestamptz
   /// 설명
-  description    String?  @db.Text
+  description           String?  @db.Text
 
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  company        Company  @relation(fields: [companyId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 
   @@index([companyId, createdAt])
   @@map("payment_history")
@@ -141,11 +143,15 @@ model Site {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company        Company         @relation(fields: [companyId], references: [id])
-  spatialObjects SpatialObject[]
-  alerts         Alert[]
-  inspections    QcInspection[]
-  pickingOrders  PickingOrder[]
+  company                   Company                    @relation(fields: [companyId], references: [id])
+  spatialObjects            SpatialObject[]
+  alerts                    Alert[]
+  inspections               QcInspection[]
+  pickingOrders             PickingOrder[]
+  slaTargets                SlaTarget[]
+  deliveryCalendars         DeliveryCalendar[]
+  bulkUploadLogs            BulkUploadLog[]
+  productionPlanSuggestions ProductionPlanSuggestion[]
 
   @@unique([companyId, code])
   @@map("sites")
@@ -320,11 +326,11 @@ model PresetCategory {
 
 /// 공간 프리셋 — warehouse-standards.md 기반 표준 규격
 model SpatialPreset {
-  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  categoryId String @map("category_id") @db.Uuid
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryId String  @map("category_id") @db.Uuid
   /// 프리셋 코드 (예: KR_STANDARD, T11, DRY_40FT)
-  code       String @unique @db.VarChar(50)
-  name       String @db.VarChar(200)
+  code       String  @unique @db.VarChar(50)
+  name       String  @db.VarChar(200)
   /// 표준 출처 (예: KS A 1003, ISO 6780, EN 15512)
   standard   String? @db.VarChar(100)
   /// 지역 (KR, EU, US, AU, INTL)
@@ -342,15 +348,15 @@ model SpatialPreset {
 
   // --- 하중/용량 ---
   /// 자중 (kg)
-  weight      Float? @default(0)
+  weight       Float? @default(0)
   /// 최대 적재 하중 (kg)
-  maxLoad     Float? @map("max_load")
+  maxLoad      Float? @map("max_load")
   /// 용량 (CBM, 팔레트 수 등)
-  capacity    Float?
+  capacity     Float?
   /// 단수 (랙 레벨 수)
-  levels      Int?
+  levels       Int?
   /// 단간 높이 (m)
-  levelHeight Float? @map("level_height")
+  levelHeight  Float? @map("level_height")
   /// 단당 하중 (kg)
   loadPerLevel Float? @map("load_per_level")
 
@@ -371,9 +377,9 @@ model SpatialPreset {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  category           PresetCategory      @relation(fields: [categoryId], references: [id])
-  rackTemplates      WarehouseTemplate[] @relation("RackPreset")
-  palletTemplates    WarehouseTemplate[] @relation("PalletPreset")
+  category        PresetCategory      @relation(fields: [categoryId], references: [id])
+  rackTemplates   WarehouseTemplate[] @relation("RackPreset")
+  palletTemplates WarehouseTemplate[] @relation("PalletPreset")
 
   @@index([categoryId])
   @@index([region])
@@ -382,15 +388,15 @@ model SpatialPreset {
 
 /// 창고 템플릿 — 프리셋 조합으로 구성된 창고 유형
 model WarehouseTemplate {
-  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name        String @db.VarChar(200)
-  code        String @unique @db.VarChar(50)
+  id          String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String  @db.VarChar(200)
+  code        String  @unique @db.VarChar(50)
   description String? @db.Text
   /// 업종 (FOOD_BEVERAGE, AUTO_PARTS, ELECTRONICS 등)
-  industry    String @db.VarChar(50)
+  industry    String  @db.VarChar(50)
   /// 추천 창고 크기 (m²)
-  areaMin     Float? @map("area_min")
-  areaMax     Float? @map("area_max")
+  areaMin     Float?  @map("area_min")
+  areaMax     Float?  @map("area_max")
 
   // --- 사용 프리셋 참조 ---
   rackPresetId      String  @map("rack_preset_id") @db.Uuid
@@ -413,8 +419,8 @@ model WarehouseTemplate {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  rackPreset      SpatialPreset @relation("RackPreset", fields: [rackPresetId], references: [id])
-  palletPreset    SpatialPreset @relation("PalletPreset", fields: [palletPresetId], references: [id])
+  rackPreset   SpatialPreset @relation("RackPreset", fields: [rackPresetId], references: [id])
+  palletPreset SpatialPreset @relation("PalletPreset", fields: [palletPresetId], references: [id])
 
   @@index([industry])
   @@map("warehouse_templates")
@@ -434,26 +440,28 @@ model SlaTarget {
 
   // --- 목표 지표 ---
   /// 납기 준수율 목표 (%, 예: 98.5)
-  deliveryOnTimeTarget  Float @default(98.0) @map("delivery_on_time_target")
+  deliveryOnTimeTarget   Float @default(98.0) @map("delivery_on_time_target")
   /// 오배송률 한도 (%, 예: 0.5 — 낮을수록 좋음)
-  misshipmentRateLimit  Float @default(0.5) @map("misshipment_rate_limit")
+  misshipmentRateLimit   Float @default(0.5) @map("misshipment_rate_limit")
   /// 피킹 정확도 목표 (%, 예: 99.5)
-  pickingAccuracyTarget Float @default(99.5) @map("picking_accuracy_target")
+  pickingAccuracyTarget  Float @default(99.5) @map("picking_accuracy_target")
   /// 평균 처리 시간 한도 (분, 예: 120)
   avgProcessingTimeLimit Float @default(120) @map("avg_processing_time_limit")
 
   // --- 에스컬레이션 설정 ---
   /// 에스컬레이션 활성화
-  escalationEnabled Boolean @default(true) @map("escalation_enabled")
+  escalationEnabled   Boolean @default(true) @map("escalation_enabled")
   /// 위반 시 알림 수신 이메일 (JSON 배열)
-  escalationEmails  Json?   @map("escalation_emails") @db.JsonB
+  escalationEmails    Json?   @map("escalation_emails") @db.JsonB
   /// 연속 위반 횟수 임계값 (이 횟수 이상 연속 위반 시 에스컬레이션)
-  escalationThreshold Int @default(3) @map("escalation_threshold")
+  escalationThreshold Int     @default(3) @map("escalation_threshold")
 
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
+  company    Company        @relation(fields: [companyId], references: [id])
+  site       Site           @relation(fields: [siteId], references: [id])
   metrics    SlaMetric[]
   violations SlaViolation[]
 
@@ -471,28 +479,28 @@ model SlaMetric {
 
   // --- 실측 KPI ---
   /// 납기 준수율 (%)
-  deliveryOnTimeRate  Float @map("delivery_on_time_rate")
+  deliveryOnTimeRate Float @map("delivery_on_time_rate")
   /// 오배송률 (%)
-  misshipmentRate     Float @map("misshipment_rate")
+  misshipmentRate    Float @map("misshipment_rate")
   /// 피킹 정확도 (%)
-  pickingAccuracy     Float @map("picking_accuracy")
+  pickingAccuracy    Float @map("picking_accuracy")
   /// 평균 처리 시간 (분)
-  avgProcessingTime   Float @map("avg_processing_time")
+  avgProcessingTime  Float @map("avg_processing_time")
 
   // --- 건수 ---
   /// 총 주문 건수
-  totalOrders         Int   @default(0) @map("total_orders")
+  totalOrders      Int @default(0) @map("total_orders")
   /// 정시 배송 건수
-  onTimeOrders        Int   @default(0) @map("on_time_orders")
+  onTimeOrders     Int @default(0) @map("on_time_orders")
   /// 오배송 건수
-  misshipmentCount    Int   @default(0) @map("misshipment_count")
+  misshipmentCount Int @default(0) @map("misshipment_count")
   /// 총 피킹 건수
-  totalPicks          Int   @default(0) @map("total_picks")
+  totalPicks       Int @default(0) @map("total_picks")
   /// 정확 피킹 건수
-  accuratePicks       Int   @default(0) @map("accurate_picks")
+  accuratePicks    Int @default(0) @map("accurate_picks")
 
-  metadata   Json?    @db.JsonB
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   slaTarget SlaTarget @relation(fields: [slaTargetId], references: [id])
 
@@ -503,25 +511,25 @@ model SlaMetric {
 
 /// SLA 위반 기록
 model SlaViolation {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  slaTargetId String   @map("sla_target_id") @db.Uuid
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slaTargetId   String    @map("sla_target_id") @db.Uuid
   /// 위반 지표 (delivery_on_time, misshipment_rate, picking_accuracy, avg_processing_time)
-  metricName  String   @map("metric_name") @db.VarChar(50)
+  metricName    String    @map("metric_name") @db.VarChar(50)
   /// 목표값
-  targetValue Float    @map("target_value")
+  targetValue   Float     @map("target_value")
   /// 실측값
-  actualValue Float    @map("actual_value")
+  actualValue   Float     @map("actual_value")
   /// 위반 날짜
-  violationDate DateTime @map("violation_date") @db.Date
+  violationDate DateTime  @map("violation_date") @db.Date
   /// 심각도 (warning, critical)
-  severity    String   @db.VarChar(20)
+  severity      String    @db.VarChar(20)
   /// 에스컬레이션 발송 여부
-  escalated   Boolean  @default(false)
+  escalated     Boolean   @default(false)
   /// 해결 여부
-  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  resolvedAt    DateTime? @map("resolved_at") @db.Timestamptz
   /// 메모
-  note        String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  note          String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   slaTarget SlaTarget @relation(fields: [slaTargetId], references: [id])
 
@@ -534,93 +542,68 @@ model SlaViolation {
 // QC — 품질 검수 관리
 // ============================================================
 
-/// 공급업체
-model Supplier {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  name      String   @db.VarChar(200)
-  code      String   @db.VarChar(50)
-  /// 연락처
-  contact   String?  @db.VarChar(200)
-  /// 이메일
-  email     String?  @db.VarChar(255)
-  /// 현재 등급 (A/B/C/D)
-  grade     String   @default("B") @db.VarChar(5)
-  /// 현재 품질 점수 (0~100)
-  qualityScore Float @default(80) @map("quality_score")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  inspections QcInspection[]
-
-  @@unique([companyId, code])
-  @@index([companyId])
-  @@map("suppliers")
-}
-
 /// 검수 기록
 model QcInspection {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId     String   @map("site_id") @db.Uuid
-  supplierId String?  @map("supplier_id") @db.Uuid
+  id        String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId    String  @map("site_id") @db.Uuid
+  partnerId String? @map("partner_id") @db.Uuid
   /// 검수 유형 (INBOUND: 입고, OUTBOUND: 출고)
-  type       String   @db.VarChar(20)
+  type      String  @db.VarChar(20)
   /// 검수 상태 (PENDING, IN_PROGRESS, COMPLETED, FAILED)
-  status     String   @default("PENDING") @db.VarChar(20)
+  status    String  @default("PENDING") @db.VarChar(20)
 
   // --- 수량 ---
   /// 총 검수 수량
-  totalQty     Int @default(0) @map("total_qty")
+  totalQty   Int   @default(0) @map("total_qty")
   /// 합격 수량
-  passedQty    Int @default(0) @map("passed_qty")
+  passedQty  Int   @default(0) @map("passed_qty")
   /// 불량 수량
-  defectQty    Int @default(0) @map("defect_qty")
+  defectQty  Int   @default(0) @map("defect_qty")
   /// 불량률 (%)
-  defectRate   Float @default(0) @map("defect_rate")
+  defectRate Float @default(0) @map("defect_rate")
 
   /// 참조 번호 (입고전표 번호 등)
-  referenceNo  String? @map("reference_no") @db.VarChar(100)
+  referenceNo   String?   @map("reference_no") @db.VarChar(100)
   /// 검수자
-  inspectorName String? @map("inspector_name") @db.VarChar(100)
+  inspectorName String?   @map("inspector_name") @db.VarChar(100)
   /// 검수 완료 시각
-  inspectedAt  DateTime? @map("inspected_at") @db.Timestamptz
+  inspectedAt   DateTime? @map("inspected_at") @db.Timestamptz
   /// 비고
-  note         String?  @db.Text
-  metadata     Json?    @db.JsonB
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  note          String?   @db.Text
+  metadata      Json?     @db.JsonB
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  site     Site      @relation(fields: [siteId], references: [id])
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
-  items    QcDefectItem[]
+  site    Site           @relation(fields: [siteId], references: [id])
+  partner Partner?       @relation(fields: [partnerId], references: [id])
+  items   QcDefectItem[]
 
   @@index([siteId, type])
-  @@index([supplierId])
+  @@index([partnerId])
   @@index([inspectedAt])
   @@map("qc_inspections")
 }
 
 /// 불량 항목 상세
 model QcDefectItem {
-  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  inspectionId String @map("inspection_id") @db.Uuid
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inspectionId         String   @map("inspection_id") @db.Uuid
   /// 불량 유형 (DAMAGED: 파손, WRONG_ITEM: 오품, WRONG_QTY: 수량 불일치,
   ///            EXPIRED: 유통기한 초과, CONTAMINATED: 오염, PACKAGING: 포장 불량, OTHER: 기타)
-  defectType   String @map("defect_type") @db.VarChar(30)
+  defectType           String   @map("defect_type") @db.VarChar(30)
   /// 불량 수량
-  qty          Int    @default(1)
+  qty                  Int      @default(1)
   /// 상품명/SKU
-  itemName     String? @map("item_name") @db.VarChar(200)
-  itemSku      String? @map("item_sku") @db.VarChar(100)
+  itemName             String?  @map("item_name") @db.VarChar(200)
+  itemSku              String?  @map("item_sku") @db.VarChar(100)
   /// 격리 위치 (spatial_objects의 QUARANTINE_ZONE 참조 ID)
-  quarantineLocationId String? @map("quarantine_location_id") @db.Uuid
+  quarantineLocationId String?  @map("quarantine_location_id") @db.Uuid
   /// 처리 상태 (QUARANTINED: 격리, RETURNED: 반품, DISPOSED: 폐기, REWORKED: 재작업)
-  disposition  String? @db.VarChar(20)
+  disposition          String?  @db.VarChar(20)
   /// 사진/증빙 URL
-  evidenceUrl  String? @map("evidence_url") @db.Text
-  note         String? @db.Text
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  evidenceUrl          String?  @map("evidence_url") @db.Text
+  note                 String?  @db.Text
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   inspection QcInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
 
@@ -636,21 +619,21 @@ model QcDefectItem {
 
 /// 피킹 주문 (출고 요청 단위)
 model PickingOrder {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId    String   @map("site_id") @db.Uuid
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String    @map("site_id") @db.Uuid
   /// 주문 번호
-  orderNo   String   @map("order_no") @db.VarChar(100)
+  orderNo      String    @map("order_no") @db.VarChar(100)
   /// 상태 (PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED)
-  status    String   @default("PENDING") @db.VarChar(20)
+  status       String    @default("PENDING") @db.VarChar(20)
   /// 출고 정책 (FIFO, FEFO, NEAREST)
-  policy    String   @default("FIFO") @db.VarChar(20)
+  policy       String    @default("FIFO") @db.VarChar(20)
   /// 우선순위 (1=최고, 5=최저)
-  priority  Int      @default(3)
+  priority     Int       @default(3)
   /// 배정된 작업자
-  assigneeId   String?  @map("assignee_id") @db.Uuid
-  assigneeName String?  @map("assignee_name") @db.VarChar(100)
+  assigneeId   String?   @map("assignee_id") @db.Uuid
+  assigneeName String?   @map("assignee_name") @db.VarChar(100)
   /// 고객명
-  customerName String? @map("customer_name") @db.VarChar(200)
+  customerName String?   @map("customer_name") @db.VarChar(200)
   /// 배정 시각
   assignedAt   DateTime? @map("assigned_at") @db.Timestamptz
   /// 피킹 시작 시각
@@ -658,15 +641,15 @@ model PickingOrder {
   /// 피킹 완료 시각
   completedAt  DateTime? @map("completed_at") @db.Timestamptz
   /// 총 라인 수
-  totalLines   Int @default(0) @map("total_lines")
+  totalLines   Int       @default(0) @map("total_lines")
   /// 완료 라인 수
-  pickedLines  Int @default(0) @map("picked_lines")
+  pickedLines  Int       @default(0) @map("picked_lines")
   /// 오류 라인 수
-  errorLines   Int @default(0) @map("error_lines")
-  note         String?  @db.Text
-  metadata     Json?    @db.JsonB
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  errorLines   Int       @default(0) @map("error_lines")
+  note         String?   @db.Text
+  metadata     Json?     @db.JsonB
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   site  Site          @relation(fields: [siteId], references: [id])
   lines PickingLine[]
@@ -679,46 +662,46 @@ model PickingOrder {
 
 /// 피킹 라인 (주문 내 개별 아이템)
 model PickingLine {
-  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  pickingOrderId String   @map("picking_order_id") @db.Uuid
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  pickingOrderId String @map("picking_order_id") @db.Uuid
   /// 라인 번호 (순서)
-  lineNo         Int      @map("line_no")
+  lineNo         Int    @map("line_no")
   /// 상품 SKU
-  sku            String   @db.VarChar(100)
+  sku            String @db.VarChar(100)
   /// 상품명
-  itemName       String   @map("item_name") @db.VarChar(200)
+  itemName       String @map("item_name") @db.VarChar(200)
   /// 요청 수량
-  requestedQty   Int      @map("requested_qty")
+  requestedQty   Int    @map("requested_qty")
   /// 실제 피킹 수량
-  pickedQty      Int      @default(0) @map("picked_qty")
+  pickedQty      Int    @default(0) @map("picked_qty")
   /// 상태 (PENDING, PICKED, SHORT, ERROR, SKIPPED)
-  status         String   @default("PENDING") @db.VarChar(20)
+  status         String @default("PENDING") @db.VarChar(20)
 
   // --- 위치 정보 (정책 엔진이 결정) ---
   /// 출발 bin 위치 ID (spatial_objects 참조)
-  binLocationId  String?  @map("bin_location_id") @db.Uuid
+  binLocationId String?   @map("bin_location_id") @db.Uuid
   /// bin 코드 (사람이 읽을 수 있는 형태: A-01-03)
-  binCode        String?  @map("bin_code") @db.VarChar(50)
+  binCode       String?   @map("bin_code") @db.VarChar(50)
   /// zone
-  zone           String?  @db.VarChar(50)
+  zone          String?   @db.VarChar(50)
   /// 바코드
-  barcode        String?  @db.VarChar(100)
+  barcode       String?   @db.VarChar(100)
   /// 유통기한
-  expiryDate     DateTime? @map("expiry_date") @db.Date
+  expiryDate    DateTime? @map("expiry_date") @db.Date
   /// 입고일
-  receivedDate   DateTime? @map("received_date") @db.Date
+  receivedDate  DateTime? @map("received_date") @db.Date
   /// 피킹 순서 (경로 최적화 결과)
-  pickSequence   Int      @default(0) @map("pick_sequence")
+  pickSequence  Int       @default(0) @map("pick_sequence")
 
   /// 바코드 스캔 확인 여부
-  scanVerified   Boolean  @default(false) @map("scan_verified")
+  scanVerified Boolean   @default(false) @map("scan_verified")
   /// 피킹 완료 시각
-  pickedAt       DateTime? @map("picked_at") @db.Timestamptz
+  pickedAt     DateTime? @map("picked_at") @db.Timestamptz
   /// 오류 사유
-  errorReason    String?  @map("error_reason") @db.VarChar(200)
-  note           String?  @db.Text
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  errorReason  String?   @map("error_reason") @db.VarChar(200)
+  note         String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   pickingOrder PickingOrder @relation(fields: [pickingOrderId], references: [id], onDelete: Cascade)
 
@@ -734,24 +717,24 @@ model PickingLine {
 
 /// 이상 탐지 알림 이벤트
 model Alert {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId     String   @map("site_id") @db.Uuid
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String    @map("site_id") @db.Uuid
   /// 지표 유형 (inventory_level, picking_error_rate 등)
-  metricType String   @map("metric_type") @db.VarChar(50)
+  metricType   String    @map("metric_type") @db.VarChar(50)
   /// 심각도 (info, warning, critical)
-  severity   String   @db.VarChar(20)
-  title      String   @db.VarChar(300)
-  message    String   @db.Text
+  severity     String    @db.VarChar(20)
+  title        String    @db.VarChar(300)
+  message      String    @db.Text
   /// 이상 건수
-  anomalyCount Int    @default(0) @map("anomaly_count")
+  anomalyCount Int       @default(0) @map("anomaly_count")
   /// 확인 여부
-  isRead     Boolean  @default(false) @map("is_read")
+  isRead       Boolean   @default(false) @map("is_read")
   /// 해결 여부
-  resolvedAt DateTime? @map("resolved_at") @db.Timestamptz
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz
   /// 탐지 통계 데이터
-  metadata   Json?    @db.JsonB
-  detectedAt DateTime @map("detected_at") @db.Timestamptz
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  metadata     Json?     @db.JsonB
+  detectedAt   DateTime  @map("detected_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   site Site @relation(fields: [siteId], references: [id])
 
@@ -785,74 +768,80 @@ model SpatialHierarchy {
 
 /// 거래처 (공급업체 + 고객사)
 model Partner {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
+  id           String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId    String  @map("company_id") @db.Uuid
   /// 거래처 유형 (SUPPLIER: 공급업체, CUSTOMER: 고객사, BOTH: 양쪽)
-  type        String   @db.VarChar(20)
-  name        String   @db.VarChar(200)
-  code        String   @db.VarChar(50)
+  type         String  @db.VarChar(20)
+  name         String  @db.VarChar(200)
+  code         String  @db.VarChar(50)
   /// 사업자등록번호
-  bizNo       String?  @map("biz_no") @db.VarChar(20)
+  bizNo        String? @map("biz_no") @db.VarChar(20)
   /// 대표자명
-  ceoName     String?  @map("ceo_name") @db.VarChar(100)
+  ceoName      String? @map("ceo_name") @db.VarChar(100)
   /// 업태
-  bizType     String?  @map("biz_type") @db.VarChar(100)
+  bizType      String? @map("biz_type") @db.VarChar(100)
   /// 종목
-  bizCategory String?  @map("biz_category") @db.VarChar(100)
-  address     String?  @db.Text
-  phone       String?  @db.VarChar(30)
-  email       String?  @db.VarChar(255)
+  bizCategory  String? @map("biz_category") @db.VarChar(100)
+  address      String? @db.Text
+  phone        String? @db.VarChar(30)
+  email        String? @db.VarChar(255)
   /// 담당자명
-  contactName String?  @map("contact_name") @db.VarChar(100)
+  contactName  String? @map("contact_name") @db.VarChar(100)
   /// 결제 조건 (ex: NET30, COD)
   paymentTerms String? @map("payment_terms") @db.VarChar(30)
   /// 메모
-  note        String?  @db.Text
+  note         String? @db.Text
 
   /// 담당자 연락처
-  contactPhone   String?  @map("contact_phone") @db.VarChar(30)
+  contactPhone    String? @map("contact_phone") @db.VarChar(30)
   /// 담당자 이메일
-  contactEmail   String?  @map("contact_email") @db.VarChar(255)
+  contactEmail    String? @map("contact_email") @db.VarChar(255)
   /// 대표 전화
-  mainPhone      String?  @map("main_phone") @db.VarChar(30)
+  mainPhone       String? @map("main_phone") @db.VarChar(30)
   /// 팩스
-  fax            String?  @db.VarChar(30)
+  fax             String? @db.VarChar(30)
   /// 우편번호
-  zipCode        String?  @map("zip_code") @db.VarChar(10)
+  zipCode         String? @map("zip_code") @db.VarChar(10)
   /// 상세 주소
-  addressDetail  String?  @map("address_detail") @db.Text
+  addressDetail   String? @map("address_detail") @db.Text
   /// 배송지
   deliveryAddress String? @map("delivery_address") @db.Text
   /// 배송 메모
-  deliveryMemo   String?  @map("delivery_memo") @db.Text
+  deliveryMemo    String? @map("delivery_memo") @db.Text
   /// 여신 한도 (만원)
-  creditLimit    Int?     @map("credit_limit")
+  creditLimit     Int?    @map("credit_limit")
   /// 거래 통화
-  currency       String   @default("KRW") @db.VarChar(3)
+  currency        String  @default("KRW") @db.VarChar(3)
   /// 과세 유형 (TAX: 과세, EXEMPT: 면세, ZERO: 영세율)
-  taxType        String   @default("TAX") @map("tax_type") @db.VarChar(10)
+  taxType         String  @default("TAX") @map("tax_type") @db.VarChar(10)
   /// 기본 리드타임 일수 (공급업체)
-  leadTimeDays   Int?     @map("lead_time_days")
+  leadTimeDays    Int?    @map("lead_time_days")
   /// 최소 발주량
-  minOrderQty    Int?     @map("min_order_qty")
+  minOrderQty     Int?    @map("min_order_qty")
   /// 품질 등급 (A/B/C/D)
-  qualityGrade   String?  @map("quality_grade") @db.VarChar(1)
+  qualityGrade    String? @map("quality_grade") @db.VarChar(1)
   /// 비고
-  memo           String?  @db.Text
+  memo            String? @db.Text
   /// 태그 (JSON 배열)
-  tags           Json?    @db.JsonB
+  tags            Json?   @db.JsonB
 
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  /// QC 품질 등급 (A/B/C/D) — suppliers 테이블에서 통합
+  supplierGrade        String @default("B") @map("supplier_grade") @db.VarChar(5)
+  /// QC 품질 점수 (0~100) — suppliers 테이블에서 통합
+  supplierQualityScore Float  @default(80) @map("supplier_quality_score")
 
-  company              Company   @relation(fields: [companyId], references: [id])
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  company              Company                     @relation(fields: [companyId], references: [id])
   vouchers             Voucher[]
   leadTimes            SupplierLeadTime[]
   contacts             PartnerContact[]
   bankAccounts         PartnerBankAccount[]
   attachments          PartnerAttachment[]
   transactionSummaries PartnerTransactionSummary[]
+  qcInspections        QcInspection[]
 
   @@unique([companyId, code])
   @@index([companyId, type])
@@ -861,37 +850,37 @@ model Partner {
 
 /// 전표 (매입/매출)
 model Voucher {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String    @map("site_id") @db.Uuid
   /// 전표 유형 (PURCHASE: 매입, SALES: 매출)
-  type        String   @db.VarChar(20)
+  type        String    @db.VarChar(20)
   /// 전표 번호 (자동 생성)
-  voucherNo   String   @unique @map("voucher_no") @db.VarChar(30)
+  voucherNo   String    @unique @map("voucher_no") @db.VarChar(30)
   /// 거래처 ID
-  partnerId   String   @map("partner_id") @db.Uuid
+  partnerId   String    @map("partner_id") @db.Uuid
   /// 전표 상태 (DRAFT, CONFIRMED, CANCELED)
-  status      String   @default("DRAFT") @db.VarChar(20)
+  status      String    @default("DRAFT") @db.VarChar(20)
   /// 전표 일자
-  voucherDate DateTime @map("voucher_date") @db.Date
+  voucherDate DateTime  @map("voucher_date") @db.Date
   /// 납기일
   dueDate     DateTime? @map("due_date") @db.Date
   /// 공급가액 합계 (원)
-  subtotal    Int      @default(0)
+  subtotal    Int       @default(0)
   /// 부가세 합계 (원)
-  taxAmount   Int      @default(0) @map("tax_amount")
+  taxAmount   Int       @default(0) @map("tax_amount")
   /// 총액 (공급가 + 부가세)
-  totalAmount Int      @default(0) @map("total_amount")
+  totalAmount Int       @default(0) @map("total_amount")
   /// 참조 번호 (입고/출고 전표 연계)
-  referenceNo String?  @map("reference_no") @db.VarChar(50)
+  referenceNo String?   @map("reference_no") @db.VarChar(50)
   /// 비고
-  note        String?  @db.Text
+  note        String?   @db.Text
   /// 확정 일시
   confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  partner     Partner       @relation(fields: [partnerId], references: [id])
-  lines       VoucherLine[]
+  partner Partner       @relation(fields: [partnerId], references: [id])
+  lines   VoucherLine[]
 
   @@index([siteId, type])
   @@index([siteId, voucherDate])
@@ -901,24 +890,24 @@ model Voucher {
 
 /// 전표 항목
 model VoucherLine {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  voucherId   String   @map("voucher_id") @db.Uuid
-  lineNo      Int      @map("line_no")
-  sku         String   @db.VarChar(50)
-  itemName    String   @map("item_name") @db.VarChar(200)
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  voucherId String   @map("voucher_id") @db.Uuid
+  lineNo    Int      @map("line_no")
+  sku       String   @db.VarChar(50)
+  itemName  String   @map("item_name") @db.VarChar(200)
   /// 수량
-  qty         Int
+  qty       Int
   /// 단가 (원)
-  unitPrice   Int      @map("unit_price")
+  unitPrice Int      @map("unit_price")
   /// 공급가 = qty × unitPrice
-  amount      Int
+  amount    Int
   /// 부가세
-  taxAmount   Int      @default(0) @map("tax_amount")
+  taxAmount Int      @default(0) @map("tax_amount")
   /// 비고
-  note        String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  note      String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  voucher     Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
 
   @@index([voucherId])
   @@index([sku])
@@ -927,23 +916,23 @@ model VoucherLine {
 
 /// SKU별 원가 정보
 model SkuCost {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
-  sku         String   @db.VarChar(50)
-  itemName    String   @map("item_name") @db.VarChar(200)
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId            String   @map("site_id") @db.Uuid
+  sku               String   @db.VarChar(50)
+  itemName          String   @map("item_name") @db.VarChar(200)
   /// 원가 계산 방식 (FIFO, MOVING_AVG)
-  costMethod  String   @default("FIFO") @map("cost_method") @db.VarChar(20)
+  costMethod        String   @default("FIFO") @map("cost_method") @db.VarChar(20)
   /// 현재 재고 수량
-  currentQty  Int      @default(0) @map("current_qty")
+  currentQty        Int      @default(0) @map("current_qty")
   /// FIFO: 현재 로트별 원가 배열 [{ qty, unitCost }]
-  fifoLayers  Json?    @map("fifo_layers") @db.JsonB
+  fifoLayers        Json?    @map("fifo_layers") @db.JsonB
   /// 이동평균: 현재 평균 단가 (원)
-  avgUnitCost Float    @default(0) @map("avg_unit_cost")
+  avgUnitCost       Float    @default(0) @map("avg_unit_cost")
   /// 최종 매입 단가 (원)
-  lastPurchasePrice Int @default(0) @map("last_purchase_price")
+  lastPurchasePrice Int      @default(0) @map("last_purchase_price")
   /// 표준 판매 단가 (원)
-  sellingPrice Int     @default(0) @map("selling_price")
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  sellingPrice      Int      @default(0) @map("selling_price")
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([siteId, sku])
   @@index([siteId])
@@ -986,6 +975,8 @@ model HsCodeWatch {
   /// 주요 관심 코드 여부
   isMain        Boolean  @default(false) @map("is_main")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  company Company @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, hsCode])
   @@index([companyId])
@@ -1088,15 +1079,15 @@ model PrefetchBatchLog {
 
 /// SKU별 출고 이력 (수요 예측용 일별 집계)
 model SkuDailyUsage {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId    String   @map("site_id") @db.Uuid
-  sku       String   @db.VarChar(50)
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  sku         String   @db.VarChar(50)
   /// 날짜
-  usageDate DateTime @map("usage_date") @db.Date
+  usageDate   DateTime @map("usage_date") @db.Date
   /// 출고 수량
-  qtyUsed   Int      @map("qty_used")
+  qtyUsed     Int      @map("qty_used")
   /// 입고 수량 (리드타임 계산용)
-  qtyReceived Int    @default(0) @map("qty_received")
+  qtyReceived Int      @default(0) @map("qty_received")
 
   @@unique([siteId, sku, usageDate])
   @@index([siteId, sku])
@@ -1106,26 +1097,26 @@ model SkuDailyUsage {
 
 /// 공급업체 리드타임 학습 기록
 model SupplierLeadTime {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String    @map("site_id") @db.Uuid
   /// 공급업체 ID (Partner)
-  partnerId   String   @map("partner_id") @db.Uuid
-  sku         String   @db.VarChar(50)
+  partnerId    String    @map("partner_id") @db.Uuid
+  sku          String    @db.VarChar(50)
   /// 발주일
-  orderDate   DateTime @map("order_date") @db.Date
+  orderDate    DateTime  @map("order_date") @db.Date
   /// 입고 완료일
   receivedDate DateTime? @map("received_date") @db.Date
   /// 실제 리드타임 (영업일 기준)
-  actualDays  Int?     @map("actual_days")
+  actualDays   Int?      @map("actual_days")
   /// 발주 수량
-  orderQty    Int      @map("order_qty")
+  orderQty     Int       @map("order_qty")
   /// 발주 전표 번호
-  voucherNo   String?  @map("voucher_no") @db.VarChar(30)
+  voucherNo    String?   @map("voucher_no") @db.VarChar(30)
 
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  partner     Partner  @relation(fields: [partnerId], references: [id])
+  partner Partner @relation(fields: [partnerId], references: [id])
 
   @@index([siteId, sku])
   @@index([partnerId])
@@ -1135,21 +1126,21 @@ model SupplierLeadTime {
 
 /// 수요 예측 결과
 model DemandForecast {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
-  sku         String   @db.VarChar(50)
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId        String   @map("site_id") @db.Uuid
+  sku           String   @db.VarChar(50)
   /// 예측 기간 (7, 14, 30일)
-  horizon     Int
+  horizon       Int
   /// 예측 일별 수요량 (JSON 배열: [{date, qty}])
-  dailyForecast Json  @map("daily_forecast") @db.JsonB
+  dailyForecast Json     @map("daily_forecast") @db.JsonB
   /// 예측 합계 수량
-  totalForecast Int   @map("total_forecast")
+  totalForecast Int      @map("total_forecast")
   /// 예측 모델 (LINEAR, PROPHET, MOVING_AVG)
-  model       String   @db.VarChar(20)
+  model         String   @db.VarChar(20)
   /// 예측 정확도 (MAPE, %)
-  mape        Float?
+  mape          Float?
   /// 예측 생성 시각
-  forecastedAt DateTime @default(now()) @map("forecasted_at") @db.Timestamptz
+  forecastedAt  DateTime @default(now()) @map("forecasted_at") @db.Timestamptz
 
   @@index([siteId, sku])
   @@index([forecastedAt])
@@ -1158,39 +1149,39 @@ model DemandForecast {
 
 /// 발주 추천
 model ReorderRecommendation {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId        String   @map("site_id") @db.Uuid
-  sku           String   @db.VarChar(50)
-  itemName      String   @map("item_name") @db.VarChar(200)
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String    @map("site_id") @db.Uuid
+  sku          String    @db.VarChar(50)
+  itemName     String    @map("item_name") @db.VarChar(200)
   /// 현재 재고 수량
-  currentQty    Int      @map("current_qty")
+  currentQty   Int       @map("current_qty")
   /// 안전 재고 수량
-  safetyStock   Int      @map("safety_stock")
+  safetyStock  Int       @map("safety_stock")
   /// 예상 소진일
-  stockoutDate  DateTime? @map("stockout_date") @db.Date
+  stockoutDate DateTime? @map("stockout_date") @db.Date
   /// 소진까지 남은 일수
-  daysUntilOut  Int?     @map("days_until_out")
+  daysUntilOut Int?      @map("days_until_out")
   /// 추천 발주량
-  reorderQty    Int      @map("reorder_qty")
+  reorderQty   Int       @map("reorder_qty")
   /// 추천 공급업체 ID
-  partnerId     String?  @map("partner_id") @db.Uuid
+  partnerId    String?   @map("partner_id") @db.Uuid
   /// 추천 공급업체명
-  partnerName   String?  @map("partner_name") @db.VarChar(200)
+  partnerName  String?   @map("partner_name") @db.VarChar(200)
   /// 공급업체 평균 리드타임
-  avgLeadDays   Int?     @map("avg_lead_days")
+  avgLeadDays  Int?      @map("avg_lead_days")
   /// 추천 발주일 ("지금 발주하면 납기 맞춤")
-  orderByDate   DateTime? @map("order_by_date") @db.Date
+  orderByDate  DateTime? @map("order_by_date") @db.Date
   /// 긴급도 (LOW, MEDIUM, HIGH, CRITICAL)
-  urgency       String   @db.VarChar(20)
+  urgency      String    @db.VarChar(20)
   /// 추천 상태 (PENDING, ACCEPTED, DISMISSED, AUTO_ORDERED)
-  status        String   @default("PENDING") @db.VarChar(20)
+  status       String    @default("PENDING") @db.VarChar(20)
   /// 자동 생성된 전표 ID
-  voucherId     String?  @map("voucher_id") @db.Uuid
+  voucherId    String?   @map("voucher_id") @db.Uuid
   /// 예측 기반 정보 (JSON)
-  forecastMeta  Json?    @map("forecast_meta") @db.JsonB
+  forecastMeta Json?     @map("forecast_meta") @db.JsonB
 
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([siteId, urgency])
   @@index([siteId, sku])
@@ -1205,31 +1196,31 @@ model ReorderRecommendation {
 
 /// ERP 커넥터 설정 (회사별)
 model ErpConnectorConfig {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId     String   @map("company_id") @db.Uuid
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId      String    @map("company_id") @db.Uuid
   /// 커넥터 유형 (DOUZON, YOUNGLIMWON)
-  erpType       String   @map("erp_type") @db.VarChar(20)
+  erpType        String    @map("erp_type") @db.VarChar(20)
   /// 표시 이름
-  displayName   String   @map("display_name") @db.VarChar(100)
+  displayName    String    @map("display_name") @db.VarChar(100)
   /// API 접속 URL
-  baseUrl       String   @map("base_url") @db.VarChar(500)
+  baseUrl        String    @map("base_url") @db.VarChar(500)
   /// 인증 방식 (OAUTH2, API_KEY, BASIC)
-  authType      String   @map("auth_type") @db.VarChar(20)
+  authType       String    @map("auth_type") @db.VarChar(20)
   /// 인증 정보 (암호화 저장: clientId, clientSecret, apiKey 등)
-  credentials   Json     @db.JsonB
+  credentials    Json      @db.JsonB
   /// 추가 설정 (companyCode, 타임존 등)
-  configJson    Json?    @map("config_json") @db.JsonB
+  configJson     Json?     @map("config_json") @db.JsonB
   /// 연동 활성 여부
-  isActive      Boolean  @default(true) @map("is_active")
+  isActive       Boolean   @default(true) @map("is_active")
   /// 마지막 연결 확인 시각
-  lastPingAt    DateTime? @map("last_ping_at") @db.Timestamptz
+  lastPingAt     DateTime? @map("last_ping_at") @db.Timestamptz
   /// 마지막 연결 상태 (OK, ERROR, TIMEOUT)
-  lastPingStatus String? @map("last_ping_status") @db.VarChar(20)
+  lastPingStatus String?   @map("last_ping_status") @db.VarChar(20)
 
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  company       Company  @relation(fields: [companyId], references: [id])
+  company       Company           @relation(fields: [companyId], references: [id])
   syncLogs      ErpSyncLog[]
   fieldMappings ErpFieldMapping[]
 
@@ -1240,30 +1231,30 @@ model ErpConnectorConfig {
 
 /// ERP 동기화 로그
 model ErpSyncLog {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  connectorId   String   @map("connector_id") @db.Uuid
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  connectorId     String  @map("connector_id") @db.Uuid
   /// 동기화 방향 (PUSH: HanVoxel→ERP, PULL: ERP→HanVoxel)
-  direction     String   @db.VarChar(10)
+  direction       String  @db.VarChar(10)
   /// 동기화 대상 (VOUCHER, PARTNER, INVENTORY, RECEIPT)
-  entityType    String   @map("entity_type") @db.VarChar(20)
+  entityType      String  @map("entity_type") @db.VarChar(20)
   /// 대상 레코드 ID (HanVoxel 측)
-  entityId      String?  @map("entity_id") @db.Uuid
+  entityId        String? @map("entity_id") @db.Uuid
   /// ERP 측 전표/레코드 번호
-  erpRefNo      String?  @map("erp_ref_no") @db.VarChar(50)
+  erpRefNo        String? @map("erp_ref_no") @db.VarChar(50)
   /// 동기화 상태 (SUCCESS, FAILED, RETRYING, SKIPPED)
-  status        String   @db.VarChar(20)
+  status          String  @db.VarChar(20)
   /// 오류 메시지
-  errorMessage  String?  @map("error_message") @db.Text
+  errorMessage    String? @map("error_message") @db.Text
   /// 재시도 횟수
-  retryCount    Int      @default(0) @map("retry_count")
+  retryCount      Int     @default(0) @map("retry_count")
   /// 요청 페이로드 (디버깅용)
-  requestPayload Json?   @map("request_payload") @db.JsonB
+  requestPayload  Json?   @map("request_payload") @db.JsonB
   /// 응답 페이로드
-  responsePayload Json?  @map("response_payload") @db.JsonB
+  responsePayload Json?   @map("response_payload") @db.JsonB
 
-  syncedAt      DateTime @default(now()) @map("synced_at") @db.Timestamptz
+  syncedAt DateTime @default(now()) @map("synced_at") @db.Timestamptz
 
-  connector     ErpConnectorConfig @relation(fields: [connectorId], references: [id])
+  connector ErpConnectorConfig @relation(fields: [connectorId], references: [id])
 
   @@index([connectorId, status])
   @@index([connectorId, entityType])
@@ -1273,24 +1264,24 @@ model ErpSyncLog {
 
 /// ERP 필드 매핑 (커스터마이징)
 model ErpFieldMapping {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  connectorId   String   @map("connector_id") @db.Uuid
+  id             String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  connectorId    String  @map("connector_id") @db.Uuid
   /// 대상 엔티티 (VOUCHER, PARTNER, ITEM)
-  entityType    String   @map("entity_type") @db.VarChar(20)
+  entityType     String  @map("entity_type") @db.VarChar(20)
   /// HanVoxel 필드명
-  sourceField   String   @map("source_field") @db.VarChar(100)
+  sourceField    String  @map("source_field") @db.VarChar(100)
   /// ERP 필드명
-  targetField   String   @map("target_field") @db.VarChar(100)
+  targetField    String  @map("target_field") @db.VarChar(100)
   /// 변환 규칙 (DIRECT, FORMAT, LOOKUP, CONSTANT)
-  transformType String   @default("DIRECT") @map("transform_type") @db.VarChar(20)
+  transformType  String  @default("DIRECT") @map("transform_type") @db.VarChar(20)
   /// 변환 파라미터 (포맷 문자열, 룩업 테이블 등)
   transformParam String? @map("transform_param") @db.VarChar(500)
   /// 필수 여부
-  isRequired    Boolean  @default(false) @map("is_required")
+  isRequired     Boolean @default(false) @map("is_required")
 
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  connector     ErpConnectorConfig @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  connector ErpConnectorConfig @relation(fields: [connectorId], references: [id], onDelete: Cascade)
 
   @@unique([connectorId, entityType, sourceField])
   @@index([connectorId])
@@ -1303,36 +1294,36 @@ model ErpFieldMapping {
 
 /// 업계 벤치마크 스냅샷 (월별 익명 집계)
 model BenchmarkSnapshot {
-  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 집계 기간 (YYYY-MM)
-  period       String   @db.VarChar(7)
+  period           String @db.VarChar(7)
   /// 업종 (AUTO_PARTS, FOOD_BEVERAGE, ELECTRONICS 등)
-  industry     String   @db.VarChar(50)
+  industry         String @db.VarChar(50)
   /// 회사 규모 (SMALL, MEDIUM, LARGE)
-  companySize  String   @map("company_size") @db.VarChar(20)
+  companySize      String @map("company_size") @db.VarChar(20)
   /// 참여 회사 수 (익명성 보장: 최소 5 이상)
-  participantCount Int  @map("participant_count")
+  participantCount Int    @map("participant_count")
 
   // ── 핵심 KPI 평균 ──
   /// 피킹 정확도 (%) 평균
-  avgPickingAccuracy  Float @default(0) @map("avg_picking_accuracy")
+  avgPickingAccuracy   Float @default(0) @map("avg_picking_accuracy")
   /// 재고회전율 (회/년) 평균
   avgInventoryTurnover Float @default(0) @map("avg_inventory_turnover")
   /// 공간활용률 (%) 평균
-  avgSpaceUtilization Float @default(0) @map("avg_space_utilization")
+  avgSpaceUtilization  Float @default(0) @map("avg_space_utilization")
   /// 납기준수율 (%) 평균
-  avgOnTimeDelivery   Float @default(0) @map("avg_on_time_delivery")
+  avgOnTimeDelivery    Float @default(0) @map("avg_on_time_delivery")
   /// 입고처리 시간 (시간) 평균
-  avgReceivingTime    Float @default(0) @map("avg_receiving_time")
+  avgReceivingTime     Float @default(0) @map("avg_receiving_time")
   /// 주문처리 시간 (시간) 평균
-  avgOrderCycleTime   Float @default(0) @map("avg_order_cycle_time")
+  avgOrderCycleTime    Float @default(0) @map("avg_order_cycle_time")
 
   // ── 분포 (백분위) ──
   /// 각 KPI의 P25, P50, P75, P90 값 (JSON)
-  percentiles  Json @default("{}") @db.JsonB
+  percentiles Json @default("{}") @db.JsonB
 
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([period, industry, companySize])
   @@index([industry])
@@ -1342,32 +1333,32 @@ model BenchmarkSnapshot {
 
 /// 개별 회사 벤치마크 지표 (월별)
 model CompanyBenchmark {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId   String @map("company_id") @db.Uuid
+  siteId      String @map("site_id") @db.Uuid
   /// 집계 기간 (YYYY-MM)
-  period      String   @db.VarChar(7)
+  period      String @db.VarChar(7)
   /// 업종
-  industry    String   @db.VarChar(50)
+  industry    String @db.VarChar(50)
   /// 회사 규모
-  companySize String   @map("company_size") @db.VarChar(20)
+  companySize String @map("company_size") @db.VarChar(20)
 
   // ── 내 지표 ──
-  pickingAccuracy     Float @default(0) @map("picking_accuracy")
-  inventoryTurnover   Float @default(0) @map("inventory_turnover")
-  spaceUtilization    Float @default(0) @map("space_utilization")
-  onTimeDelivery      Float @default(0) @map("on_time_delivery")
-  receivingTime       Float @default(0) @map("receiving_time")
-  orderCycleTime      Float @default(0) @map("order_cycle_time")
+  pickingAccuracy   Float @default(0) @map("picking_accuracy")
+  inventoryTurnover Float @default(0) @map("inventory_turnover")
+  spaceUtilization  Float @default(0) @map("space_utilization")
+  onTimeDelivery    Float @default(0) @map("on_time_delivery")
+  receivingTime     Float @default(0) @map("receiving_time")
+  orderCycleTime    Float @default(0) @map("order_cycle_time")
 
   // ── 업계 대비 순위 ──
   /// 업계 상위 퍼센트 (JSON: { pickingAccuracy: 15, ... })
-  percentileRanks Json @default("{}") @map("percentile_ranks") @db.JsonB
+  percentileRanks Json  @default("{}") @map("percentile_ranks") @db.JsonB
   /// 종합 점수 (100점 만점)
   overallScore    Float @default(0) @map("overall_score")
 
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([companyId, siteId, period])
   @@index([companyId])
@@ -1377,23 +1368,23 @@ model CompanyBenchmark {
 
 /// 벤치마크 리포트 (PDF 생성 이력)
 model BenchmarkReport {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId  String   @map("company_id") @db.Uuid
-  siteId     String   @map("site_id") @db.Uuid
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId       String  @map("company_id") @db.Uuid
+  siteId          String  @map("site_id") @db.Uuid
   /// 리포트 기간 (YYYY-MM)
-  period     String   @db.VarChar(7)
+  period          String  @db.VarChar(7)
   /// 리포트 제목
-  title      String   @db.VarChar(200)
+  title           String  @db.VarChar(200)
   /// 리포트 JSON 데이터 (PDF 생성 원본)
-  reportData Json     @map("report_data") @db.JsonB
+  reportData      Json    @map("report_data") @db.JsonB
   /// 개선 권고 사항 (JSON 배열)
-  recommendations Json @default("[]") @db.JsonB
+  recommendations Json    @default("[]") @db.JsonB
   /// PDF 파일 경로 (S3 또는 로컬)
-  pdfUrl     String?  @map("pdf_url") @db.VarChar(500)
+  pdfUrl          String? @map("pdf_url") @db.VarChar(500)
   /// 생성 상태 (PENDING, GENERATED, FAILED)
-  status     String   @default("PENDING") @db.VarChar(20)
+  status          String  @default("PENDING") @db.VarChar(20)
 
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([companyId, period])
   @@map("benchmark_reports")
@@ -1405,30 +1396,30 @@ model BenchmarkReport {
 
 /// ROI 기준선 (HanVoxel 도입 전 운영 지표 스냅샷)
 model RoiBaseline {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  siteId    String @map("site_id") @db.Uuid
 
   /// 기준선 설정일
   baselineDate DateTime @map("baseline_date") @db.Timestamptz
 
   // ── 도입 전 비용 ──
   /// 연간 인건비 (원)
-  annualLaborCost    BigInt @default(0) @map("annual_labor_cost")
+  annualLaborCost  BigInt @default(0) @map("annual_labor_cost")
   /// 연간 오류 비용 (원)
-  annualErrorCost    BigInt @default(0) @map("annual_error_cost")
+  annualErrorCost  BigInt @default(0) @map("annual_error_cost")
   /// m²당 월 임대료 (원)
-  monthlyRentPerM2   Int    @default(0) @map("monthly_rent_per_m2")
+  monthlyRentPerM2 Int    @default(0) @map("monthly_rent_per_m2")
   /// 창고 면적 (m²)
-  warehouseArea      Float  @default(0) @map("warehouse_area")
+  warehouseArea    Float  @default(0) @map("warehouse_area")
 
   // ── 도입 전 운영 지표 ──
   /// 월 피킹 건수
-  monthlyPickings    Int    @default(0) @map("monthly_pickings")
+  monthlyPickings Int   @default(0) @map("monthly_pickings")
   /// 오류율 (%)
-  errorRate          Float  @default(0) @map("error_rate")
+  errorRate       Float @default(0) @map("error_rate")
   /// 직원 수
-  employeeCount      Int    @default(0) @map("employee_count")
+  employeeCount   Int   @default(0) @map("employee_count")
 
   // ── 예상 개선율 (설정 시점 입력값) ──
   /// 인건비 절감율 (%)
@@ -1453,46 +1444,46 @@ model RoiBaseline {
 
 /// ROI 월별 스냅샷 (실제 운영 데이터 기반 절감 추적)
 model RoiMonthlySnapshot {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  baselineId  String   @map("baseline_id") @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  baselineId String @map("baseline_id") @db.Uuid
+  companyId  String @map("company_id") @db.Uuid
+  siteId     String @map("site_id") @db.Uuid
 
   /// 집계 기간 (YYYY-MM)
-  period      String   @db.VarChar(7)
+  period String @db.VarChar(7)
 
   // ── 실제 운영 지표 (DB에서 자동 집계) ──
   /// 월 피킹 건수 (picking_orders 테이블에서 집계)
-  actualPickings       Int    @default(0) @map("actual_pickings")
+  actualPickings      Int   @default(0) @map("actual_pickings")
   /// 월 오류 건수 (picking_lines 중 오류 건)
-  actualErrors         Int    @default(0) @map("actual_errors")
+  actualErrors        Int   @default(0) @map("actual_errors")
   /// 실제 오류율 (%)
-  actualErrorRate      Float  @default(0) @map("actual_error_rate")
+  actualErrorRate     Float @default(0) @map("actual_error_rate")
   /// 현재 직원 수
-  actualEmployeeCount  Int    @default(0) @map("actual_employee_count")
+  actualEmployeeCount Int   @default(0) @map("actual_employee_count")
 
   // ── 사용자 입력 실제 비용 ──
   /// 해당월 인건비 (원)
-  actualLaborCost      BigInt @default(0) @map("actual_labor_cost")
+  actualLaborCost BigInt @default(0) @map("actual_labor_cost")
   /// 해당월 오류 비용 (원)
-  actualErrorCost      BigInt @default(0) @map("actual_error_cost")
+  actualErrorCost BigInt @default(0) @map("actual_error_cost")
 
   // ── 자동 계산된 절감액 ──
   /// 인건비 절감액 (기준선 월할 - 실제)
-  laborSaving          BigInt @default(0) @map("labor_saving")
+  laborSaving     BigInt @default(0) @map("labor_saving")
   /// 오류 비용 절감액
-  errorCostSaving      BigInt @default(0) @map("error_cost_saving")
+  errorCostSaving BigInt @default(0) @map("error_cost_saving")
   /// 공간 절감액 (기준선 기반 추정)
-  spaceSaving          BigInt @default(0) @map("space_saving")
+  spaceSaving     BigInt @default(0) @map("space_saving")
   /// 월 총 절감액
-  totalSaving          BigInt @default(0) @map("total_saving")
+  totalSaving     BigInt @default(0) @map("total_saving")
 
   // ── 누적 ──
   /// 도입 이후 누적 절감액
-  cumulativeSaving     BigInt @default(0) @map("cumulative_saving")
+  cumulativeSaving BigInt @default(0) @map("cumulative_saving")
 
   /// 데이터 소스 (AUTO: DB 자동집계, MANUAL: 수동입력, MIXED: 혼합)
-  dataSource  String @default("AUTO") @map("data_source") @db.VarChar(10)
+  dataSource String @default("AUTO") @map("data_source") @db.VarChar(10)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
@@ -1510,42 +1501,42 @@ model RoiMonthlySnapshot {
 
 /// 입고 주문
 model InboundOrder {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
+  id                      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId                  String    @map("site_id") @db.Uuid
   /// 자동발주 추천 연동 ID
-  reorderRecommendationId String? @map("reorder_recommendation_id") @db.Uuid
+  reorderRecommendationId String?   @map("reorder_recommendation_id") @db.Uuid
   /// 공급업체 (Partner) ID
-  vendorId    String?  @map("vendor_id") @db.Uuid
+  vendorId                String?   @map("vendor_id") @db.Uuid
   /// 공급업체명 (검색·표시용 비정규화)
-  vendorName  String?  @map("vendor_name") @db.VarChar(200)
+  vendorName              String?   @map("vendor_name") @db.VarChar(200)
   /// 상태: ORDERED → IN_TRANSIT → ARRIVED → QC_PENDING → QC_PASSED → STOCKED
-  status      String   @default("ORDERED") @db.VarChar(20)
+  status                  String    @default("ORDERED") @db.VarChar(20)
   /// 입고 예상일
-  expectedDate DateTime? @map("expected_date") @db.Date
+  expectedDate            DateTime? @map("expected_date") @db.Date
   /// 실제 입고일
-  actualDate  DateTime? @map("actual_date") @db.Date
+  actualDate              DateTime? @map("actual_date") @db.Date
   /// 비고
-  notes       String?  @db.Text
+  notes                   String?   @db.Text
 
   /// 배송 기사 ID
-  driverId       String?  @map("driver_id") @db.Uuid
+  driverId       String? @map("driver_id") @db.Uuid
   /// 배송 기사명
-  driverName     String?  @map("driver_name") @db.VarChar(100)
+  driverName     String? @map("driver_name") @db.VarChar(100)
   /// 배송 기사 연락처
-  driverPhone    String?  @map("driver_phone") @db.VarChar(30)
+  driverPhone    String? @map("driver_phone") @db.VarChar(30)
   /// 운송사
-  carrierCompany String?  @map("carrier_company") @db.VarChar(100)
+  carrierCompany String? @map("carrier_company") @db.VarChar(100)
   /// 차량 번호
-  vehicleNo      String?  @map("vehicle_no") @db.VarChar(30)
+  vehicleNo      String? @map("vehicle_no") @db.VarChar(30)
   /// 배송 추적 URL
-  trackingUrl    String?  @map("tracking_url") @db.Text
+  trackingUrl    String? @map("tracking_url") @db.Text
 
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  items       InboundItem[]
-  calendar    DeliveryCalendar[]
-  driver      DeliveryDriver? @relation(fields: [driverId], references: [id])
+  items    InboundItem[]
+  calendar DeliveryCalendar[]
+  driver   DeliveryDriver?    @relation(fields: [driverId], references: [id])
 
   @@index([siteId, status])
   @@index([siteId, expectedDate])
@@ -1559,7 +1550,7 @@ model InboundItem {
   id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   inboundOrderId  String  @map("inbound_order_id") @db.Uuid
   /// 상품 SKU
-  skuCode         String  @map("sku_code") @db.VarChar(100)
+  sku             String  @map("sku_code") @db.VarChar(100)
   /// 상품명
   itemName        String? @map("item_name") @db.VarChar(200)
   /// 예상 수량
@@ -1573,86 +1564,86 @@ model InboundItem {
   /// 배치될 랙/BIN 공간 객체 ID
   spatialObjectId String? @map("spatial_object_id") @db.Uuid
 
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  inboundOrder    InboundOrder @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
+  inboundOrder InboundOrder @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
 
   @@index([inboundOrderId])
-  @@index([skuCode])
+  @@index([sku])
   @@map("inbound_items")
 }
 
 /// 출고 주문
 model OutboundOrder {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId          String   @map("site_id") @db.Uuid
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId         String    @map("site_id") @db.Uuid
   /// 출고 유형: PICKING | PALLET | CONTAINER | DIRECT | TRANSFER
-  type            String   @default("PICKING") @db.VarChar(20)
+  type           String    @default("PICKING") @db.VarChar(20)
   /// 상태: PLANNED → PICKING → PACKED → DISPATCHED
-  status          String   @default("PLANNED") @db.VarChar(20)
+  status         String    @default("PLANNED") @db.VarChar(20)
   /// 출고 예정일
-  scheduledDate   DateTime? @map("scheduled_date") @db.Date
+  scheduledDate  DateTime? @map("scheduled_date") @db.Date
   /// 실제 출고일
-  dispatchedDate  DateTime? @map("dispatched_date") @db.Date
+  dispatchedDate DateTime? @map("dispatched_date") @db.Date
   /// 고객명
-  customerName    String?  @map("customer_name") @db.VarChar(200)
+  customerName   String?   @map("customer_name") @db.VarChar(200)
   /// 배송지
-  destination     String?  @db.Text
+  destination    String?   @db.Text
   /// 명세표 번호 (OUT-YYYYMMDD-XXXX)
-  manifestNumber  String?  @unique @map("manifest_number") @db.VarChar(30)
+  manifestNumber String?   @unique @map("manifest_number") @db.VarChar(30)
   /// 타임슬롯 (AM / PM / NIGHT / CUSTOM)
-  timeSlot        String?  @map("time_slot") @db.VarChar(20)
+  timeSlot       String?   @map("time_slot") @db.VarChar(20)
   /// 비고
-  notes           String?  @db.Text
+  notes          String?   @db.Text
   /// 컨테이너 규격 (CONTAINER 유형 시)
-  containerSpec   String?  @map("container_spec") @db.VarChar(30)
+  containerSpec  String?   @map("container_spec") @db.VarChar(30)
   /// HS 코드 (수출 시)
-  hsCode          String?  @map("hs_code") @db.VarChar(10)
+  hsCode         String?   @map("hs_code") @db.VarChar(10)
 
   /// 거래처 (고객사) ID
-  customerId      String?  @map("customer_id") @db.Uuid
+  customerId      String? @map("customer_id") @db.Uuid
   /// 수령인 이름
-  receiverName    String?  @map("receiver_name") @db.VarChar(100)
+  receiverName    String? @map("receiver_name") @db.VarChar(100)
   /// 수령인 연락처
-  receiverPhone   String?  @map("receiver_phone") @db.VarChar(30)
+  receiverPhone   String? @map("receiver_phone") @db.VarChar(30)
   /// 수령인 주소
-  receiverAddress String?  @map("receiver_address") @db.Text
+  receiverAddress String? @map("receiver_address") @db.Text
 
   /// 배송 기사 ID
-  driverId        String?  @map("driver_id") @db.Uuid
+  driverId       String? @map("driver_id") @db.Uuid
   /// 배송 기사명
-  driverName      String?  @map("driver_name") @db.VarChar(100)
+  driverName     String? @map("driver_name") @db.VarChar(100)
   /// 배송 기사 연락처
-  driverPhone     String?  @map("driver_phone") @db.VarChar(30)
+  driverPhone    String? @map("driver_phone") @db.VarChar(30)
   /// 운송사
-  carrierCompany  String?  @map("carrier_company") @db.VarChar(100)
+  carrierCompany String? @map("carrier_company") @db.VarChar(100)
   /// 차량 번호
-  vehicleNo       String?  @map("vehicle_no") @db.VarChar(30)
+  vehicleNo      String? @map("vehicle_no") @db.VarChar(30)
   /// 배송 추적 URL
-  trackingUrl     String?  @map("tracking_url") @db.Text
+  trackingUrl    String? @map("tracking_url") @db.Text
 
   /// 팔레트 수량
-  palletCount     Int?     @map("pallet_count")
+  palletCount         Int?    @map("pallet_count")
   /// 팔레트 유형
-  palletType      String?  @map("pallet_type") @db.VarChar(20)
+  palletType          String? @map("pallet_type") @db.VarChar(20)
   /// 컨테이너 번호
-  containerNo     String?  @map("container_no") @db.VarChar(30)
+  containerNo         String? @map("container_no") @db.VarChar(30)
   /// 컨테이너 유형
-  containerType   String?  @map("container_type") @db.VarChar(20)
+  containerType       String? @map("container_type") @db.VarChar(20)
   /// 총 중량 (kg)
-  totalWeightKg   Float?   @map("total_weight_kg")
+  totalWeightKg       Float?  @map("total_weight_kg")
   /// 총 부피 (CBM)
-  totalVolumeCbm  Float?   @map("total_volume_cbm")
+  totalVolumeCbm      Float?  @map("total_volume_cbm")
   /// 특수 지시사항
   specialInstructions String? @map("special_instructions") @db.Text
 
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  items           OutboundItem[]
-  calendar        DeliveryCalendar[]
-  driver          DeliveryDriver? @relation(fields: [driverId], references: [id])
+  items    OutboundItem[]
+  calendar DeliveryCalendar[]
+  driver   DeliveryDriver?    @relation(fields: [driverId], references: [id])
 
   @@index([siteId, status])
   @@index([siteId, scheduledDate])
@@ -1664,30 +1655,30 @@ model OutboundOrder {
 
 /// 출고 품목 명세
 model OutboundItem {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  outboundOrderId  String   @map("outbound_order_id") @db.Uuid
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  outboundOrderId String    @map("outbound_order_id") @db.Uuid
   /// 상품 SKU
-  skuCode          String   @map("sku_code") @db.VarChar(100)
+  sku             String    @map("sku_code") @db.VarChar(100)
   /// 상품명
-  itemName         String?  @map("item_name") @db.VarChar(200)
+  itemName        String?   @map("item_name") @db.VarChar(200)
   /// 수량
-  qty              Int
+  qty             Int
   /// 단가 (원)
-  unitPrice        Int      @default(0) @map("unit_price")
+  unitPrice       Int       @default(0) @map("unit_price")
   /// 피킹 담당자
-  pickedBy         String?  @map("picked_by") @db.VarChar(100)
+  pickedBy        String?   @map("picked_by") @db.VarChar(100)
   /// 피킹 시각
-  pickedAt         DateTime? @map("picked_at") @db.Timestamptz
+  pickedAt        DateTime? @map("picked_at") @db.Timestamptz
   /// 출고 위치 (spatial_objects 참조)
-  spatialObjectId  String?  @map("spatial_object_id") @db.Uuid
+  spatialObjectId String?   @map("spatial_object_id") @db.Uuid
 
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  outboundOrder    OutboundOrder @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
+  outboundOrder OutboundOrder @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
 
   @@index([outboundOrderId])
-  @@index([skuCode])
+  @@index([sku])
   @@map("outbound_items")
 }
 
@@ -1710,11 +1701,12 @@ model DeliveryCalendar {
   /// 색상 코드
   colorCode       String?  @map("color_code") @db.VarChar(7)
 
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  inboundOrder    InboundOrder?  @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
-  outboundOrder   OutboundOrder? @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
+  site          Site           @relation(fields: [siteId], references: [id])
+  inboundOrder  InboundOrder?  @relation(fields: [inboundOrderId], references: [id], onDelete: Cascade)
+  outboundOrder OutboundOrder? @relation(fields: [outboundOrderId], references: [id], onDelete: Cascade)
 
   @@index([siteId, scheduledDate])
   @@index([siteId, type])
@@ -1727,33 +1719,35 @@ model DeliveryCalendar {
 
 /// B2C 대량 출고 CSV/Excel 업로드 이력
 model BulkUploadLog {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId        String   @map("site_id") @db.Uuid
+  id            String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId        String  @map("site_id") @db.Uuid
   /// 업로드 파일명
-  fileName      String   @map("file_name") @db.VarChar(500)
+  fileName      String  @map("file_name") @db.VarChar(500)
   /// 파일 크기 (bytes)
-  fileSize      Int      @map("file_size")
+  fileSize      Int     @map("file_size")
   /// 총 행 수
-  totalRows     Int      @map("total_rows")
+  totalRows     Int     @map("total_rows")
   /// 성공 건수
-  successCount  Int      @default(0) @map("success_count")
+  successCount  Int     @default(0) @map("success_count")
   /// 오류 건수
-  errorCount    Int      @default(0) @map("error_count")
+  errorCount    Int     @default(0) @map("error_count")
   /// 경고 건수
-  warningCount  Int      @default(0) @map("warning_count")
+  warningCount  Int     @default(0) @map("warning_count")
   /// 업로드 상태: PARSING → VALIDATED → CREATING → COMPLETED → FAILED
-  status        String   @default("PARSING") @db.VarChar(20)
+  status        String  @default("PARSING") @db.VarChar(20)
   /// 플랫폼 유형: COUPANG | SMARTSTORE | CUSTOM
-  platformType  String   @default("CUSTOM") @map("platform_type") @db.VarChar(30)
+  platformType  String  @default("CUSTOM") @map("platform_type") @db.VarChar(30)
   /// 컬럼 매핑 설정 (JSON)
-  columnMapping Json?    @map("column_mapping")
+  columnMapping Json?   @map("column_mapping")
   /// 오류 상세 (JSON)
-  errorDetails  Json?    @map("error_details")
+  errorDetails  Json?   @map("error_details")
   /// 업로드자 ID
-  uploadedBy    String?  @map("uploaded_by") @db.VarChar(200)
+  uploadedBy    String? @map("uploaded_by") @db.VarChar(200)
 
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  site Site @relation(fields: [siteId], references: [id])
 
   @@index([siteId, createdAt])
   @@index([status])
@@ -1766,30 +1760,31 @@ model BulkUploadLog {
 
 /// 수주 (고객 발주 수신)
 model SalesOrder {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId           String   @map("site_id") @db.Uuid
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId           String    @map("site_id") @db.Uuid
   /// 수주 번호 (AUTO: SO-YYYYMMDD-XXXX)
-  orderNo          String   @unique @map("order_no") @db.VarChar(30)
+  orderNo          String    @unique @map("order_no") @db.VarChar(30)
   /// 고객사 ID (erp_customers 참조)
-  customerId       String?  @map("customer_id") @db.Uuid
+  customerId       String?   @map("customer_id") @db.Uuid
   /// 고객사명 (비정규화)
-  customerName     String?  @map("customer_name") @db.VarChar(200)
+  customerName     String?   @map("customer_name") @db.VarChar(200)
   /// 상태: RECEIVED → MRP_CHECKED → CONFIRMED → IN_PRODUCTION → SHIPPED
-  status           String   @default("RECEIVED") @db.VarChar(20)
+  status           String    @default("RECEIVED") @db.VarChar(20)
   /// 수주일
-  orderDate        DateTime @default(now()) @map("order_date") @db.Date
+  orderDate        DateTime  @default(now()) @map("order_date") @db.Date
   /// 납기일
   deliveryDeadline DateTime? @map("delivery_deadline") @db.Date
   /// 품목 목록 [{product_sku, qty, unit_price}]
-  items            Json     @default("[]")
+  items            Json      @default("[]")
   /// 비고
-  notes            String?  @db.Text
+  notes            String?   @db.Text
 
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  mrpResults       MrpResult[]
-  stockChecks      StockCheckRequest[]
+  mrpResults            MrpResult[]
+  stockChecks           StockCheckRequest[]
+  productionSuggestions ProductionPlanSuggestion[]
 
   @@index([siteId, status])
   @@index([siteId, deliveryDeadline])
@@ -1799,23 +1794,23 @@ model SalesOrder {
 
 /// BOM — Bill of Materials (제품별 소요 자재 목록)
 model BomItem {
-  id             String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  siteId         String  @map("site_id") @db.Uuid
+  id           String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String  @map("site_id") @db.Uuid
   /// 완성품 SKU
-  productSku     String  @map("product_sku") @db.VarChar(100)
+  productSku   String  @map("product_sku") @db.VarChar(100)
   /// 소요 자재 SKU
-  materialSku    String  @map("material_sku") @db.VarChar(100)
+  materialSku  String  @map("material_sku") @db.VarChar(100)
   /// 완성품 1개당 필요 자재 수량
-  qtyPerUnit     Float   @map("qty_per_unit")
+  qtyPerUnit   Float   @map("qty_per_unit")
   /// 단위 (개, kg, L 등)
-  unit           String  @default("개") @db.VarChar(20)
+  unit         String  @default("개") @db.VarChar(20)
   /// 자재 조달 소요일
-  leadTimeDays   Int     @default(0) @map("lead_time_days")
+  leadTimeDays Int     @default(0) @map("lead_time_days")
   /// 비고
-  notes          String? @db.Text
+  notes        String? @db.Text
 
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([siteId, productSku, materialSku])
   @@index([productSku])
@@ -1825,32 +1820,32 @@ model BomItem {
 
 /// MRP 소요량 계산 결과
 model MrpResult {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  salesOrderId     String   @map("sales_order_id") @db.Uuid
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  salesOrderId     String    @map("sales_order_id") @db.Uuid
   /// 소요 자재 SKU
-  materialSku      String   @map("material_sku") @db.VarChar(100)
+  materialSku      String    @map("material_sku") @db.VarChar(100)
   /// 자재명
-  materialName     String?  @map("material_name") @db.VarChar(200)
+  materialName     String?   @map("material_name") @db.VarChar(200)
   /// 필요 수량
-  requiredQty      Float    @map("required_qty")
+  requiredQty      Float     @map("required_qty")
   /// 현재 재고
-  currentStock     Float    @map("current_stock")
+  currentStock     Float     @map("current_stock")
   /// 부족 수량 (required - current, 음수이면 0)
-  shortageQty      Float    @map("shortage_qty")
+  shortageQty      Float     @map("shortage_qty")
   /// 자동 발주 생성 여부
-  reorderTriggered Boolean  @default(false) @map("reorder_triggered")
+  reorderTriggered Boolean   @default(false) @map("reorder_triggered")
   /// 더블체크 담당자
-  checkedBy        String?  @map("checked_by") @db.VarChar(200)
+  checkedBy        String?   @map("checked_by") @db.VarChar(200)
   /// 더블체크 시각
   checkedAt        DateTime? @map("checked_at") @db.Timestamptz
   /// 상태: PENDING → CHECKED_OK → CHECKED_SHORTAGE → REORDERED
-  status           String   @default("PENDING") @db.VarChar(20)
+  status           String    @default("PENDING") @db.VarChar(20)
 
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  salesOrder       SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  stockChecks      StockCheckRequest[]
+  salesOrder  SalesOrder          @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  stockChecks StockCheckRequest[]
 
   @@index([salesOrderId])
   @@index([materialSku])
@@ -1860,29 +1855,29 @@ model MrpResult {
 
 /// 재고 더블체크 요청
 model StockCheckRequest {
-  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  mrpResultId    String    @map("mrp_result_id") @db.Uuid
-  salesOrderId   String    @map("sales_order_id") @db.Uuid
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  mrpResultId  String    @map("mrp_result_id") @db.Uuid
+  salesOrderId String    @map("sales_order_id") @db.Uuid
   /// 재고 담당자 user_id
-  assignedTo     String?   @map("assigned_to") @db.VarChar(200)
+  assignedTo   String?   @map("assigned_to") @db.VarChar(200)
   /// 요청 시각
-  requestedAt    DateTime  @default(now()) @map("requested_at") @db.Timestamptz
+  requestedAt  DateTime  @default(now()) @map("requested_at") @db.Timestamptz
   /// 응답 시각
-  respondedAt    DateTime? @map("responded_at") @db.Timestamptz
+  respondedAt  DateTime? @map("responded_at") @db.Timestamptz
   /// 담당자가 확인한 실물 수량
-  actualQty      Float?    @map("actual_qty")
+  actualQty    Float?    @map("actual_qty")
   /// 시스템 재고 vs 실물 차이
-  discrepancy    Float?
+  discrepancy  Float?
   /// 상태: PENDING → IN_PROGRESS → CONFIRMED → DISCREPANCY_FOUND
-  status         String    @default("PENDING") @db.VarChar(20)
+  status       String    @default("PENDING") @db.VarChar(20)
   /// 비고
-  notes          String?   @db.Text
+  notes        String?   @db.Text
 
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  mrpResult      MrpResult    @relation(fields: [mrpResultId], references: [id], onDelete: Cascade)
-  salesOrder     SalesOrder   @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  mrpResult  MrpResult  @relation(fields: [mrpResultId], references: [id], onDelete: Cascade)
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
 
   @@index([salesOrderId])
   @@index([mrpResultId])
@@ -1896,26 +1891,26 @@ model StockCheckRequest {
 
 /// 거래처 담당자 연락처
 model PartnerContact {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 거래처 ID
-  partnerId   String   @map("partner_id") @db.Uuid
+  partnerId  String   @map("partner_id") @db.Uuid
   /// 담당자명
-  name        String   @db.VarChar(100)
+  name       String   @db.VarChar(100)
   /// 부서
-  department  String?  @db.VarChar(100)
+  department String?  @db.VarChar(100)
   /// 직위
-  position    String?  @db.VarChar(100)
+  position   String?  @db.VarChar(100)
   /// 연락처
-  phone       String?  @db.VarChar(30)
+  phone      String?  @db.VarChar(30)
   /// 이메일
-  email       String?  @db.VarChar(255)
+  email      String?  @db.VarChar(255)
   /// 주 담당자 여부
-  isPrimary   Boolean  @default(false) @map("is_primary")
+  isPrimary  Boolean  @default(false) @map("is_primary")
   /// 메모
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@index([partnerId])
   @@map("partner_contacts")
@@ -1923,20 +1918,20 @@ model PartnerContact {
 
 /// 거래처 계좌 정보
 model PartnerBankAccount {
-  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 거래처 ID
-  partnerId      String   @map("partner_id") @db.Uuid
+  partnerId     String   @map("partner_id") @db.Uuid
   /// 은행명
-  bankName       String   @map("bank_name") @db.VarChar(100)
+  bankName      String   @map("bank_name") @db.VarChar(100)
   /// 계좌번호
-  accountNo      String   @map("account_no") @db.VarChar(50)
+  accountNo     String   @map("account_no") @db.VarChar(50)
   /// 예금주
-  accountHolder  String   @map("account_holder") @db.VarChar(100)
+  accountHolder String   @map("account_holder") @db.VarChar(100)
   /// 주 계좌 여부
-  isPrimary      Boolean  @default(false) @map("is_primary")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  partner        Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@index([partnerId])
   @@map("partner_bank_accounts")
@@ -1944,19 +1939,19 @@ model PartnerBankAccount {
 
 /// 거래처 첨부파일 (사업자등록증, 통장사본, 계약서 등)
 model PartnerAttachment {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 거래처 ID
-  partnerId   String   @map("partner_id") @db.Uuid
+  partnerId  String   @map("partner_id") @db.Uuid
   /// 파일 유형 (사업자등록증/통장사본/계약서/기타)
-  fileType    String   @map("file_type") @db.VarChar(30)
+  fileType   String   @map("file_type") @db.VarChar(30)
   /// 파일명
-  fileName    String   @map("file_name") @db.VarChar(500)
+  fileName   String   @map("file_name") @db.VarChar(500)
   /// 파일 URL
-  fileUrl     String   @map("file_url") @db.Text
+  fileUrl    String   @map("file_url") @db.Text
   /// 업로드 일시
-  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+  uploadedAt DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
 
-  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@index([partnerId])
   @@map("partner_attachments")
@@ -1989,7 +1984,7 @@ model PartnerTransactionSummary {
   lastTransactionAt DateTime? @map("last_transaction_at") @db.Timestamptz
   updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  partner           Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@unique([partnerId, year, month])
   @@index([partnerId])
@@ -2002,31 +1997,343 @@ model PartnerTransactionSummary {
 
 /// 배송 기사
 model DeliveryDriver {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   /// 사이트 ID
-  siteId          String   @map("site_id") @db.Uuid
+  siteId         String   @map("site_id") @db.Uuid
   /// 기사명
-  name            String   @db.VarChar(100)
+  name           String   @db.VarChar(100)
   /// 연락처
-  phone           String   @db.VarChar(30)
+  phone          String   @db.VarChar(30)
   /// 운송사
-  carrierCompany  String?  @map("carrier_company") @db.VarChar(100)
+  carrierCompany String?  @map("carrier_company") @db.VarChar(100)
   /// 차량 번호
-  vehicleNo       String?  @map("vehicle_no") @db.VarChar(30)
+  vehicleNo      String?  @map("vehicle_no") @db.VarChar(30)
   /// 차량 종류
-  vehicleType     String?  @map("vehicle_type") @db.VarChar(30)
+  vehicleType    String?  @map("vehicle_type") @db.VarChar(30)
   /// 전담 기사 여부
-  isRegular       Boolean  @default(false) @map("is_regular")
+  isRegular      Boolean  @default(false) @map("is_regular")
   /// 메모
-  memo            String?  @db.Text
+  memo           String?  @db.Text
   /// 활성 상태
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  inboundOrders   InboundOrder[]
-  outboundOrders  OutboundOrder[]
+  inboundOrders  InboundOrder[]
+  outboundOrders OutboundOrder[]
 
   @@index([siteId])
   @@map("delivery_drivers")
+}
+
+// ============================================================
+// Production / MES — 생산 관리 (Phase 4)
+// ============================================================
+
+/// 작업장/공정
+model WorkCenter {
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String  @map("site_id") @db.Uuid
+  /// 작업장 코드 (WC-001)
+  code            String  @db.VarChar(30)
+  /// 작업장명
+  name            String  @db.VarChar(200)
+  /// 타입: MACHINE | MANUAL | ASSEMBLY | QC
+  type            String  @db.VarChar(20)
+  /// 일 생산 가능 수량
+  capacityPerDay  Int     @default(0) @map("capacity_per_day")
+  /// 상태: RUNNING | IDLE | MAINTENANCE | BREAKDOWN
+  status          String  @default("IDLE") @db.VarChar(20)
+  /// 창고 내 위치 (spatial_objects 참조)
+  spatialObjectId String? @map("spatial_object_id") @db.Uuid
+  /// 담당자
+  responsibleUser String? @map("responsible_user") @db.VarChar(200)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  productionOrders ProductionOrder[]
+  processes        ProductionProcess[]
+  maintenances     EquipmentMaintenance[]
+  kpis             ProductionKpi[]
+  planSuggestions  ProductionPlanSuggestion[]
+
+  @@unique([siteId, code])
+  @@index([siteId, status])
+  @@map("work_centers")
+}
+
+/// 생산 지시서
+model ProductionOrder {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId          String    @map("site_id") @db.Uuid
+  /// 지시서 번호 (AUTO: WO-YYYYMMDD-XXXX)
+  orderNo         String    @unique @map("order_no") @db.VarChar(30)
+  /// 수주 연동 (nullable — 자체 생산 가능)
+  salesOrderId    String?   @map("sales_order_id") @db.Uuid
+  /// 완성품 SKU
+  productSku      String    @map("product_sku") @db.VarChar(100)
+  /// 완성품명 (비정규화)
+  productName     String?   @map("product_name") @db.VarChar(200)
+  /// 계획 수량
+  plannedQty      Int       @map("planned_qty")
+  /// 실제 생산 수량
+  actualQty       Int       @default(0) @map("actual_qty")
+  /// 불량 수량
+  defectQty       Int       @default(0) @map("defect_qty")
+  /// 상태: PLANNED → RELEASED → IN_PROGRESS → PAUSED → COMPLETED → CANCELLED
+  status          String    @default("PLANNED") @db.VarChar(20)
+  /// 우선순위: URGENT | HIGH | NORMAL | LOW
+  priority        String    @default("NORMAL") @db.VarChar(10)
+  /// 계획 시작일시
+  plannedStartAt  DateTime? @map("planned_start_at") @db.Timestamptz
+  /// 계획 종료일시
+  plannedEndAt    DateTime? @map("planned_end_at") @db.Timestamptz
+  /// 실제 시작일시
+  actualStartAt   DateTime? @map("actual_start_at") @db.Timestamptz
+  /// 실제 종료일시
+  actualEndAt     DateTime? @map("actual_end_at") @db.Timestamptz
+  /// 담당 작업장
+  workCenterId    String?   @map("work_center_id") @db.Uuid
+  /// 작업자 목록 (JSON 배열)
+  assignedWorkers Json      @default("[]") @map("assigned_workers")
+  /// 비고
+  notes           String?   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  workCenter      WorkCenter?                @relation(fields: [workCenterId], references: [id])
+  processes       ProductionProcess[]
+  logs            ProductionLog[]
+  materials       ProductionMaterial[]
+  planSuggestions ProductionPlanSuggestion[]
+
+  @@index([siteId, status])
+  @@index([siteId, plannedStartAt])
+  @@index([workCenterId])
+  @@index([salesOrderId])
+  @@map("production_orders")
+}
+
+/// 공정 단계 (생산 지시서별)
+model ProductionProcess {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productionOrderId String    @map("production_order_id") @db.Uuid
+  /// 공정 순서 (1, 2, 3...)
+  stepNo            Int       @map("step_no")
+  /// 공정명 (프레스 성형 / 용접 / 도장 / 조립 / 검사)
+  processName       String    @map("process_name") @db.VarChar(200)
+  /// 작업장
+  workCenterId      String?   @map("work_center_id") @db.Uuid
+  /// 계획 소요 시간 (분)
+  plannedDuration   Int?      @map("planned_duration")
+  /// 실제 소요 시간 (분)
+  actualDuration    Int?      @map("actual_duration")
+  /// 상태: PENDING → IN_PROGRESS → DONE → SKIPPED
+  status            String    @default("PENDING") @db.VarChar(20)
+  /// 담당 작업자
+  workerId          String?   @map("worker_id") @db.VarChar(200)
+  /// 시작 시각
+  startedAt         DateTime? @map("started_at") @db.Timestamptz
+  /// 종료 시각
+  endedAt           DateTime? @map("ended_at") @db.Timestamptz
+  /// 비고
+  notes             String?   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  workCenter      WorkCenter?     @relation(fields: [workCenterId], references: [id])
+  logs            ProductionLog[]
+
+  @@index([productionOrderId, stepNo])
+  @@map("production_processes")
+}
+
+/// 생산 실적 기록 (실시간)
+model ProductionLog {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productionOrderId String   @map("production_order_id") @db.Uuid
+  /// 공정 ID (nullable — 전체 WO 레벨 로그도 가능)
+  processId         String?  @map("process_id") @db.Uuid
+  /// 로그 타입: START | PROGRESS | PAUSE | RESUME | COMPLETE | DEFECT | NOTE
+  logType           String   @map("log_type") @db.VarChar(20)
+  /// 이 로그 시점까지 생산량
+  qtyProduced       Int?     @map("qty_produced")
+  /// 이 로그 시점 불량 수량
+  qtyDefect         Int?     @map("qty_defect")
+  /// 불량 원인 코드
+  defectReason      String?  @map("defect_reason") @db.VarChar(50)
+  /// 작업자
+  workerId          String?  @map("worker_id") @db.VarChar(200)
+  /// 기록 시각
+  loggedAt          DateTime @default(now()) @map("logged_at") @db.Timestamptz
+  /// 비고
+  notes             String?  @db.Text
+
+  productionOrder ProductionOrder    @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  process         ProductionProcess? @relation(fields: [processId], references: [id])
+
+  @@index([productionOrderId, loggedAt])
+  @@index([logType])
+  @@map("production_logs")
+}
+
+/// 생산 자재 불출
+model ProductionMaterial {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productionOrderId String    @map("production_order_id") @db.Uuid
+  /// 자재 SKU
+  materialSku       String    @map("material_sku") @db.VarChar(100)
+  /// 자재명 (비정규화)
+  materialName      String?   @map("material_name") @db.VarChar(200)
+  /// BOM 기준 필요량
+  plannedQty        Float     @map("planned_qty")
+  /// 실제 불출량
+  issuedQty         Float     @default(0) @map("issued_qty")
+  /// 반납량 (잉여)
+  returnedQty       Float     @default(0) @map("returned_qty")
+  /// 불출 시각
+  issuedAt          DateTime? @map("issued_at") @db.Timestamptz
+  /// 불출 담당자
+  issuedBy          String?   @map("issued_by") @db.VarChar(200)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+
+  @@index([productionOrderId])
+  @@index([materialSku])
+  @@map("production_materials")
+}
+
+/// 불량 코드 마스터
+model DefectCode {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId   String @map("site_id") @db.Uuid
+  /// 불량 코드 (DIM, SUR, WEL, ASM, MAT, ETC)
+  code     String @db.VarChar(20)
+  /// 불량명
+  name     String @db.VarChar(100)
+  /// 카테고리 (치수불량 / 표면결함 / 용접불량 / 조립오류 / 재료불량 / 기타)
+  category String @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([siteId, code])
+  @@map("defect_codes")
+}
+
+/// 설비 유지보수
+model EquipmentMaintenance {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workCenterId    String    @map("work_center_id") @db.Uuid
+  /// 유형: SCHEDULED | BREAKDOWN | PREVENTIVE
+  type            String    @db.VarChar(20)
+  /// 상태: PENDING → IN_PROGRESS → COMPLETED
+  status          String    @default("PENDING") @db.VarChar(20)
+  /// 예정일
+  scheduledAt     DateTime? @map("scheduled_at") @db.Timestamptz
+  /// 완료일
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz
+  /// 가동 중단 시간 (분)
+  downtimeMinutes Int       @default(0) @map("downtime_minutes")
+  /// 수리 기사
+  technician      String?   @db.VarChar(200)
+  /// 비용
+  cost            Float?
+  /// 비고
+  notes           String?   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
+
+  @@index([workCenterId, status])
+  @@index([scheduledAt])
+  @@map("equipment_maintenances")
+}
+
+/// 생산 KPI 일별 집계
+model ProductionKpi {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 집계 날짜
+  date            DateTime @db.Date
+  /// 작업장
+  workCenterId    String   @map("work_center_id") @db.Uuid
+  /// 계획 수량
+  plannedQty      Int      @default(0) @map("planned_qty")
+  /// 실제 생산 수량
+  actualQty       Int      @default(0) @map("actual_qty")
+  /// 불량 수량
+  defectQty       Int      @default(0) @map("defect_qty")
+  /// 달성률 (%)
+  achievementRate Float    @default(0) @map("achievement_rate")
+  /// 불량률 (%)
+  defectRate      Float    @default(0) @map("defect_rate")
+  /// OEE (가동률 × 성능률 × 품질률)
+  oeeScore        Float    @default(0) @map("oee_score")
+  /// 가동 중단 시간 (분)
+  downtimeMinutes Int      @default(0) @map("downtime_minutes")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@unique([date, workCenterId])
+  @@index([workCenterId, date])
+  @@map("production_kpis")
+}
+
+// ── 생산 계획 추천 (수주 → 생산 자동 연동) ──────────────
+/// 확정된 수주(Sales Order)로부터 생산 계획을 자동 추천
+model ProductionPlanSuggestion {
+  id                      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 사이트
+  siteId                  String    @map("site_id") @db.Uuid
+  /// 수주 ID
+  salesOrderId            String    @map("sales_order_id") @db.Uuid
+  /// 수주 번호
+  salesOrderNo            String    @map("sales_order_no") @db.VarChar(50)
+  /// 제품 SKU
+  productSku              String    @map("product_sku") @db.VarChar(100)
+  /// 제품명
+  productName             String?   @map("product_name") @db.VarChar(200)
+  /// 필요 수량
+  requiredQty             Int       @map("required_qty")
+  /// 납기 기한
+  deliveryDeadline        DateTime? @map("delivery_deadline") @db.Timestamptz
+  /// AI 추천 생산 시작일
+  recommendedStartAt      DateTime? @map("recommended_start_at") @db.Timestamptz
+  /// AI 추천 생산 종료일
+  recommendedEndAt        DateTime? @map("recommended_end_at") @db.Timestamptz
+  /// 추천 작업장 ID
+  recommendedWorkCenterId String?   @map("recommended_work_center_id") @db.Uuid
+  /// 긴급도 (CRITICAL | HIGH | NORMAL)
+  urgencyLevel            String    @default("NORMAL") @map("urgency_level") @db.VarChar(20)
+  /// 실행 가능성 (FEASIBLE | MATERIAL_SHORT | CAPACITY_FULL)
+  feasibility             String    @default("FEASIBLE") @db.VarChar(20)
+  /// 추천 사유
+  reason                  String?   @db.Text
+  /// 상태 (PENDING | ACCEPTED | REJECTED | SCHEDULED)
+  status                  String    @default("PENDING") @db.VarChar(20)
+  /// 수락 후 생성된 생산 지시서 ID
+  productionOrderId       String?   @map("production_order_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  site            Site             @relation(fields: [siteId], references: [id])
+  salesOrder      SalesOrder       @relation(fields: [salesOrderId], references: [id])
+  workCenter      WorkCenter?      @relation(fields: [recommendedWorkCenterId], references: [id])
+  /// 수락 후 연결된 생산 지시서
+  productionOrder ProductionOrder? @relation(fields: [productionOrderId], references: [id])
+
+  @@index([siteId, status])
+  @@index([salesOrderId])
+  @@map("production_plan_suggestions")
 }

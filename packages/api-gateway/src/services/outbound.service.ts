@@ -77,7 +77,7 @@ export async function createOutboundOrder(input: CreateOutboundInput) {
       hsCode: input.hsCode ?? null,
       items: {
         create: input.items.map((item) => ({
-          skuCode: item.skuCode,
+          sku: item.skuCode,
           itemName: item.itemName ?? null,
           qty: item.qty,
           unitPrice: item.unitPrice ?? 0,
@@ -175,7 +175,7 @@ export async function getManifestData(id: string) {
 
   // 품목별 금액 계산
   const itemsWithAmount = order.items.map((item) => ({
-    skuCode: item.skuCode,
+    skuCode: item.sku,
     itemName: item.itemName,
     qty: item.qty,
     unitPrice: item.unitPrice,

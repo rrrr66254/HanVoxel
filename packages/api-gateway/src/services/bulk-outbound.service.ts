@@ -263,7 +263,7 @@ export async function bulkCreateOrders(
               notes: row.carrier ? `배송사: ${row.carrier}` : null,
               items: {
                 create: [{
-                  skuCode: row.skuCode ?? '',
+                  sku: row.skuCode ?? '',
                   itemName: row.productName ?? null,
                   qty: row.qty ?? 0,
                   unitPrice: row.unitPrice ?? 0,

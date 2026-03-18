@@ -43,7 +43,7 @@ export async function createInboundOrder(input: CreateInboundInput) {
       status: 'ORDERED',
       items: {
         create: input.items.map((item) => ({
-          skuCode: item.skuCode,
+          sku: item.skuCode,
           itemName: item.itemName ?? null,
           expectedQty: item.expectedQty,
           unitPrice: item.unitPrice ?? 0,
@@ -140,7 +140,7 @@ export async function arriveInboundOrder(
   const inspection = await prisma.qcInspection.create({
     data: {
       siteId: order.siteId,
-      supplierId: order.vendorId ?? undefined,
+      partnerId: order.vendorId ?? undefined,
       type: 'INBOUND',
       status: 'PENDING',
       totalQty: order.items.reduce((sum, item) => sum + (item.actualQty ?? item.expectedQty), 0),
@@ -161,6 +161,52 @@ export async function arriveInboundOrder(
   });
 
   return { order, inspection };
+}
+
+// ── 도착 확인 취소 ───────────────────────────────
+
+export async function cancelArrivalInboundOrder(id: string) {
+  const order = await prisma.inboundOrder.findUnique({
+    where: { id },
+    include: { items: true },
+  });
+
+  if (!order) throw new Error('입고 주문을 찾을 수 없습니다');
+
+  if (!['ARRIVED', 'QC_PENDING'].includes(order.status)) {
+    throw new Error('도착 확인 취소는 도착/QC대기 상태에서만 가능합니다');
+  }
+
+  // QC 검수 삭제 (자동 생성된 것)
+  const qcIds = order.items.map((i) => i.qcInspectionId).filter(Boolean) as string[];
+  if (qcIds.length > 0) {
+    await prisma.qcInspection.deleteMany({
+      where: { id: { in: qcIds } },
+    });
+  }
+
+  // 아이템 실제수량 및 QC ID 초기화
+  await prisma.inboundItem.updateMany({
+    where: { inboundOrderId: id },
+    data: { actualQty: null, qcInspectionId: null },
+  });
+
+  // 주문 상태 복원
+  await prisma.inboundOrder.update({
+    where: { id },
+    data: {
+      status: 'ORDERED',
+      actualDate: null,
+    },
+  });
+
+  // 달력 상태 복원 (파랑 — 예정)
+  await prisma.deliveryCalendar.updateMany({
+    where: { inboundOrderId: id },
+    data: { status: 'SCHEDULED', colorCode: '#3B82F6' },
+  });
+
+  return { success: true, orderId: id };
 }
 
 // ── QC 통과 처리 ──────────────────────────────────
