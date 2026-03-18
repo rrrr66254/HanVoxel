@@ -71,7 +71,7 @@ export async function createInspection(req: Request, res: Response) {
   }
 }
 
-// GET /api/v1/qc/inspections?siteId=&type=&supplierId=&from=&to=
+// GET /api/v1/qc/inspections?siteId=&type=&partnerId=&from=&to=
 export async function listInspections(req: Request, res: Response) {
   try {
     const siteId = req.query.siteId as string;
@@ -80,13 +80,13 @@ export async function listInspections(req: Request, res: Response) {
       return;
     }
     const type = req.query.type as string | undefined;
-    const supplierId = req.query.supplierId as string | undefined;
+    const partnerId = req.query.partnerId as string | undefined;
     const from = req.query.from as string | undefined;
     const to = req.query.to as string | undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
 
-    const { inspections, total } = await qcService.getInspections(siteId, { type, supplierId, from, to, limit, offset });
+    const { inspections, total } = await qcService.getInspections(siteId, { type, partnerId, from, to, limit, offset });
     res.json(successResponse(inspections, { total }));
   } catch (err) {
     console.error('검수 기록 조회 실패:', err);

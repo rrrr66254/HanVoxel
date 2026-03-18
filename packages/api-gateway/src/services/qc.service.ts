@@ -1,9 +1,9 @@
 import prisma from './prisma';
 import { Prisma } from '@prisma/client';
 
-// ── 공급업체 ────────────────────────────────────────────
+// ── 공급업체 (Partner 통합) ──────────────────────────────
 
-interface UpsertSupplierInput {
+interface UpsertPartnerQcInput {
   companyId: string;
   name: string;
   code: string;
@@ -11,25 +11,37 @@ interface UpsertSupplierInput {
   email?: string;
 }
 
-export async function upsertSupplier(data: UpsertSupplierInput) {
-  return prisma.supplier.upsert({
+export async function upsertSupplier(data: UpsertPartnerQcInput) {
+  // partners 테이블에서 upsert (type=SUPPLIER 기본)
+  return prisma.partner.upsert({
     where: { companyId_code: { companyId: data.companyId, code: data.code } },
-    create: data,
-    update: { name: data.name, contact: data.contact, email: data.email },
+    create: {
+      companyId: data.companyId,
+      name: data.name,
+      code: data.code,
+      type: 'SUPPLIER',
+      contactName: data.contact,
+      email: data.email,
+    },
+    update: {
+      name: data.name,
+      contactName: data.contact,
+      email: data.email,
+    },
   });
 }
 
 export async function getSuppliers(companyId: string) {
-  return prisma.supplier.findMany({
-    where: { companyId, isActive: true },
-    orderBy: { qualityScore: 'desc' },
+  return prisma.partner.findMany({
+    where: { companyId, isActive: true, type: { in: ['SUPPLIER', 'BOTH'] } },
+    orderBy: { supplierQualityScore: 'desc' },
   });
 }
 
 export async function updateSupplierScore(id: string, qualityScore: number, grade: string) {
-  return prisma.supplier.update({
+  return prisma.partner.update({
     where: { id },
-    data: { qualityScore, grade },
+    data: { supplierQualityScore: qualityScore, supplierGrade: grade },
   });
 }
 
@@ -37,7 +49,7 @@ export async function updateSupplierScore(id: string, qualityScore: number, grad
 
 interface CreateInspectionInput {
   siteId: string;
-  supplierId?: string;
+  partnerId?: string;
   type: string;  // INBOUND | OUTBOUND
   totalQty: number;
   passedQty: number;
@@ -66,7 +78,7 @@ export async function createInspection(data: CreateInspectionInput) {
   return prisma.qcInspection.create({
     data: {
       siteId: data.siteId,
-      supplierId: data.supplierId,
+      partnerId: data.partnerId,
       type: data.type,
       status: 'COMPLETED',
       totalQty: data.totalQty,
@@ -82,17 +94,17 @@ export async function createInspection(data: CreateInspectionInput) {
         ? { create: data.defectItems }
         : undefined,
     },
-    include: { items: true, supplier: true },
+    include: { items: true, partner: true },
   });
 }
 
 export async function getInspections(
   siteId: string,
-  options?: { type?: string; supplierId?: string; from?: string; to?: string; limit?: number; offset?: number }
+  options?: { type?: string; partnerId?: string; from?: string; to?: string; limit?: number; offset?: number }
 ) {
   const where: Prisma.QcInspectionWhereInput = { siteId };
   if (options?.type) where.type = options.type;
-  if (options?.supplierId) where.supplierId = options.supplierId;
+  if (options?.partnerId) where.partnerId = options.partnerId;
   if (options?.from || options?.to) {
     where.inspectedAt = {};
     if (options.from) where.inspectedAt.gte = new Date(options.from);
@@ -102,7 +114,7 @@ export async function getInspections(
   const [inspections, total] = await Promise.all([
     prisma.qcInspection.findMany({
       where,
-      include: { items: true, supplier: true },
+      include: { items: true, partner: true },
       orderBy: { createdAt: 'desc' },
       take: options?.limit ?? 50,
       skip: options?.offset ?? 0,
@@ -115,19 +127,19 @@ export async function getInspections(
 export async function getInspectionById(id: string) {
   return prisma.qcInspection.findUnique({
     where: { id },
-    include: { items: true, supplier: true },
+    include: { items: true, partner: true },
   });
 }
 
 // ── 공급업체별 품질 스코어카드 ──────────────────────────
 
-export async function getSupplierScorecard(supplierId: string, months = 6) {
+export async function getSupplierScorecard(partnerId: string, months = 6) {
   const since = new Date();
   since.setMonth(since.getMonth() - months);
 
   const inspections = await prisma.qcInspection.findMany({
     where: {
-      supplierId,
+      partnerId,
       inspectedAt: { gte: since },
       status: 'COMPLETED',
     },
@@ -135,7 +147,7 @@ export async function getSupplierScorecard(supplierId: string, months = 6) {
   });
 
   if (inspections.length === 0) {
-    return { supplierId, months, inspections: [], monthlyData: [], overallDefectRate: 0, grade: 'B', qualityScore: 80 };
+    return { partnerId, months, inspections: [], monthlyData: [], overallDefectRate: 0, grade: 'B', qualityScore: 80 };
   }
 
   // 월별 집계
@@ -181,7 +193,7 @@ export async function getSupplierScorecard(supplierId: string, months = 6) {
   }
   qualityScore = Math.round(qualityScore * 10) / 10;
 
-  return { supplierId, months, inspections, monthlyData, overallDefectRate, grade, qualityScore };
+  return { partnerId, months, inspections, monthlyData, overallDefectRate, grade, qualityScore };
 }
 
 // ── 격리 재고 조회 ──────────────────────────────────────
@@ -193,7 +205,7 @@ export async function getQuarantineItems(siteId: string) {
       quarantineLocationId: { not: null },
       disposition: 'QUARANTINED',
     },
-    include: { inspection: { include: { supplier: true } } },
+    include: { inspection: { include: { partner: true } } },
     orderBy: { createdAt: 'desc' },
   });
 }
