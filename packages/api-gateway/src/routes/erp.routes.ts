@@ -17,6 +17,19 @@ router.get('/erp/partners/:id/history', erpController.getPartnerHistory);
 router.get('/erp/partners/:id/summary', erpController.getPartnerTransactionSummary);
 router.post('/erp/partners/:id/contacts', erpController.createPartnerContact);
 router.get('/erp/partners/:id/contacts', erpController.getPartnerContacts);
+router.patch('/erp/partners/:id/contacts/:contactId', erpController.updatePartnerContact);
+router.delete('/erp/partners/:id/contacts/:contactId', erpController.deletePartnerContact);
+
+// ── 계좌 ───────────────────────────────────────────────
+router.post('/erp/partners/:id/bank-accounts', erpController.createBankAccount);
+router.get('/erp/partners/:id/bank-accounts', erpController.getBankAccounts);
+router.patch('/erp/partners/:id/bank-accounts/:accountId', erpController.updateBankAccount);
+router.delete('/erp/partners/:id/bank-accounts/:accountId', erpController.deleteBankAccount);
+
+// ── 첨부파일 ──────────────────────────────────────────
+router.post('/erp/partners/:id/attachments', erpController.createAttachment);
+router.get('/erp/partners/:id/attachments', erpController.getAttachments);
+router.delete('/erp/partners/:id/attachments/:attachmentId', erpController.deleteAttachment);
 
 // ── 전표 ───────────────────────────────────────────────
 router.post('/erp/vouchers', erpController.createVoucher);

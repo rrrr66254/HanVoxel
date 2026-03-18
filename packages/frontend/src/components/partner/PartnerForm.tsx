@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Save, Plus, Trash2, Star, Search,
-  Building2, Phone, MapPin, CreditCard, Truck, Users, Tag,
+  Building2, Phone, MapPin, CreditCard, Truck, Users, Tag, FileText,
 } from 'lucide-react';
 
 // ── 타입 정의 ──────────────────────────────────────────
@@ -22,6 +22,22 @@ interface ContactPerson {
   phone: string;
   email: string;
   isPrimary: boolean;
+}
+
+// 계좌 정보
+interface BankAccountEntry {
+  id: string;
+  bankName: string;
+  accountNo: string;
+  accountHolder: string;
+  isPrimary: boolean;
+}
+
+// 첨부파일 정보
+interface AttachmentEntry {
+  id: string;
+  fileType: string; // 사업자등록증 / 통장사본 / 계약서 / 기타
+  fileName: string;
 }
 
 interface PartnerFormState {
@@ -57,6 +73,10 @@ interface PartnerFormState {
   qualityGrade: QualityGrade;
   // 담당자 목록
   contacts: ContactPerson[];
+  // 계좌 정보
+  bankAccounts: BankAccountEntry[];
+  // 첨부파일
+  attachments: AttachmentEntry[];
   // 메모/태그
   memo: string;
   tags: string;
@@ -100,6 +120,14 @@ const MOCK_PARTNERS: Record<string, PartnerFormState> = {
       { id: 'c1', department: '영업팀', name: '이담당', phone: '010-1111-2222', email: 'lee@hanjin.co.kr', isPrimary: true },
       { id: 'c2', department: '품질팀', name: '박품질', phone: '010-3333-4444', email: 'park@hanjin.co.kr', isPrimary: false },
     ],
+    bankAccounts: [
+      { id: 'ba1', bankName: '국민', accountNo: '123-456-789012', accountHolder: '(주)한진부품', isPrimary: true },
+      { id: 'ba2', bankName: '신한', accountNo: '987-654-321098', accountHolder: '김공급', isPrimary: false },
+    ],
+    attachments: [
+      { id: 'att1', fileType: '사업자등록증', fileName: '한진부품_사업자등록증.pdf' },
+      { id: 'att2', fileType: '통장사본', fileName: '한진부품_국민은행_통장사본.pdf' },
+    ],
     memo: '주요 전자부품 공급업체. 월 2회 정기 입고.',
     tags: '전자부품,주요거래처,서울',
   },
@@ -132,6 +160,8 @@ const MOCK_PARTNERS: Record<string, PartnerFormState> = {
     contacts: [
       { id: 'c3', department: '물류팀', name: '최매니저', phone: '010-5555-6666', email: 'choi@cjlogistics.com', isPrimary: true },
     ],
+    bankAccounts: [],
+    attachments: [],
     memo: '',
     tags: '물류,용인',
   },
@@ -165,6 +195,8 @@ const INITIAL_STATE: PartnerFormState = {
   minOrderQty: '',
   qualityGrade: 'A',
   contacts: [],
+  bankAccounts: [],
+  attachments: [],
   memo: '',
   tags: '',
 };
@@ -342,6 +374,61 @@ export function PartnerForm({ partnerId, onBack, onSave }: PartnerFormProps) {
       filtered[0].isPrimary = true;
     }
     updateField('contacts', filtered);
+  };
+
+  // 계좌 추가
+  const addBankAccount = () => {
+    const newAccount: BankAccountEntry = {
+      id: `ba-${Date.now()}`,
+      bankName: '국민',
+      accountNo: '',
+      accountHolder: '',
+      isPrimary: form.bankAccounts.length === 0,
+    };
+    updateField('bankAccounts', [...form.bankAccounts, newAccount]);
+  };
+
+  // 계좌 수정
+  const updateBankAccount = (id: string, field: keyof BankAccountEntry, value: string | boolean) => {
+    const updated = form.bankAccounts.map((acc) => {
+      if (acc.id !== id) {
+        // 대표 지정 시 다른 계좌 해제
+        if (field === 'isPrimary' && value === true) {
+          return { ...acc, isPrimary: false };
+        }
+        return acc;
+      }
+      return { ...acc, [field]: value };
+    });
+    updateField('bankAccounts', updated);
+  };
+
+  // 계좌 삭제
+  const removeBankAccount = (id: string) => {
+    const filtered = form.bankAccounts.filter((acc) => acc.id !== id);
+    // 삭제 후 대표가 없으면 첫 번째를 대표로
+    if (filtered.length > 0 && !filtered.some((acc) => acc.isPrimary)) {
+      filtered[0].isPrimary = true;
+    }
+    updateField('bankAccounts', filtered);
+  };
+
+  // 첨부파일 추가 (플레이스홀더)
+  const addAttachment = () => {
+    alert('파일 업로드 기능은 준비 중입니다.');
+  };
+
+  // 첨부파일 삭제
+  const removeAttachment = (id: string) => {
+    updateField('attachments', form.attachments.filter((att) => att.id !== id));
+  };
+
+  // 첨부파일 유형 변경
+  const updateAttachmentType = (id: string, fileType: string) => {
+    const updated = form.attachments.map((att) =>
+      att.id === id ? { ...att, fileType } : att
+    );
+    updateField('attachments', updated);
   };
 
   // 저장 핸들러
@@ -854,7 +941,179 @@ export function PartnerForm({ partnerId, onBack, onSave }: PartnerFormProps) {
         )}
       </div>
 
-      {/* 섹션 7: 메모/태그 */}
+      {/* 섹션 7: 계좌 등록 */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={sectionTitleStyle}>
+            <CreditCard size={18} color="var(--accent-blue)" />
+            계좌 등록
+          </div>
+          <button onClick={addBankAccount} style={buttonStyle('secondary')}>
+            <Plus size={14} />
+            계좌 추가
+          </button>
+        </div>
+
+        {form.bankAccounts.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '32px 0',
+              color: 'var(--text-muted)',
+              fontSize: 14,
+            }}
+          >
+            등록된 계좌가 없습니다
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {form.bankAccounts.map((account) => (
+              <div
+                key={account.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: `1px solid ${account.isPrimary ? 'var(--accent-blue)' : 'var(--border-muted)'}`,
+                  background: account.isPrimary ? 'rgba(45,125,210,0.06)' : 'transparent',
+                }}
+              >
+                {/* 은행 선택 */}
+                <select
+                  value={account.bankName}
+                  onChange={(e) => updateBankAccount(account.id, 'bankName', e.target.value)}
+                  style={{ ...selectStyle, flex: 0.8, minWidth: 0 }}
+                >
+                  <option value="국민">국민</option>
+                  <option value="신한">신한</option>
+                  <option value="우리">우리</option>
+                  <option value="하나">하나</option>
+                  <option value="기업">기업</option>
+                  <option value="농협">농협</option>
+                  <option value="SC">SC</option>
+                  <option value="기타">기타</option>
+                </select>
+                {/* 계좌번호 */}
+                <input
+                  type="text"
+                  value={account.accountNo}
+                  onChange={(e) => updateBankAccount(account.id, 'accountNo', e.target.value)}
+                  placeholder="계좌번호"
+                  style={{ ...inputStyle, flex: 1.5, minWidth: 0 }}
+                />
+                {/* 예금주 */}
+                <input
+                  type="text"
+                  value={account.accountHolder}
+                  onChange={(e) => updateBankAccount(account.id, 'accountHolder', e.target.value)}
+                  placeholder="예금주"
+                  style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+                />
+                {/* 대표 계좌 토글 */}
+                <button
+                  onClick={() => updateBankAccount(account.id, 'isPrimary', !account.isPrimary)}
+                  title={account.isPrimary ? '대표 계좌' : '대표 지정'}
+                  style={{
+                    ...buttonStyle('ghost'),
+                    padding: 6,
+                    color: account.isPrimary ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  }}
+                >
+                  <Star size={16} fill={account.isPrimary ? 'var(--accent-blue)' : 'none'} />
+                </button>
+                {/* 삭제 */}
+                <button
+                  onClick={() => removeBankAccount(account.id)}
+                  title="계좌 삭제"
+                  style={buttonStyle('danger')}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 섹션 8: 첨부파일 */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={sectionTitleStyle}>
+            <FileText size={18} color="var(--accent-blue)" />
+            첨부파일
+          </div>
+          <button onClick={addAttachment} style={buttonStyle('secondary')}>
+            <Plus size={14} />
+            파일 추가
+          </button>
+        </div>
+
+        {form.attachments.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '32px 0',
+              color: 'var(--text-muted)',
+              fontSize: 14,
+            }}
+          >
+            첨부된 파일이 없습니다
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {form.attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: '1px solid var(--border-muted)',
+                }}
+              >
+                {/* 파일 유형 */}
+                <select
+                  value={attachment.fileType}
+                  onChange={(e) => updateAttachmentType(attachment.id, e.target.value)}
+                  style={{ ...selectStyle, flex: 0.8, minWidth: 0 }}
+                >
+                  <option value="사업자등록증">사업자등록증</option>
+                  <option value="통장사본">통장사본</option>
+                  <option value="계약서">계약서</option>
+                  <option value="기타">기타</option>
+                </select>
+                {/* 파일명 */}
+                <span
+                  style={{
+                    flex: 2,
+                    fontSize: 14,
+                    color: 'var(--text-primary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {attachment.fileName}
+                </span>
+                {/* 삭제 */}
+                <button
+                  onClick={() => removeAttachment(attachment.id)}
+                  title="파일 삭제"
+                  style={buttonStyle('danger')}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 섹션 9: 메모/태그 */}
       <div style={sectionStyle}>
         <div style={sectionTitleStyle}>
           <Tag size={18} color="var(--accent-blue)" />

@@ -26,6 +26,8 @@ import {
 type PartnerType = 'SUPPLIER' | 'CUSTOMER' | 'BOTH';
 type TabKey = 'ALL' | 'SUPPLIER' | 'CUSTOMER';
 type ViewMode = 'card' | 'table';
+type ActiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+type GradeFilter = 'ALL' | 'A' | 'B' | 'C' | 'D';
 
 interface Partner {
   id: string;
@@ -44,6 +46,55 @@ interface Partner {
   avgLeadTimeDays: number | null;
   lastTransactionDate: string;
   isActive: boolean;
+  creditScore: number;
+}
+
+// ── 신용 점수 계산 ──────────────────────────────────────
+/** 품질등급을 점수로 변환 */
+function qualityGradeScore(grade: string | null): number {
+  if (!grade) return 0;
+  if (grade === 'A+' || grade === 'A') return 100;
+  if (grade === 'B+' || grade === 'B') return 75;
+  if (grade === 'C') return 50;
+  return 25;
+}
+
+/** 최근 거래일 기준 점수 계산 */
+function transactionRecencyScore(dateStr: string): number {
+  const diffDays = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays <= 30) return 100;
+  if (diffDays <= 60) return 70;
+  if (diffDays <= 90) return 40;
+  return 10;
+}
+
+/** 매입처(공급업체) 신용 점수 계산 */
+function calcSupplierCreditScore(p: Omit<Partner, 'creditScore'>): number {
+  const delivery = (p.deliveryRate ?? 0) * 0.4;
+  const quality = qualityGradeScore(p.qualityGrade) * 0.3;
+  const recency = transactionRecencyScore(p.lastTransactionDate) * 0.2;
+  return Math.round(delivery + quality + recency + 10);
+}
+
+/** 매출처(고객사) 신용 점수 계산 — 거래 최근성 + 총 매출 규모 기반 */
+function calcCustomerCreditScore(p: Omit<Partner, 'creditScore'>): number {
+  const recency = transactionRecencyScore(p.lastTransactionDate);
+  // 누적 매출 1억 이상 = 100, 5000만 이상 = 75, 1000만 이상 = 50, 그 외 25
+  let volumeScore = 25;
+  if (p.totalSales >= 100000000) volumeScore = 100;
+  else if (p.totalSales >= 50000000) volumeScore = 75;
+  else if (p.totalSales >= 10000000) volumeScore = 50;
+  return Math.round(recency * 0.5 + volumeScore * 0.5);
+}
+
+/** 신용 점수 뱃지 정보 */
+function creditBadgeInfo(score: number): { label: string; bg: string; color: string } {
+  if (score >= 80) return { label: '우수', bg: 'rgba(16,185,129,0.15)', color: 'var(--accent-green)' };
+  if (score >= 60) return { label: '양호', bg: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)' };
+  if (score >= 40) return { label: '주의', bg: 'rgba(245,158,11,0.15)', color: 'var(--accent-orange)' };
+  return { label: '위험', bg: 'rgba(239,68,68,0.15)', color: 'var(--accent-red)' };
 }
 
 interface PartnerListProps {
@@ -52,8 +103,8 @@ interface PartnerListProps {
   onAddPartner?: () => void;
 }
 
-// ── Mock 데이터 ────────────────────────────────────────
-const MOCK_PARTNERS: Partner[] = [
+// ── Mock 데이터 (신용 점수 포함) ────────────────────────
+const MOCK_PARTNERS_RAW: Omit<Partner, 'creditScore'>[] = [
   {
     id: 'p-1', name: '현대모비스', type: 'CUSTOMER', bizNo: '123-45-67890',
     contactName: '김철수', contactPhone: '010-1234-5678', address: '서울시 강남구 테헤란로 330',
@@ -126,6 +177,15 @@ const MOCK_PARTNERS: Partner[] = [
   },
 ];
 
+// 신용 점수를 자동 계산하여 Partner 배열 생성
+const MOCK_PARTNERS: Partner[] = MOCK_PARTNERS_RAW.map((p) => {
+  const isSupplier = p.type === 'SUPPLIER' || p.type === 'BOTH';
+  const creditScore = isSupplier
+    ? calcSupplierCreditScore(p)
+    : calcCustomerCreditScore(p);
+  return { ...p, creditScore };
+});
+
 // ── 탭 설정 ────────────────────────────────────────────
 const TABS: { key: TabKey; label: string; icon: typeof Building2 }[] = [
   { key: 'ALL', label: '전체', icon: Users },
@@ -190,6 +250,8 @@ export function PartnerList({ onBack, onSelectPartner, onAddPartner }: PartnerLi
   const [activeTab, setActiveTab] = useState<TabKey>('ALL');
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('ALL');
+  const [gradeFilter, setGradeFilter] = useState<GradeFilter>('ALL');
 
   // 필터링된 업체 목록
   const filtered = useMemo(() => {
@@ -197,6 +259,18 @@ export function PartnerList({ onBack, onSelectPartner, onAddPartner }: PartnerLi
       // 탭 필터
       if (activeTab === 'SUPPLIER' && p.type !== 'SUPPLIER' && p.type !== 'BOTH') return false;
       if (activeTab === 'CUSTOMER' && p.type !== 'CUSTOMER' && p.type !== 'BOTH') return false;
+
+      // 활성/비활성 필터
+      if (activeFilter === 'ACTIVE' && !p.isActive) return false;
+      if (activeFilter === 'INACTIVE' && p.isActive) return false;
+
+      // 품질등급 필터 (매입처 전용, 매출처는 등급 없으므로 통과)
+      if (gradeFilter !== 'ALL') {
+        const isSupplier = p.type === 'SUPPLIER' || p.type === 'BOTH';
+        if (isSupplier) {
+          if (!p.qualityGrade || !p.qualityGrade.startsWith(gradeFilter)) return false;
+        }
+      }
 
       // 검색어 필터
       if (searchQuery.trim()) {
@@ -208,7 +282,7 @@ export function PartnerList({ onBack, onSelectPartner, onAddPartner }: PartnerLi
       }
       return true;
     });
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, activeFilter, gradeFilter]);
 
   // 탭별 카운트
   const counts = useMemo(() => ({
@@ -362,6 +436,50 @@ export function PartnerList({ onBack, onSelectPartner, onAddPartner }: PartnerLi
             />
           </div>
 
+          {/* 거래 활성/비활성 필터 */}
+          <select
+            value={activeFilter}
+            onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 8,
+              padding: '8px 12px',
+              fontSize: 13,
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="ALL">전체 상태</option>
+            <option value="ACTIVE">활성</option>
+            <option value="INACTIVE">비활성</option>
+          </select>
+
+          {/* 품질등급 필터 (매입처 탭일 때만 표시) */}
+          {(activeTab === 'SUPPLIER' || activeTab === 'ALL') && (
+            <select
+              value={gradeFilter}
+              onChange={(e) => setGradeFilter(e.target.value as GradeFilter)}
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 8,
+                padding: '8px 12px',
+                fontSize: 13,
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="ALL">전체 등급</option>
+              <option value="A">A등급</option>
+              <option value="B">B등급</option>
+              <option value="C">C등급</option>
+              <option value="D">D등급</option>
+            </select>
+          )}
+
           {/* 뷰 토글 */}
           <div style={{
             display: 'flex',
@@ -502,17 +620,40 @@ function PartnerCard({
             )}
           </div>
         </div>
-        <span style={{
-          fontSize: 11,
-          fontWeight: 600,
-          padding: '3px 10px',
-          borderRadius: 12,
-          background: badge.bg,
-          color: badge.text,
-          whiteSpace: 'nowrap',
-        }}>
-          {typeLabel(p.type)}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* 신용 점수 뱃지 */}
+          {(() => {
+            const cb = creditBadgeInfo(p.creditScore);
+            return (
+              <span style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '3px 8px',
+                borderRadius: 12,
+                background: cb.bg,
+                color: cb.color,
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+              }}>
+                <Award size={10} />
+                {cb.label} {p.creditScore}
+              </span>
+            );
+          })()}
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: '3px 10px',
+            borderRadius: 12,
+            background: badge.bg,
+            color: badge.text,
+            whiteSpace: 'nowrap',
+          }}>
+            {typeLabel(p.type)}
+          </span>
+        </div>
       </div>
 
       {/* 담당자 정보 */}

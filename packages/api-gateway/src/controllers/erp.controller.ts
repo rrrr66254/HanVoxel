@@ -185,6 +185,113 @@ export async function getPartnerContacts(req: Request, res: Response) {
   }
 }
 
+// ── 담당자 수정 ─────────────────────────────────────────
+
+export async function updatePartnerContact(req: Request, res: Response) {
+  try {
+    const contactId = req.params.contactId as string;
+    const contact = await partnerService.updatePartnerContact(contactId, req.body);
+    res.json(successResponse(contact));
+  } catch (err) {
+    console.error('담당자 수정 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '담당자 수정에 실패했습니다'));
+  }
+}
+
+// ── 담당자 삭제 ─────────────────────────────────────────
+
+export async function deletePartnerContact(req: Request, res: Response) {
+  try {
+    const contactId = req.params.contactId as string;
+    await partnerService.deletePartnerContact(contactId);
+    res.json(successResponse({ deleted: true }));
+  } catch (err) {
+    console.error('담당자 삭제 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '담당자 삭제에 실패했습니다'));
+  }
+}
+
+// ── 계좌 CRUD ──────────────────────────────────────────
+
+export async function createBankAccount(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const account = await partnerService.createBankAccount({ ...req.body, partnerId });
+    res.status(201).json(successResponse(account));
+  } catch (err) {
+    console.error('계좌 등록 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '계좌 등록에 실패했습니다'));
+  }
+}
+
+export async function getBankAccounts(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const accounts = await partnerService.getBankAccounts(partnerId);
+    res.json(successResponse(accounts));
+  } catch (err) {
+    console.error('계좌 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '계좌 조회에 실패했습니다'));
+  }
+}
+
+export async function updateBankAccount(req: Request, res: Response) {
+  try {
+    const accountId = req.params.accountId as string;
+    const account = await partnerService.updateBankAccount(accountId, req.body);
+    res.json(successResponse(account));
+  } catch (err) {
+    console.error('계좌 수정 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '계좌 수정에 실패했습니다'));
+  }
+}
+
+export async function deleteBankAccount(req: Request, res: Response) {
+  try {
+    const accountId = req.params.accountId as string;
+    await partnerService.deleteBankAccount(accountId);
+    res.json(successResponse({ deleted: true }));
+  } catch (err) {
+    console.error('계좌 삭제 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '계좌 삭제에 실패했습니다'));
+  }
+}
+
+// ── 첨부파일 CRUD ──────────────────────────────────────
+
+export async function createAttachment(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const attachment = await partnerService.createAttachment({ ...req.body, partnerId });
+    res.status(201).json(successResponse(attachment));
+  } catch (err) {
+    console.error('첨부파일 등록 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '첨부파일 등록에 실패했습니다'));
+  }
+}
+
+export async function getAttachments(req: Request, res: Response) {
+  try {
+    const partnerId = req.params.id as string;
+    const attachments = await partnerService.getAttachments(partnerId);
+    res.json(successResponse(attachments));
+  } catch (err) {
+    console.error('첨부파일 조회 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '첨부파일 조회에 실패했습니다'));
+  }
+}
+
+export async function deleteAttachment(req: Request, res: Response) {
+  try {
+    const attachmentId = req.params.attachmentId as string;
+    await partnerService.deleteAttachment(attachmentId);
+    res.json(successResponse({ deleted: true }));
+  } catch (err) {
+    console.error('첨부파일 삭제 실패:', err);
+    res.status(500).json(errorResponse('INTERNAL_ERROR', '첨부파일 삭제에 실패했습니다'));
+  }
+}
+
 // ── 전표 ───────────────────────────────────────────────
 
 export async function createVoucher(req: Request, res: Response) {

@@ -18,6 +18,30 @@ import {
 } from 'lucide-react';
 import type { CalendarEntry } from '../../api/inbound-api';
 
+// --- 확장 타입 (기사 정보 포함) ---
+interface CalendarEntryExtended extends Omit<CalendarEntry, 'inboundOrder' | 'outboundOrder'> {
+  inboundOrder?: {
+    id: string;
+    vendorName: string | null;
+    status: string;
+    expectedDate: string | null;
+    actualDate?: string | null;
+    driverName?: string;
+    driverPhone?: string;
+  } | null;
+  outboundOrder?: {
+    id: string;
+    type: string;
+    customerName: string | null;
+    status: string;
+    manifestNumber: string | null;
+    timeSlot?: string | null;
+    driverName?: string;
+    driverPhone?: string;
+    palletCount?: number;
+  } | null;
+}
+
 // --- 디자인 토큰 ---
 const C = {
   bg: '#0D1117',
@@ -34,14 +58,17 @@ const C = {
 } as const;
 
 // --- Mock 데이터 ---
-function generateMockCalendar(year: number, month: number): CalendarEntry[] {
-  const entries: CalendarEntry[] = [];
+function generateMockCalendar(year: number, month: number): CalendarEntryExtended[] {
+  const entries: CalendarEntryExtended[] = [];
   const daysInMonth = new Date(year, month, 0).getDate();
   const statuses = ['SCHEDULED', 'ARRIVED', 'COMPLETED'];
   const vendors = ['현대모비스', '삼성SDI', 'LG화학', '포스코'];
   const customers = ['쿠팡', '네이버', '롯데물류', 'CJ대한통운'];
   const types = ['PICKING', 'PALLET', 'CONTAINER', 'DIRECT'];
   const slots = ['AM', 'PM', 'NIGHT'];
+  // 기사 목 데이터
+  const driverNames = ['박철수', '김기사', '이운전', '최배달'];
+  const driverPhones = ['010-9876-5432', '010-1234-5678', '010-5555-1234', '010-7777-8888'];
 
   for (let d = 1; d <= daysInMonth; d++) {
     const inCount = Math.random() > 0.5 ? Math.floor(Math.random() * 3) + 1 : 0;
@@ -63,6 +90,9 @@ function generateMockCalendar(year: number, month: number): CalendarEntry[] {
           vendorName: vendors[Math.floor(Math.random() * vendors.length)],
           status: st === 'COMPLETED' ? 'STOCKED' : st === 'ARRIVED' ? 'QC_PENDING' : 'ORDERED',
           expectedDate: dateStr,
+          // 기사 정보 (70% 확률로 배정)
+          driverName: Math.random() > 0.3 ? driverNames[Math.floor(Math.random() * driverNames.length)] : undefined,
+          driverPhone: Math.random() > 0.3 ? driverPhones[Math.floor(Math.random() * driverPhones.length)] : undefined,
         },
       });
     }
@@ -83,6 +113,10 @@ function generateMockCalendar(year: number, month: number): CalendarEntry[] {
           status: st === 'COMPLETED' ? 'DISPATCHED' : 'PLANNED',
           manifestNumber: `OUT-${dateStr.replace(/-/g, '')}-${String(i + 1).padStart(4, '0')}`,
           timeSlot: slots[Math.floor(Math.random() * slots.length)],
+          // 기사 정보 (70% 확률로 배정) + 팔레트 수
+          driverName: Math.random() > 0.3 ? driverNames[Math.floor(Math.random() * driverNames.length)] : undefined,
+          driverPhone: Math.random() > 0.3 ? driverPhones[Math.floor(Math.random() * driverPhones.length)] : undefined,
+          palletCount: Math.floor(Math.random() * 20) + 1,
         },
       });
     }
@@ -114,7 +148,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('ALL');
-  const [entries, setEntries] = useState<CalendarEntry[]>([]);
+  const [entries, setEntries] = useState<CalendarEntryExtended[]>([]);
 
   // API 호출 (mock fallback)
   useEffect(() => {
@@ -122,7 +156,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
       try {
         const { getCalendarAll } = await import('../../api/outbound-api');
         const data = await getCalendarAll('demo', year, month, filter === 'ALL' ? undefined : filter);
-        if (data.length > 0) { setEntries(data); return; }
+        if (data.length > 0) { setEntries(data as CalendarEntryExtended[]); return; }
       } catch { /* API 미연결 */ }
       setEntries(generateMockCalendar(year, month));
     })();
@@ -136,7 +170,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
 
   // 날짜별 그룹핑
   const grouped = useMemo(() => {
-    const map: Record<string, { inbound: number; outbound: number; entries: CalendarEntry[] }> = {};
+    const map: Record<string, { inbound: number; outbound: number; entries: CalendarEntryExtended[] }> = {};
     for (const e of filtered) {
       const d = e.scheduledDate.slice(0, 10);
       if (!map[d]) map[d] = { inbound: 0, outbound: 0, entries: [] };
@@ -341,61 +375,98 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
           </div>
         )}
 
-        {selectedEntries.map((entry) => (
-          <div key={entry.id} style={{
-            padding: '12px 14px',
-            marginBottom: 8,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            background: C.bg,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              {entry.type === 'INBOUND' ? (
-                <Package size={14} style={{ color: C.inbound }} />
-              ) : (
-                <Truck size={14} style={{ color: C.outbound }} />
-              )}
-              <span style={{
-                fontSize: 11,
-                padding: '1px 6px',
-                borderRadius: 4,
-                background: entry.type === 'INBOUND' ? 'rgba(59,130,246,0.2)' : 'rgba(249,115,22,0.2)',
-                color: entry.type === 'INBOUND' ? C.inbound : C.outbound,
-                fontWeight: 600,
-              }}>
-                {entry.type === 'INBOUND' ? '입고' : '출고'}
-              </span>
-              <span style={{
-                fontSize: 10,
-                padding: '1px 6px',
-                borderRadius: 4,
-                background: entry.colorCode ? `${entry.colorCode}22` : 'transparent',
-                color: entry.colorCode ?? C.textMuted,
-              }}>
-                {entry.status}
-              </span>
-              {entry.timeSlot && (
-                <span style={{ fontSize: 10, color: C.textMuted }}>{entry.timeSlot}</span>
-              )}
-            </div>
+        {selectedEntries.map((entry) => {
+          // 기사 정보 추출
+          const driverName = entry.inboundOrder?.driverName ?? entry.outboundOrder?.driverName;
+          const driverPhone = entry.inboundOrder?.driverPhone ?? entry.outboundOrder?.driverPhone;
 
-            {entry.inboundOrder && (
-              <div style={{ fontSize: 12, color: C.text }}>
-                <div>공급: <strong>{entry.inboundOrder.vendorName ?? '미지정'}</strong></div>
-                <div style={{ color: C.textMuted, fontSize: 11 }}>상태: {entry.inboundOrder.status}</div>
-              </div>
-            )}
-
-            {entry.outboundOrder && (
-              <div style={{ fontSize: 12, color: C.text }}>
-                <div>고객: <strong>{entry.outboundOrder.customerName ?? '미지정'}</strong></div>
-                <div style={{ color: C.textMuted, fontSize: 11 }}>
-                  {entry.outboundOrder.type} · {entry.outboundOrder.manifestNumber}
+          return (
+            <div key={entry.id} style={{
+              padding: '14px 16px',
+              marginBottom: 10,
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              background: C.bg,
+            }}>
+              {/* 입고 카드 */}
+              {entry.type === 'INBOUND' && entry.inboundOrder && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Package size={14} style={{ color: C.inbound }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.inbound }}>
+                      📥 INB-{entry.inboundOrder.id}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
+                    {entry.inboundOrder.vendorName ?? '미지정'}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+                    상태: {entry.inboundOrder.status}
+                    {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
+                  </div>
                 </div>
+              )}
+
+              {/* 출고 카드 */}
+              {entry.type === 'OUTBOUND' && entry.outboundOrder && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Package size={14} style={{ color: C.outbound }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.outbound }}>
+                      📤 {entry.outboundOrder.manifestNumber ?? entry.outboundOrder.id}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
+                    → {entry.outboundOrder.customerName ?? '미지정'}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+                    {entry.outboundOrder.type}
+                    {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
+                    {entry.outboundOrder.palletCount != null ? ` · ${entry.outboundOrder.palletCount}PLT` : ''}
+                  </div>
+                </div>
+              )}
+
+              {/* 기사 정보 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 0',
+                borderTop: `1px solid ${C.border}`,
+                marginBottom: 8,
+              }}>
+                <Truck size={13} style={{ color: C.textMuted }} />
+                {driverName ? (
+                  <span style={{ fontSize: 12, color: C.text }}>
+                    {driverName} {driverPhone ?? ''}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12, color: C.textMuted, fontStyle: 'italic' }}>미배정</span>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+
+              {/* 상세보기 버튼 */}
+              <button
+                onClick={() => alert('상세보기: ' + entry.id)}
+                style={{
+                  width: '100%',
+                  padding: '6px 0',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.accent,
+                  background: 'rgba(88,166,255,0.08)',
+                  border: `1px solid rgba(88,166,255,0.2)`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                상세보기 →
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 /**
- * 거래처 관리 서비스 — 공급업체/고객사 CRUD + 거래 이력
+ * 거래처 관리 서비스 — 공급업체/고객사 CRUD + 거래 이력 + 계좌/첨부/담당자
  */
 import prisma from './prisma';
 import { Prisma } from '@prisma/client';
@@ -19,8 +19,24 @@ interface CreatePartnerInput {
   phone?: string;
   email?: string;
   contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  mainPhone?: string;
+  fax?: string;
+  zipCode?: string;
+  addressDetail?: string;
+  deliveryAddress?: string;
+  deliveryMemo?: string;
   paymentTerms?: string;
+  creditLimit?: number;
+  currency?: string;
+  taxType?: string;
+  leadTimeDays?: number;
+  minOrderQty?: number;
+  qualityGrade?: string;
+  memo?: string;
   note?: string;
+  tags?: Prisma.JsonValue;
 }
 
 export async function createPartner(data: CreatePartnerInput) {
@@ -41,6 +57,7 @@ export async function getPartners(
     where.OR = [
       { name: { contains: options.search, mode: 'insensitive' } },
       { code: { contains: options.search, mode: 'insensitive' } },
+      { bizNo: { contains: options.search, mode: 'insensitive' } },
     ];
   }
 
@@ -50,6 +67,13 @@ export async function getPartners(
       orderBy: { name: 'asc' },
       take: options?.limit ?? 50,
       skip: options?.offset ?? 0,
+      include: {
+        contacts: { where: { isPrimary: true }, take: 1 },
+        transactionSummaries: {
+          orderBy: [{ year: 'desc' }, { month: 'desc' }],
+          take: 1,
+        },
+      },
     }),
     prisma.partner.count({ where }),
   ]);
@@ -57,7 +81,18 @@ export async function getPartners(
 }
 
 export async function getPartnerById(id: string) {
-  return prisma.partner.findUnique({ where: { id } });
+  return prisma.partner.findUnique({
+    where: { id },
+    include: {
+      contacts: { orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }] },
+      bankAccounts: { orderBy: { isPrimary: 'desc' } },
+      attachments: { orderBy: { uploadedAt: 'desc' } },
+      transactionSummaries: {
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        take: 12,
+      },
+    },
+  });
 }
 
 // ── 거래 이력 ──────────────────────────────────────────
@@ -123,7 +158,6 @@ export async function getPartnerRanking(
   type: 'SUPPLIER' | 'CUSTOMER',
   limit = 10,
 ) {
-  // 전표 유형: SUPPLIER → PURCHASE, CUSTOMER → SALES
   const voucherType = type === 'SUPPLIER' ? 'PURCHASE' : 'SALES';
 
   const partners = await prisma.partner.findMany({
@@ -136,13 +170,13 @@ export async function getPartnerRanking(
     },
   });
 
-  // 거래 총액 집계 후 정렬
   const ranked = partners
     .map((p) => ({
       id: p.id,
       name: p.name,
       code: p.code,
       type: p.type,
+      qualityGrade: p.qualityGrade,
       totalAmount: p.vouchers.reduce((sum, v) => sum + v.totalAmount, 0),
       voucherCount: p.vouchers.length,
     }))
@@ -159,7 +193,6 @@ export async function getPartnerDashboardStats(companyId: string) {
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  // 거래처 ID 목록
   const partnerIds = (
     await prisma.partner.findMany({
       where: { companyId, isActive: true },
@@ -175,7 +208,6 @@ export async function getPartnerDashboardStats(companyId: string) {
     };
   }
 
-  // 이번 달 / 지난 달 전표 집계
   const [currentVouchers, prevVouchers] = await Promise.all([
     prisma.voucher.groupBy({
       by: ['type'],
@@ -200,7 +232,6 @@ export async function getPartnerDashboardStats(companyId: string) {
   const sumByType = (rows: typeof currentVouchers, t: string) =>
     rows.find((r) => r.type === t)?._sum.totalAmount ?? 0;
 
-  // 미수금: SALES 확정 전표 중 미결제 (dueDate 지남)
   const [receivableAgg, payableAgg] = await Promise.all([
     prisma.voucher.aggregate({
       where: {
@@ -270,4 +301,60 @@ export async function updatePartnerContact(
 
 export async function deletePartnerContact(id: string) {
   return prisma.partnerContact.delete({ where: { id } });
+}
+
+// ── 계좌 CRUD ──────────────────────────────────────────
+
+interface CreateBankAccountInput {
+  partnerId: string;
+  bankName: string;
+  accountNo: string;
+  accountHolder: string;
+  isPrimary?: boolean;
+}
+
+export async function createBankAccount(data: CreateBankAccountInput) {
+  return prisma.partnerBankAccount.create({ data });
+}
+
+export async function getBankAccounts(partnerId: string) {
+  return prisma.partnerBankAccount.findMany({
+    where: { partnerId },
+    orderBy: { isPrimary: 'desc' },
+  });
+}
+
+export async function updateBankAccount(
+  id: string,
+  data: Partial<Omit<CreateBankAccountInput, 'partnerId'>>,
+) {
+  return prisma.partnerBankAccount.update({ where: { id }, data });
+}
+
+export async function deleteBankAccount(id: string) {
+  return prisma.partnerBankAccount.delete({ where: { id } });
+}
+
+// ── 첨부파일 CRUD ──────────────────────────────────────
+
+interface CreateAttachmentInput {
+  partnerId: string;
+  fileType: string;
+  fileName: string;
+  fileUrl: string;
+}
+
+export async function createAttachment(data: CreateAttachmentInput) {
+  return prisma.partnerAttachment.create({ data });
+}
+
+export async function getAttachments(partnerId: string) {
+  return prisma.partnerAttachment.findMany({
+    where: { partnerId },
+    orderBy: { uploadedAt: 'desc' },
+  });
+}
+
+export async function deleteAttachment(id: string) {
+  return prisma.partnerAttachment.delete({ where: { id } });
 }
