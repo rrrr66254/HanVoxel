@@ -136,11 +136,17 @@ export async function arriveInboundOrder(
     data: { status: 'ARRIVED', colorCode: '#F59E0B' },
   });
 
-  // QC 검수 자동 생성
+  // QC 검수 자동 생성 — vendorId가 suppliers 테이블에 존재하는지 확인
+  let validSupplierId: string | undefined;
+  if (order.vendorId) {
+    const supplier = await prisma.supplier.findUnique({ where: { id: order.vendorId } });
+    if (supplier) validSupplierId = order.vendorId;
+  }
+
   const inspection = await prisma.qcInspection.create({
     data: {
       siteId: order.siteId,
-      supplierId: order.vendorId ?? undefined,
+      supplierId: validSupplierId,
       type: 'INBOUND',
       status: 'PENDING',
       totalQty: order.items.reduce((sum, item) => sum + (item.actualQty ?? item.expectedQty), 0),
