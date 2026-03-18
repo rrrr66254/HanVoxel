@@ -118,12 +118,22 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       try {
         const { getInboundOrders } = await import('../../api/inbound-api');
         const result = await getInboundOrders(MOCK_SITE_ID, statusFilter || undefined);
-        if (result.orders.length > 0) {
-          setOrders(result.orders);
-          setApiOffline(false);
-          isUsingMock.current = false;
-          return;
+        // API 성공 — 빈 결과여도 API 데이터 사용
+        setOrders(result.orders);
+        setApiOffline(false);
+        isUsingMock.current = false;
+        if (result.orders.length === 0) {
+          console.info(
+            '%c[HanVoxel] API 연결 성공 — 입고 주문 0건 (시드 데이터 실행 필요: npm run db:seed:mock:reset)',
+            'color: #3B82F6;',
+          );
+        } else {
+          console.info(
+            `%c[HanVoxel] API 연결 성공 — 입고 주문 ${result.orders.length}건 로드`,
+            'color: #10B981;',
+          );
         }
+        return;
       } catch (err) {
         // API 연결 실패 — 콘솔에 명확한 경고 출력
         console.warn(
@@ -131,7 +141,15 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
           'color: #F59E0B; font-weight: bold; font-size: 14px;',
         );
         console.warn(
-          '%c  api-gateway가 실행 중인지 확인하세요: cd packages/api-gateway && npm run dev',
+          '%c  1. api-gateway가 실행 중인지 확인: cd packages/api-gateway && npm run dev',
+          'color: #8B949E;',
+        );
+        console.warn(
+          '%c  2. DB 연결이 정상인지 확인: .env 파일의 DATABASE_URL',
+          'color: #8B949E;',
+        );
+        console.warn(
+          '%c  3. 시드 데이터 실행: npm run db:seed:mock:reset',
           'color: #8B949E;',
         );
         console.error('[HanVoxel] API 에러 상세:', err);
@@ -239,12 +257,14 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
           background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
         }}>
           <WifiOff size={16} style={{ color: C.yellow, flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: C.yellow, fontWeight: 600 }}>
-            API 서버 연결 실패 — 데모 데이터를 사용 중입니다. 변경사항은 브라우저에만 저장됩니다.
-          </span>
-          <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-            api-gateway 실행 필요 (포트 3001)
-          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600 }}>
+              API 서버 연결 실패 — 데모 데이터를 사용 중입니다
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              변경사항은 브라우저에만 저장됩니다. 브라우저 콘솔(F12)에서 상세 에러를 확인하세요.
+            </div>
+          </div>
         </div>
       )}
 
