@@ -9,23 +9,23 @@ const METRIC_LABELS: Record<string, string> = {
   avg_processing_time: '평균 처리 시간',
 };
 
-/* 다크 테마 색상 (SlaDashboard와 동일) */
+/* 테마 색상 (CSS 변수 참조) */
 const C = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  blue: '#2D7DD2',
-  green: '#3FB950',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  blue: 'var(--accent-blue)',
+  green: 'var(--accent-green)',
   greenBg: 'rgba(63,185,80,0.1)',
-  red: '#F85149',
+  red: 'var(--accent-red)',
   redBg: 'rgba(248,81,73,0.1)',
-  yellow: '#D29922',
+  yellow: 'var(--accent-orange)',
   yellowBg: 'rgba(210,153,34,0.1)',
-  row: '#161B22',
-  rowAlt: '#1C2129',
+  row: 'var(--bg-secondary)',
+  rowAlt: 'var(--bg-hover)',
 };
 
 interface SlaReportProps {

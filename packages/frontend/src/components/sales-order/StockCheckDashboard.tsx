@@ -10,7 +10,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
-  ArrowLeft,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -21,10 +20,10 @@ import type { StockCheckRequest } from '../../api/sales-order-api';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444',
-  purple: '#8B5CF6',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)',
+  purple: 'var(--accent-purple)',
 } as const;
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -119,9 +118,6 @@ export function StockCheckDashboard({ onBack }: StockCheckDashboardProps) {
     <div style={{ padding: '24px 28px', background: C.bg, minHeight: '100%' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-          <ArrowLeft size={20} />
-        </button>
         <PackageCheck size={22} style={{ color: C.green }} />
         <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>재고 더블체크</h2>
       </div>

@@ -380,7 +380,7 @@ const styles = {
     const colors = {
       low: { color: 'var(--accent-orange)', bg: 'rgba(210, 153, 34, 0.12)' },
       mid: { color: 'var(--accent-red)', bg: 'rgba(248, 81, 73, 0.10)' },
-      high: { color: '#ff4444', bg: 'rgba(255, 68, 68, 0.15)' },
+      high: { color: 'var(--accent-red)', bg: 'rgba(255, 68, 68, 0.15)' },
     };
     const c = colors[level];
     return {

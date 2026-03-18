@@ -25,7 +25,16 @@
     "partner": "업체 관리",
     "partnerDashboard": "거래 현황",
     "driver": "기사 관리",
-    "currentPlan": "현재 플랜"
+    "production": "생산 관리",
+    "productionBoard": "생산 현황판",
+    "productionPlan": "생산 계획",
+    "workOrders": "생산 지시서",
+    "productionEntry": "실적 입력",
+    "workCenters": "작업장 관리",
+    "productionAnalytics": "생산 분석",
+    "currentPlan": "현재 플랜",
+    "ceoDashboard": "CEO 대시보드",
+    "overview": "개요"
   },
   "header": {
     "alerts": "알림"

@@ -26,23 +26,23 @@ export function DataTable<T extends Record<string, unknown>>({
 }: DataTableProps<T>) {
   return (
     <div style={{
-      border: '1px solid #21262D',
+      border: '1px solid var(--border-muted)',
       borderRadius: 10,
       overflow: 'hidden',
     }}>
       {/* 헤더 */}
       <div style={{
         display: 'flex',
-        background: '#0D1117',
+        background: 'var(--bg-primary)',
         padding: '10px 16px',
-        borderBottom: '1px solid #21262D',
+        borderBottom: '1px solid var(--border-muted)',
       }}>
         {columns.map((col) => (
           <div key={col.key} style={{
             flex: col.width ? `0 0 ${col.width}px` : 1,
             fontSize: 10,
             fontWeight: 600,
-            color: '#484F58',
+            color: 'var(--text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             textAlign: col.align ?? 'left',
@@ -59,7 +59,7 @@ export function DataTable<T extends Record<string, unknown>>({
             padding: '32px 16px',
             textAlign: 'center',
             fontSize: 13,
-            color: '#484F58',
+            color: 'var(--text-muted)',
           }}>
             {emptyMessage}
           </div>
@@ -71,18 +71,18 @@ export function DataTable<T extends Record<string, unknown>>({
               style={{
                 display: 'flex',
                 padding: '12px 16px',
-                borderBottom: i < data.length - 1 ? '1px solid #21262D' : 'none',
+                borderBottom: i < data.length - 1 ? '1px solid var(--border-muted)' : 'none',
                 cursor: onRowClick ? 'pointer' : 'default',
                 transition: 'background 0.1s ease',
               }}
-              onMouseEnter={(e) => { if (onRowClick) e.currentTarget.style.background = '#1C2A3A'; }}
+              onMouseEnter={(e) => { if (onRowClick) e.currentTarget.style.background = 'var(--bg-hover)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               {columns.map((col) => (
                 <div key={col.key} style={{
                   flex: col.width ? `0 0 ${col.width}px` : 1,
                   fontSize: 12,
-                  color: '#E6EDF3',
+                  color: 'var(--text-primary)',
                   textAlign: col.align ?? 'left',
                   display: 'flex',
                   alignItems: 'center',

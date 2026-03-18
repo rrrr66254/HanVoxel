@@ -37,9 +37,9 @@ const btnBase: React.CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 8,
-  border: '1px solid #30363D',
+  border: '1px solid var(--border-default)',
   background: 'transparent',
-  color: '#8B949E',
+  color: 'var(--text-secondary)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -51,8 +51,8 @@ const btnBase: React.CSSProperties = {
 const btnActive: React.CSSProperties = {
   ...btnBase,
   background: 'rgba(45, 125, 210, 0.2)',
-  borderColor: '#2D7DD2',
-  color: '#2D7DD2',
+  borderColor: 'var(--accent-blue)',
+  color: 'var(--accent-blue)',
 };
 
 export function ViewerToolbar({
@@ -83,8 +83,8 @@ export function ViewerToolbar({
           flexDirection: 'column',
           gap: 4,
           padding: 6,
-          background: '#161B22',
-          border: '1px solid #30363D',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)',
           borderRadius: 12,
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
           zIndex: 20,
@@ -115,7 +115,7 @@ export function ViewerToolbar({
           tooltip="삭제 (Del)"
         />
 
-        <div style={{ height: 1, background: '#30363D', margin: '4px 0' }} />
+        <div style={{ height: 1, background: 'var(--border-default)', margin: '4px 0' }} />
 
         {/* 스냅 토글 */}
         <ToolBtn
@@ -139,8 +139,8 @@ export function ViewerToolbar({
                 position: 'absolute',
                 left: 44,
                 top: 0,
-                background: '#161B22',
-                border: '1px solid #30363D',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-default)',
                 borderRadius: 8,
                 padding: 8,
                 minWidth: 140,
@@ -165,8 +165,8 @@ export function ViewerToolbar({
           display: 'flex',
           gap: 2,
           padding: 4,
-          background: '#161B22',
-          border: '1px solid #30363D',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)',
           borderRadius: 10,
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
           zIndex: 20,
@@ -202,8 +202,8 @@ export function ViewerToolbar({
           flexDirection: 'column',
           gap: 4,
           padding: 6,
-          background: '#161B22',
-          border: '1px solid #30363D',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)',
           borderRadius: 12,
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
           zIndex: 20,
@@ -211,7 +211,7 @@ export function ViewerToolbar({
       >
         <ToolBtn icon={<ZoomIn size={16} />} onClick={onZoomIn} tooltip="줌 인" />
         <ToolBtn icon={<ZoomOut size={16} />} onClick={onZoomOut} tooltip="줌 아웃" />
-        <div style={{ height: 1, background: '#30363D', margin: '2px 0' }} />
+        <div style={{ height: 1, background: 'var(--border-default)', margin: '2px 0' }} />
         <ToolBtn icon={<Maximize2 size={16} />} onClick={onResetView} tooltip="뷰 초기화" />
       </div>
     </>
@@ -230,24 +230,24 @@ export function CoordinateDisplay({ x, y, z }: { x: number; y: number; z: number
         display: 'flex',
         gap: 16,
         padding: '8px 16px',
-        background: '#161B22',
-        border: '1px solid #30363D',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-default)',
         borderRadius: 8,
         fontSize: 11,
         fontFamily: 'monospace',
-        color: '#8B949E',
+        color: 'var(--text-secondary)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
         zIndex: 20,
       }}
     >
       <span>
-        <span style={{ color: '#F85149', fontWeight: 600 }}>X</span> {x.toFixed(1)}
+        <span style={{ color: 'var(--accent-red)', fontWeight: 600 }}>X</span> {x.toFixed(1)}
       </span>
       <span>
-        <span style={{ color: '#3FB950', fontWeight: 600 }}>Y</span> {y.toFixed(1)}
+        <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>Y</span> {y.toFixed(1)}
       </span>
       <span>
-        <span style={{ color: '#2D7DD2', fontWeight: 600 }}>Z</span> {z.toFixed(1)}
+        <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>Z</span> {z.toFixed(1)}
       </span>
     </div>
   );
@@ -263,8 +263,8 @@ export function Minimap({ objectCount }: { objectCount: number }) {
         right: 16,
         width: 180,
         height: 120,
-        background: '#161B22',
-        border: '1px solid #30363D',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-default)',
         borderRadius: 10,
         overflow: 'hidden',
         boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
@@ -275,25 +275,25 @@ export function Minimap({ objectCount }: { objectCount: number }) {
       <div
         style={{
           padding: '4px 8px',
-          background: '#21262D',
-          borderBottom: '1px solid #30363D',
+          background: 'var(--bg-tertiary)',
+          borderBottom: '1px solid var(--border-default)',
           fontSize: 9,
           fontWeight: 600,
-          color: '#8B949E',
+          color: 'var(--text-secondary)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}
       >
         <span>오버헤드 뷰</span>
-        <span style={{ color: '#484F58' }}>{objectCount} 객체</span>
+        <span style={{ color: 'var(--text-muted)' }}>{objectCount} 객체</span>
       </div>
       {/* 미니맵 그리드 영역 */}
       <div
         style={{
           width: '100%',
           height: 'calc(100% - 22px)',
-          background: 'linear-gradient(135deg, #0D1117 0%, #161B22 100%)',
+          background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%)',
           position: 'relative',
         }}
       >
@@ -306,7 +306,7 @@ export function Minimap({ objectCount }: { objectCount: number }) {
               y1={`${(i + 1) * 10}%`}
               x2="100%"
               y2={`${(i + 1) * 10}%`}
-              stroke="#30363D"
+              stroke="var(--border-default)"
               strokeWidth="0.5"
             />
           ))}
@@ -317,7 +317,7 @@ export function Minimap({ objectCount }: { objectCount: number }) {
               y1="0"
               x2={`${(i + 1) * 10}%`}
               y2="100%"
-              stroke="#30363D"
+              stroke="var(--border-default)"
               strokeWidth="0.5"
             />
           ))}
@@ -369,7 +369,7 @@ export function Minimap({ objectCount }: { objectCount: number }) {
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: '#2D7DD2',
+            background: 'var(--accent-blue)',
             boxShadow: '0 0 6px rgba(45,125,210,0.6)',
           }}
         />
@@ -397,14 +397,14 @@ function ToolBtn({
       style={active ? btnActive : btnBase}
       onMouseEnter={(e) => {
         if (!active) {
-          e.currentTarget.style.background = '#21262D';
-          e.currentTarget.style.color = '#E6EDF3';
+          e.currentTarget.style.background = 'var(--bg-tertiary)';
+          e.currentTarget.style.color = 'var(--text-primary)';
         }
       }}
       onMouseLeave={(e) => {
         if (!active) {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = '#8B949E';
+          e.currentTarget.style.color = 'var(--text-secondary)';
         }
       }}
     >
@@ -436,7 +436,7 @@ function ViewModeBtn({
         borderRadius: 7,
         border: 'none',
         background: active ? 'rgba(45, 125, 210, 0.2)' : 'transparent',
-        color: active ? '#2D7DD2' : '#8B949E',
+        color: active ? 'var(--accent-blue)' : 'var(--text-secondary)',
         fontSize: 11,
         fontWeight: active ? 700 : 500,
         cursor: 'pointer',
@@ -472,7 +472,7 @@ function LayerItem({
         borderRadius: 6,
         border: 'none',
         background: 'transparent',
-        color: visible ? '#E6EDF3' : '#484F58',
+        color: visible ? 'var(--text-primary)' : 'var(--text-muted)',
         fontSize: 12,
         cursor: 'pointer',
         transition: 'all 0.15s ease',

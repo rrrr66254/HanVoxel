@@ -17,6 +17,8 @@ import { BenchmarkDashboard } from './components/benchmark-dashboard';
 import { InOutCalendar, InboundManagement, OutboundManagement } from './components/inout-management';
 import { SalesOrderDashboard, BomManager, StockCheckDashboard } from './components/sales-order';
 import { PartnerList, PartnerDetail, PartnerForm, PartnerDashboard, DriverManager } from './components/partner';
+import { ProductionBoard, ProductionPlan, WorkOrderList, ProductionEntry, WorkCenterManagement, ProductionAnalytics } from './components/production';
+import { CeoDashboard } from './components/ceo-dashboard';
 import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -27,7 +29,7 @@ import type { SpatialObject } from './types/spatial';
 import './i18n';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partner' | 'partner-detail' | 'partner-form' | 'partner-dashboard' | 'driver' | 'settings';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partner' | 'partner-detail' | 'partner-form' | 'partner-dashboard' | 'driver' | 'production-board' | 'production-plan' | 'work-orders' | 'production-entry' | 'work-centers' | 'production-analytics' | 'ceo-dashboard' | 'settings';
 
 // 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
 // localStorage에서 adminMode 확인, 없으면 기본 true
@@ -88,6 +90,20 @@ function App() {
     switch (mode) {
       case 'settings':
         return <SettingsPage onBack={goBack} />;
+      case 'ceo-dashboard':
+        return <CeoDashboard onBack={goBack} onNavigate={(m) => setMode(m as AppMode)} />;
+      case 'production-board':
+        return <ProductionBoard onBack={goBack} />;
+      case 'production-plan':
+        return <ProductionPlan onBack={goBack} />;
+      case 'work-orders':
+        return <WorkOrderList onBack={goBack} />;
+      case 'production-entry':
+        return <ProductionEntry onBack={goBack} />;
+      case 'work-centers':
+        return <WorkCenterManagement onBack={goBack} />;
+      case 'production-analytics':
+        return <ProductionAnalytics onBack={goBack} />;
       case 'driver':
         return <DriverManager onBack={goBack} />;
       case 'partner-dashboard':

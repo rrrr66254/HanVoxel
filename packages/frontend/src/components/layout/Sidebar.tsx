@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -14,6 +15,7 @@ import {
   Warehouse,
   Settings,
   Crown,
+  LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
   Calendar,
@@ -24,6 +26,14 @@ import {
   PackageCheck,
   Building2,
   Users,
+  Factory,
+  GanttChart,
+  ListChecks,
+  PenTool,
+  Cog,
+  Activity,
+  ChevronDown,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +47,7 @@ interface MenuItem {
 
 // 메뉴 목록 (i18n 키 사용)
 const MENU_ITEMS: MenuItem[] = [
+  { id: 'ceo-dashboard', icon: LayoutDashboard, labelKey: 'sidebar.ceoDashboard', sectionKey: 'sidebar.overview' },
   { id: 'viewer', icon: Box, labelKey: 'sidebar.viewer', sectionKey: 'sidebar.spatialManagement' },
   { id: 'wizard', icon: Warehouse, labelKey: 'sidebar.wizard', sectionKey: 'sidebar.spatialManagement' },
   { id: 'roi', icon: TrendingUp, labelKey: 'sidebar.roi', sectionKey: 'sidebar.spatialManagement' },
@@ -52,6 +63,12 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.operations' },
   { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.operations' },
   { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.operations' },
+  { id: 'production-board', icon: Factory, labelKey: 'sidebar.productionBoard', sectionKey: 'sidebar.production' },
+  { id: 'production-plan', icon: GanttChart, labelKey: 'sidebar.productionPlan', sectionKey: 'sidebar.production' },
+  { id: 'work-orders', icon: ListChecks, labelKey: 'sidebar.workOrders', sectionKey: 'sidebar.production' },
+  { id: 'production-entry', icon: PenTool, labelKey: 'sidebar.productionEntry', sectionKey: 'sidebar.production' },
+  { id: 'work-centers', icon: Cog, labelKey: 'sidebar.workCenters', sectionKey: 'sidebar.production' },
+  { id: 'production-analytics', icon: Activity, labelKey: 'sidebar.productionAnalytics', sectionKey: 'sidebar.production' },
   { id: 'subscription', icon: CreditCard, labelKey: 'sidebar.subscription', sectionKey: 'sidebar.settings' },
   { id: 'erp', icon: FileText, labelKey: 'sidebar.erp', sectionKey: 'sidebar.intelligence' },
   { id: 'trade', icon: Globe, labelKey: 'sidebar.trade', sectionKey: 'sidebar.intelligence' },
@@ -62,8 +79,10 @@ const MENU_ITEMS: MenuItem[] = [
 
 // 섹션 순서 (i18n 키)
 const SECTION_KEYS = [
+  'sidebar.overview',
   'sidebar.spatialManagement',
   'sidebar.operations',
+  'sidebar.production',
   'sidebar.intelligence',
   'sidebar.settings',
 ];
@@ -80,6 +99,13 @@ interface SidebarProps {
 export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onToggleAdmin, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { t } = useTranslation();
   const isEnterprise = planType === 'ENTERPRISE';
+
+  // 섹션 접기/펼치기 상태 (기본: 모두 펼침)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections(prev => ({ ...prev, [sectionKey]: !prev[sectionKey] }));
+  };
 
   // 섹션별 메뉴 그룹핑
   const grouped = SECTION_KEYS.map((sectionKey) => ({
@@ -151,18 +177,36 @@ export function Sidebar({ activeMode, onModeChange, planType = 'ENTERPRISE', onT
               <div style={{ height: 1, background: 'var(--border-muted)', margin: collapsed ? '8px 4px' : '8px 8px' }} />
             )}
             {!collapsed && (
-              <div style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--text-muted)',
-                padding: '8px 20px 6px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
+              <button
+                onClick={() => toggleSection(group.sectionKey)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  padding: '8px 20px 6px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >
                 {t(group.sectionKey)}
-              </div>
+                {collapsedSections[group.sectionKey]
+                  ? <ChevronRight size={12} />
+                  : <ChevronDown size={12} />
+                }
+              </button>
             )}
-            {group.items.map((item) => {
+            {(collapsed || !collapsedSections[group.sectionKey]) && group.items.map((item) => {
               const isActive = activeMode === item.id;
               const Icon = item.icon;
               return (

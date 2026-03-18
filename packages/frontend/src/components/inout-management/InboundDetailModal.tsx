@@ -110,10 +110,13 @@ function fmt(n: number): string {
 interface Props {
   order: InboundOrderData | null;
   onClose: () => void;
+  onArrive?: (id: string) => void;
+  onCancelArrive?: (id: string) => void;
+  onQcPass?: (id: string) => void;
 }
 
 // --- 메인 컴포넌트 ---
-export function InboundDetailModal({ order, onClose }: Props) {
+export function InboundDetailModal({ order, onClose, onArrive, onCancelArrive, onQcPass }: Props) {
   const [visible, setVisible] = useState(false);
 
   // 등장 애니메이션
@@ -127,8 +130,8 @@ export function InboundDetailModal({ order, onClose }: Props) {
 
   if (!order) return null;
 
-  // mock 데이터 사용 — 전달받은 order 기반
-  const data: InboundOrderData = { ...MOCK_ORDER, ...order };
+  // 전달받은 order 우선, 부족한 필드만 mock으로 보완
+  const data: InboundOrderData = { ...MOCK_ORDER, ...order, items: order.items.length > 0 ? order.items : MOCK_ORDER.items };
   const statusInfo = STATUS_MAP[data.status] ?? { label: data.status, color: 'var(--text-muted)' };
 
   // 합계 계산
@@ -490,7 +493,7 @@ export function InboundDetailModal({ order, onClose }: Props) {
           </div>
         </div>
 
-        {/* ===== 하단 액션 버튼 ===== */}
+        {/* ===== 하단 액션 버튼 (상태에 따라 조건부 렌더링) ===== */}
         <div style={{
           padding: '16px 24px',
           borderTop: '1px solid var(--border-default)',
@@ -499,16 +502,30 @@ export function InboundDetailModal({ order, onClose }: Props) {
           gap: 10,
           flexShrink: 0,
         }}>
-          <button style={btnPrimary}>
-            <CheckCircle size={14} /> 도착 확인
-          </button>
-          <button style={btnSecondary}>
-            <ClipboardCheck size={14} /> QC 검수 시작
-          </button>
-          <div style={{ flex: 1 }} />
-          <button style={btnDanger}>
-            <XCircle size={14} /> 입고 취소
-          </button>
+          {/* 도착 확인: ORDERED / IN_TRANSIT 상태에서만 */}
+          {(data.status === 'ORDERED' || data.status === 'IN_TRANSIT') && onArrive && (
+            <button style={btnPrimary} onClick={() => { onArrive(data.id); handleClose(); }}>
+              <CheckCircle size={14} /> 도착 확인
+            </button>
+          )}
+          {/* QC 통과: QC_PENDING 상태에서만 */}
+          {data.status === 'QC_PENDING' && onQcPass && (
+            <button style={btnSecondary} onClick={() => { onQcPass(data.id); handleClose(); }}>
+              <ClipboardCheck size={14} /> QC 통과 처리
+            </button>
+          )}
+          {/* 도착 취소: ARRIVED / QC_PENDING 상태에서만 */}
+          {(data.status === 'ARRIVED' || data.status === 'QC_PENDING') && onCancelArrive && (
+            <button style={btnDanger} onClick={() => { onCancelArrive(data.id); handleClose(); }}>
+              <XCircle size={14} /> 도착 취소
+            </button>
+          )}
+          {/* 완료 상태일 때는 닫기 버튼만 */}
+          {(data.status === 'STOCKED' || data.status === 'QC_PASSED') && (
+            <button style={btnSecondary} onClick={handleClose}>
+              닫기
+            </button>
+          )}
         </div>
       </div>
     </div>

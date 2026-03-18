@@ -103,7 +103,7 @@ export function EditorLeftSidebar({
   return (
     <div className="flex h-full min-h-0 select-none">
       {/* 아이콘 탭 바 (56px) */}
-      <div className="flex w-14 flex-col items-center border-r border-[#2A2F38] bg-[#12151A] py-2">
+      <div className="flex w-14 flex-col items-center border-r border-[var(--border-muted)] bg-[var(--bg-primary)] py-2">
         <SideTabBtn
           icon={<Package size={18} />}
           label="카탈로그"
@@ -127,9 +127,9 @@ export function EditorLeftSidebar({
 
       {/* 확장 패널 (280px) */}
       {expanded && (
-        <div className="flex h-full min-h-0 w-72 flex-col overflow-hidden border-r border-[#2A2F38] bg-[#1A1D24]">
+        <div className="flex h-full min-h-0 w-72 flex-col overflow-hidden border-r border-[var(--border-muted)] bg-[var(--bg-secondary)]">
           {/* 패널 헤더 */}
-          <div className="flex items-center justify-between border-b border-[#2A2F38] px-4 py-3">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] px-4 py-3">
             <h3 className="text-sm font-semibold text-white">
               {activeTab === 'catalog' && '카탈로그'}
               {activeTab === 'zones' && '구역 관리'}
@@ -137,7 +137,7 @@ export function EditorLeftSidebar({
             </h3>
             <button
               onClick={() => setActiveTab(null)}
-              className="rounded p-1 text-gray-500 transition-colors hover:bg-[#2A2F38] hover:text-gray-300"
+              className="rounded p-1 text-gray-500 transition-colors hover:bg-[var(--border-muted)] hover:text-gray-300"
             >
               <ChevronLeft size={14} />
             </button>
@@ -147,7 +147,7 @@ export function EditorLeftSidebar({
           {activeTab === 'catalog' && (
             <>
               {/* 카테고리 탭 — 고정 + 가로 스크롤 */}
-              <div className="sticky top-0 z-10 flex shrink-0 gap-1 overflow-x-auto border-b border-[#2A2F38] bg-[#1A1D24] px-3 py-2">
+              <div className="sticky top-0 z-10 flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--border-muted)] bg-[var(--bg-secondary)] px-3 py-2">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
@@ -155,7 +155,7 @@ export function EditorLeftSidebar({
                     className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all ${
                       activeCategory === cat.id
                         ? 'bg-blue-600/20 text-blue-400'
-                        : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+                        : 'text-gray-500 hover:bg-[var(--bg-tertiary)] hover:text-gray-300'
                     }`}
                   >
                     {getCategoryIcon(cat.label)}
@@ -165,7 +165,7 @@ export function EditorLeftSidebar({
               </div>
 
               {/* 프리셋 카드 목록 */}
-              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#30363D #161B22' }}>
+              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border-default) var(--bg-secondary)' }}>
                 {loading ? (
                   <div className="flex h-20 items-center justify-center text-xs text-gray-600">
                     로딩 중...
@@ -184,7 +184,7 @@ export function EditorLeftSidebar({
               </div>
 
               {/* 하단 요약 */}
-              <div className="border-t border-[#2A2F38] px-4 py-2 text-[10px] text-gray-600">
+              <div className="border-t border-[var(--border-muted)] px-4 py-2 text-[10px] text-gray-600">
                 {presets.length}개 규격 · warehouse-standards.md 기반
               </div>
             </>
@@ -194,7 +194,7 @@ export function EditorLeftSidebar({
           {activeTab === 'zones' && (
             <>
               {/* 구역 추가 버튼 */}
-              <div className="border-b border-[#2A2F38] px-3 py-3">
+              <div className="border-b border-[var(--border-muted)] px-3 py-3">
                 <p className="mb-2 text-[11px] text-gray-500">새 구역 그리기</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {(['STORAGE', 'PICKING', 'STAGING', 'SAFETY'] as ZoneType[]).map((type) => (
@@ -219,7 +219,7 @@ export function EditorLeftSidebar({
               </div>
 
               {/* 기존 구역 목록 */}
-              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#30363D #161B22' }}>
+              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'var(--border-default) var(--bg-secondary)' }}>
                 {zones.length === 0 ? (
                   <div className="flex h-20 items-center justify-center text-xs text-gray-600">
                     구역이 없습니다
@@ -229,7 +229,7 @@ export function EditorLeftSidebar({
                     {zones.map((zone) => (
                       <div
                         key={zone.id}
-                        className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-[#22262E]"
+                        className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors hover:bg-[var(--bg-tertiary)]"
                       >
                         <div className="flex items-center gap-2">
                           <span
@@ -306,7 +306,7 @@ function SideTabBtn({
       className={`relative mb-1 flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
         active
           ? 'bg-blue-600/20 text-blue-400'
-          : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+          : 'text-gray-500 hover:bg-[var(--bg-secondary)] hover:text-gray-300'
       }`}
     >
       {icon}
@@ -334,11 +334,11 @@ function LayerRow({
   return (
     <button
       onClick={onToggle}
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[#22262E]"
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-[var(--bg-tertiary)]"
     >
       <span
         className="h-3 w-3 rounded"
-        style={{ background: visible ? color : '#2A2F38' }}
+        style={{ background: visible ? color : 'var(--border-muted)' }}
       />
       <span className={`flex-1 text-left text-xs ${visible ? 'text-gray-300' : 'text-gray-600'}`}>
         {label}

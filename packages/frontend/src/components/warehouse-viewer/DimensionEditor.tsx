@@ -67,12 +67,12 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
   const inputStyle: React.CSSProperties = {
     width: '100%',
     borderRadius: 6,
-    border: '1px solid #30363D',
-    background: '#0D1117',
+    border: '1px solid var(--border-default)',
+    background: 'var(--bg-primary)',
     padding: '6px 8px',
     fontSize: 12,
     fontFamily: 'monospace',
-    color: '#E6EDF3',
+    color: 'var(--text-primary)',
     outline: 'none',
     textAlign: 'center',
     transition: 'border-color 0.15s ease',
@@ -83,8 +83,8 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
       style={{
         width: '100%',
         height: '100%',
-        background: '#1A1D24',
-        color: '#E6EDF3',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)',
         overflow: 'auto',
       }}
     >
@@ -92,7 +92,7 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
       <div
         style={{
           padding: '14px 16px',
-          borderBottom: '1px solid #21262D',
+          borderBottom: '1px solid var(--border-muted)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -100,14 +100,14 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
       >
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>치수 편집</h3>
-          <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
         <button
           onClick={onClose}
           style={{
             width: 28, height: 28, borderRadius: 6,
-            border: '1px solid #30363D', background: 'transparent',
-            color: '#8B949E', cursor: 'pointer',
+            border: '1px solid var(--border-default)', background: 'transparent',
+            color: 'var(--text-secondary)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -123,8 +123,8 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             value={values.name}
             onChange={(e) => setValues((prev) => ({ ...prev, name: e.target.value }))}
             style={{ ...inputStyle, textAlign: 'left', fontFamily: 'inherit' }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
           />
         </FieldRow>
 
@@ -164,7 +164,7 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             padding: '10px',
             borderRadius: 8,
             border: 'none',
-            background: '#2D7DD2',
+            background: 'var(--accent-blue)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 700,
@@ -176,14 +176,14 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             transition: 'all 0.15s ease',
             fontFamily: 'inherit',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#3A8FE0'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#2D7DD2'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-blue-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--accent-blue)'; }}
         >
           <Save size={14} />
           적용
         </button>
 
-        <div style={{ height: 1, background: '#21262D' }} />
+        <div style={{ height: 1, background: 'var(--border-muted)' }} />
 
         {/* 기본값으로 리셋 */}
         <button
@@ -194,7 +194,7 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             borderRadius: 8,
             border: '1px solid rgba(139,148,158,0.2)',
             background: 'transparent',
-            color: '#8B949E',
+            color: 'var(--text-secondary)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
@@ -221,7 +221,7 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             borderRadius: 8,
             border: '1px solid rgba(63, 185, 80, 0.3)',
             background: 'rgba(63, 185, 80, 0.08)',
-            color: '#3FB950',
+            color: 'var(--accent-green)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
@@ -248,7 +248,7 @@ export function DimensionEditor({ object, onUpdate, onSavePreset, onDelete, onCl
             borderRadius: 8,
             border: '1px solid rgba(248, 81, 73, 0.2)',
             background: 'transparent',
-            color: '#F85149',
+            color: 'var(--accent-red)',
             fontSize: 12,
             cursor: 'pointer',
             display: 'flex',
@@ -278,7 +278,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
           marginBottom: 6,
           fontSize: 10,
           fontWeight: 600,
-          color: '#484F58',
+          color: 'var(--text-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}
@@ -311,7 +311,7 @@ function NumInput({
           textAlign: 'center',
           fontSize: 9,
           fontWeight: 600,
-          color: color ?? '#484F58',
+          color: color ?? 'var(--text-muted)',
           marginBottom: 3,
         }}
       >
@@ -325,18 +325,18 @@ function NumInput({
         style={{
           width: '100%',
           borderRadius: 6,
-          border: '1px solid #30363D',
-          background: '#0D1117',
+          border: '1px solid var(--border-default)',
+          background: 'var(--bg-primary)',
           padding: '6px 4px',
           textAlign: 'center',
           fontSize: 12,
           fontFamily: 'monospace',
-          color: '#E6EDF3',
+          color: 'var(--text-primary)',
           outline: 'none',
           transition: 'border-color 0.15s ease',
         }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
       />
     </div>
   );

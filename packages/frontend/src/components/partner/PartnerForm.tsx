@@ -271,7 +271,7 @@ const buttonStyle = (variant: 'primary' | 'secondary' | 'danger' | 'ghost'): Rea
     case 'secondary':
       return { ...base, background: 'var(--bg-hover)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
     case 'danger':
-      return { ...base, background: 'transparent', color: '#F85149', padding: '6px 10px' };
+      return { ...base, background: 'transparent', color: 'var(--accent-red)', padding: '6px 10px' };
     case 'ghost':
       return { ...base, background: 'transparent', color: 'var(--text-secondary)', padding: '6px 12px' };
   }

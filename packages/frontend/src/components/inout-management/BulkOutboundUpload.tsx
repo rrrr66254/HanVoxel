@@ -37,10 +37,10 @@ import { getTemplateUrl } from '../../api/bulk-outbound-api';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444', orange: '#F97316',
-  purple: '#8B5CF6',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)', orange: 'var(--accent-orange)',
+  purple: 'var(--accent-purple)',
 } as const;
 
 // --- 타겟 필드 정의 ---
@@ -332,9 +332,6 @@ export function BulkOutboundUpload({ onBack }: BulkOutboundUploadProps) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <Upload size={22} style={{ color: C.purple }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>B2C 대량 출고 업로드</h2>
         </div>
@@ -462,8 +459,8 @@ function UploadStep({
         <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>판매 플랫폼 선택</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { key: 'COUPANG', label: '쿠팡', color: '#F43F5E' },
-            { key: 'SMARTSTORE', label: '스마트스토어', color: '#22C55E' },
+            { key: 'COUPANG', label: '쿠팡', color: 'var(--accent-red)' },
+            { key: 'SMARTSTORE', label: '스마트스토어', color: 'var(--accent-green)' },
             { key: 'CUSTOM', label: '자체몰 / 기타', color: C.accent },
           ].map((p) => (
             <button
@@ -735,7 +732,7 @@ function ValidationStep({
         <div style={{ maxHeight: 400, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ position: 'sticky', top: 0, background: '#1C2128', zIndex: 1 }}>
+              <tr style={{ position: 'sticky', top: 0, background: 'var(--bg-hover)', zIndex: 1 }}>
                 {['행', '상태', '주문번호', 'SKU', '품명', '수량', '수령인', '배송지', '메시지'].map((h) => (
                   <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: C.textMuted, fontWeight: 600, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>
                     {h}
@@ -946,33 +943,33 @@ function HistoryStep({
 
 const thStyle: React.CSSProperties = {
   padding: '8px 10px', fontSize: 11, fontWeight: 600,
-  color: '#8B949E', background: '#1C2128',
+  color: 'var(--text-secondary)', background: 'var(--bg-hover)',
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: '8px 10px', fontSize: 12, color: '#C9D1D9', background: '#161B22',
+  padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)', background: 'var(--bg-secondary)',
 };
 
 const cellStyle: React.CSSProperties = {
-  padding: '6px 10px', color: '#C9D1D9', fontSize: 12,
+  padding: '6px 10px', color: 'var(--text-primary)', fontSize: 12,
 };
 
 const topBtnStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
   padding: '6px 14px', borderRadius: 6, fontSize: 12,
-  background: 'transparent', color: '#8B949E',
-  border: '1px solid #30363D', cursor: 'pointer',
+  background: 'transparent', color: 'var(--text-secondary)',
+  border: '1px solid var(--border-default)', cursor: 'pointer',
 };
 
 const primaryBtnStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-  background: '#58A6FF', color: '#fff', border: 'none', cursor: 'pointer',
+  background: 'var(--accent-blue)', color: '#fff', border: 'none', cursor: 'pointer',
 };
 
 const secondaryBtnStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
   padding: '8px 16px', borderRadius: 8, fontSize: 13,
-  background: 'transparent', color: '#8B949E',
-  border: '1px solid #30363D', cursor: 'pointer',
+  background: 'transparent', color: 'var(--text-secondary)',
+  border: '1px solid var(--border-default)', cursor: 'pointer',
 };

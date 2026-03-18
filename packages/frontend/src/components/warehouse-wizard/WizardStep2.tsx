@@ -75,7 +75,7 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
         >
           <div className="h-3 w-3 rounded-full" style={{ background: industryColor }} />
         </div>
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: '#F0F6FC', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           템플릿 선택
         </h2>
         <p className="mt-2 text-sm text-gray-400">
@@ -108,8 +108,8 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                   onClick={() => handleSelect(tpl)}
                   className="group relative flex flex-col rounded-2xl p-5 text-left transition-all"
                   style={{
-                    border: isSelected ? `2px solid ${industryColor}` : '2px solid #21262D',
-                    background: isSelected ? `${industryColor}08` : '#161B22',
+                    border: isSelected ? `2px solid ${industryColor}` : '2px solid var(--bg-tertiary)',
+                    background: isSelected ? `${industryColor}08` : 'var(--bg-secondary)',
                     boxShadow: isSelected
                       ? `0 0 24px ${industryColor}20, 0 4px 16px rgba(0,0,0,0.3)`
                       : '0 2px 8px rgba(0,0,0,0.2)',
@@ -156,8 +156,8 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                       <span
                         className="shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold"
                         style={{
-                          background: isSelected ? `${industryColor}20` : '#21262D',
-                          color: isSelected ? industryColor : '#8B949E',
+                          background: isSelected ? `${industryColor}20` : 'var(--bg-tertiary)',
+                          color: isSelected ? industryColor : 'var(--text-secondary)',
                         }}
                       >
                         {variantLabel}
@@ -171,7 +171,7 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
                   {/* 스펙 그리드 */}
                   <div
                     className="space-y-2 rounded-lg p-3"
-                    style={{ background: '#0D111780', border: '1px solid #21262D' }}
+                    style={{ background: 'color-mix(in srgb, var(--bg-primary) 50%, transparent)', border: '1px solid var(--bg-tertiary)' }}
                   >
                     <SpecRow label="랙" value={tpl.rackPreset?.name ?? '-'} />
                     <SpecRow label="배치" value={tpl.rackLayout === 'BACK_TO_BACK' ? '등지기(B2B)' : '단열(Single)'} />
@@ -198,8 +198,8 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
               onClick={handleSelectEmpty}
               className="group relative flex w-full items-center gap-4 rounded-2xl p-5 text-left transition-all"
               style={{
-                border: isEmptySelected ? '2px solid #6B7280' : '2px solid #21262D',
-                background: isEmptySelected ? '#6B728008' : '#161B22',
+                border: isEmptySelected ? '2px solid #6B7280' : '2px solid var(--bg-tertiary)',
+                background: isEmptySelected ? '#6B728008' : 'var(--bg-secondary)',
                 boxShadow: isEmptySelected
                   ? '0 0 24px rgba(107,114,128,0.15), 0 4px 16px rgba(0,0,0,0.3)'
                   : '0 2px 8px rgba(0,0,0,0.2)',
@@ -218,11 +218,11 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
               <div
                 className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl"
                 style={{
-                  background: isEmptySelected ? '#6B728020' : '#21262D',
-                  border: '1px dashed #484F58',
+                  background: isEmptySelected ? '#6B728020' : 'var(--bg-tertiary)',
+                  border: '1px dashed var(--text-muted)',
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={isEmptySelected ? '#9CA3AF' : '#484F58'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={isEmptySelected ? 'var(--text-secondary)' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
@@ -285,8 +285,8 @@ export function WizardStep2({ form, onChange, onNext, onBack }: WizardStep2Props
           disabled={!form.templateId}
           className="group flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold transition-all"
           style={{
-            background: form.templateId ? 'linear-gradient(135deg, #2D7DD2, #3FB950)' : '#21262D',
-            color: form.templateId ? '#fff' : '#484F58',
+            background: form.templateId ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))' : 'var(--bg-tertiary)',
+            color: form.templateId ? '#fff' : 'var(--text-muted)',
             cursor: form.templateId ? 'pointer' : 'not-allowed',
             boxShadow: form.templateId ? '0 4px 16px rgba(45,125,210,0.3)' : 'none',
           }}

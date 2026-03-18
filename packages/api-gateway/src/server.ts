@@ -20,6 +20,8 @@ import inboundRoutes from './routes/inbound.routes';
 import outboundRoutes from './routes/outbound.routes';
 import salesOrderRoutes from './routes/sales-order.routes';
 import driverRoutes from './routes/driver.routes';
+import productionRoutes from './routes/production.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -48,6 +50,8 @@ app.use('/api/v1', inboundRoutes);
 app.use('/api/v1', outboundRoutes);
 app.use('/api/v1', salesOrderRoutes);
 app.use('/api/v1', driverRoutes);
+app.use('/api/v1', productionRoutes);
+app.use('/api/v1', dashboardRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

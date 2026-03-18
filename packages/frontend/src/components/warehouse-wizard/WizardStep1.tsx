@@ -79,17 +79,17 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
       <div className="mb-8 text-center">
         <div
           className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl"
-          style={{ background: 'linear-gradient(135deg, #2D7DD2, #3FB950)' }}
+          style={{ background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))' }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </div>
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: '#F0F6FC', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           새 창고 만들기
         </h2>
-        <p style={{ fontSize: 14, color: '#7D8590', marginTop: 8 }}>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>
           창고의 기본 정보를 입력하세요. 다음 단계에서 업종에 맞는 템플릿을 선택합니다.
         </p>
       </div>
@@ -100,10 +100,10 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
           {/* 창고 이름 */}
           <div
             className="rounded-xl p-5"
-            style={{ background: '#161B22', border: '1px solid #21262D' }}
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-muted)' }}
           >
             <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-200">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <line x1="9" y1="3" x2="9" y2="21" />
               </svg>
@@ -115,13 +115,13 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
               onChange={(e) => set('warehouseName', e.target.value)}
               placeholder="예: 김포 물류센터 A동"
               className="w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-gray-600"
-              style={{ background: '#0D1117', border: '1px solid #30363D' }}
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-default)' }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#2D7DD2';
+                e.currentTarget.style.borderColor = 'var(--accent-blue)';
                 e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,125,210,0.15)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#30363D';
+                e.currentTarget.style.borderColor = 'var(--border-default)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
@@ -130,10 +130,10 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
           {/* 층수 선택 (먼저 표시) */}
           <div
             className="rounded-xl p-5"
-            style={{ background: '#161B22', border: '1px solid #21262D' }}
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-muted)' }}
           >
             <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-200">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <line x1="3" y1="9" x2="21" y2="9" />
                 <line x1="3" y1="15" x2="21" y2="15" />
@@ -150,9 +150,9 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                   onClick={() => handleFloorCountChange(n)}
                   className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold transition-all"
                   style={{
-                    background: form.floorCount === n ? '#2D7DD2' : '#0D1117',
-                    border: form.floorCount === n ? '1px solid #2D7DD2' : '1px solid #30363D',
-                    color: form.floorCount === n ? '#fff' : '#8B949E',
+                    background: form.floorCount === n ? 'var(--accent-blue)' : 'var(--bg-primary)',
+                    border: form.floorCount === n ? '1px solid var(--accent-blue)' : '1px solid var(--border-default)',
+                    color: form.floorCount === n ? '#fff' : 'var(--text-secondary)',
                     boxShadow: form.floorCount === n ? '0 0 12px rgba(45,125,210,0.3)' : 'none',
                   }}
                 >
@@ -173,10 +173,10 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
           {/* 층별 크기 설정 */}
           <div
             className="rounded-xl p-5"
-            style={{ background: '#161B22', border: '1px solid #21262D' }}
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-muted)' }}
           >
             <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-200">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
               {form.floorCount > 1 ? `${activeFloor}층 크기` : '창고 크기'}
@@ -194,9 +194,9 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                       onClick={() => setActiveFloor(floor)}
                       className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all"
                       style={{
-                        background: activeFloor === floor ? '#1F2937' : 'transparent',
-                        border: activeFloor === floor ? '1px solid #374151' : '1px solid transparent',
-                        color: activeFloor === floor ? '#60A5FA' : '#6B7280',
+                        background: activeFloor === floor ? 'var(--bg-tertiary)' : 'transparent',
+                        border: activeFloor === floor ? '1px solid var(--border-default)' : '1px solid transparent',
+                        color: activeFloor === floor ? 'var(--accent-blue)' : 'var(--text-muted)',
                       }}
                     >
                       {floor}층
@@ -244,7 +244,7 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
             {form.areaWidth > 0 && form.areaDepth > 0 && (
               <div
                 className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
-                style={{ background: '#0D1117', border: '1px solid #21262D' }}
+                style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-muted)' }}
               >
                 <span className="text-xs text-gray-500">
                   {form.floorCount > 1
@@ -268,10 +268,10 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
         {/* 오른쪽 컬럼 — 업종 선택 */}
         <div
           className="rounded-xl p-5"
-          style={{ background: '#161B22', border: '1px solid #21262D' }}
+          style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-muted)' }}
         >
           <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-200">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8590" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -291,9 +291,9 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                   onClick={() => set('industry', code)}
                   className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm transition-all"
                   style={{
-                    border: isSelected ? `1px solid ${color}` : '1px solid #21262D',
-                    background: isSelected ? `${color}12` : '#0D1117',
-                    color: isSelected ? '#F0F6FC' : '#8B949E',
+                    border: isSelected ? `1px solid ${color}` : '1px solid var(--bg-tertiary)',
+                    background: isSelected ? `${color}12` : 'var(--bg-primary)',
+                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                     boxShadow: isSelected ? `0 0 16px ${color}20` : 'none',
                   }}
                 >
@@ -301,11 +301,11 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
                   <div
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                     style={{
-                      background: isSelected ? `${color}25` : '#161B22',
+                      background: isSelected ? `${color}25` : 'var(--bg-secondary)',
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isSelected ? color : '#484F58'}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill={isSelected ? color : 'var(--text-muted)'}>
                       <path d={INDUSTRY_ICONS[code]} />
                     </svg>
                   </div>
@@ -345,8 +345,8 @@ export function WizardStep1({ form, onChange, onNext }: WizardStep1Props) {
           disabled={!isValid}
           className="group flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold transition-all"
           style={{
-            background: isValid ? 'linear-gradient(135deg, #2D7DD2, #3FB950)' : '#21262D',
-            color: isValid ? '#fff' : '#484F58',
+            background: isValid ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))' : 'var(--bg-tertiary)',
+            color: isValid ? '#fff' : 'var(--text-muted)',
             cursor: isValid ? 'pointer' : 'not-allowed',
             boxShadow: isValid ? '0 4px 16px rgba(45,125,210,0.3)' : 'none',
           }}
@@ -395,13 +395,13 @@ function DimensionInput({
           value={value || ''}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           className="w-full rounded-lg px-3 py-2.5 pr-8 font-mono text-sm text-white outline-none transition-all placeholder:text-gray-600"
-          style={{ background: '#0D1117', border: '1px solid #30363D' }}
+          style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-default)' }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = '#2D7DD2';
+            e.currentTarget.style.borderColor = 'var(--accent-blue)';
             e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45,125,210,0.15)';
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = '#30363D';
+            e.currentTarget.style.borderColor = 'var(--border-default)';
             e.currentTarget.style.boxShadow = 'none';
           }}
         />

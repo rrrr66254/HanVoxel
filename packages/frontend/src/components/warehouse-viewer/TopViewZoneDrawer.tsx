@@ -545,7 +545,7 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
     <div style={{
       position: 'absolute',
       inset: 0,
-      background: '#0D1117',
+      background: 'var(--bg-primary)',
       zIndex: 50,
       display: 'flex',
       flexDirection: 'column',
@@ -553,8 +553,8 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
       {/* 상단 툴바 */}
       <div style={{
         height: 48,
-        background: '#161B22',
-        borderBottom: '1px solid #21262D',
+        background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -562,9 +562,9 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#E6EDF3' }}>2D 구역 편집</span>
-          <span style={{ fontSize: 11, color: '#484F58' }}>|</span>
-          <span style={{ fontSize: 11, color: '#8B949E' }}>드래그하여 구역 생성</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>2D 구역 편집</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>|</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>드래그하여 구역 생성</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -578,7 +578,7 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
                 borderRadius: 6,
                 border: selectedType === type
                   ? `2px solid ${ZONE_COLORS[type]}`
-                  : '1px solid #30363D',
+                  : '1px solid var(--border-default)',
                 background: selectedType === type
                   ? `${ZONE_COLORS[type]}20`
                   : 'transparent',
@@ -593,7 +593,7 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
             </button>
           ))}
 
-          <div style={{ width: 1, height: 24, background: '#21262D', margin: '0 4px' }} />
+          <div style={{ width: 1, height: 24, background: 'var(--border-muted)', margin: '0 4px' }} />
 
           {/* 3D로 복귀 (완료) */}
           <button
@@ -634,17 +634,17 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
           right: 12,
           width: 220,
           background: 'rgba(22,27,34,0.95)',
-          border: '1px solid #30363D',
+          border: '1px solid var(--border-default)',
           borderRadius: 10,
           padding: 12,
           maxHeight: 'calc(100% - 24px)',
           overflowY: 'auto',
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3', marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
             구역 목록 ({zones.length})
           </div>
           {zones.length === 0 ? (
-            <div style={{ fontSize: 11, color: '#484F58', padding: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: 8 }}>
               드래그하여 구역을 생성하세요
             </div>
           ) : (
@@ -656,7 +656,7 @@ export function TopViewZoneDrawer({ zones, objects = [], onAddZone, onDeleteZone
                 padding: '6px 8px',
                 borderRadius: 6,
                 marginBottom: 4,
-                background: '#0D1117',
+                background: 'var(--bg-primary)',
                 border: `1px solid ${ZONE_COLORS[zone.type]}30`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

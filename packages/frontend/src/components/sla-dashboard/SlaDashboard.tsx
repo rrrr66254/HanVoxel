@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   Truck, AlertTriangle, Target, Clock, TrendingUp, TrendingDown,
-  ArrowLeft, ShieldCheck, X, FileText, CheckCircle, XCircle,
+  ShieldCheck, X, FileText, CheckCircle, XCircle,
   ChevronRight, Calendar, BarChart3,
 } from 'lucide-react';
 import SlaSettings from './SlaSettings';
@@ -10,20 +10,20 @@ import SlaReport from './SlaReport';
 import type { SlaTargetData, SlaMetricData, SlaViolationData } from '../../api/sla-api';
 import { getSlaTarget, getSlaMetrics, getSlaViolations } from '../../api/sla-api';
 
-// ── 다크 테마 색상 상수 ─────────────────────────────────
+// ── 테마 색상 상수 (CSS 변수 참조) ─────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  gridLine: '#21262D',
-  blue: '#2D7DD2',
-  red: '#F85149',
-  green: '#3FB950',
-  yellow: '#D29922',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  gridLine: 'var(--bg-tertiary)',
+  blue: 'var(--accent-blue)',
+  red: 'var(--accent-red)',
+  green: 'var(--accent-green)',
+  yellow: 'var(--accent-orange)',
   overlay: 'rgba(0,0,0,0.6)',
 } as const;
 
@@ -465,7 +465,7 @@ function ViolationDetailModal({ violation, metrics, target, onClose }: Violation
               <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 2 }}>{metricDirection}</div>
             </div>
             <div style={{
-              background: `${COLORS.red}08`, borderRadius: 10, border: `1px solid ${COLORS.red}30`,
+              background: 'rgba(248,81,73,0.03)', borderRadius: 10, border: '1px solid rgba(248,81,73,0.19)',
               padding: 14, textAlign: 'center',
             }}>
               <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>실측</div>
@@ -555,8 +555,8 @@ function ViolationDetailModal({ violation, metrics, target, onClose }: Violation
                     <div key={m.recordDate} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '6px 10px', borderRadius: 6,
-                      background: isViolationDay ? `${COLORS.red}10` : 'transparent',
-                      border: isViolationDay ? `1px solid ${COLORS.red}30` : '1px solid transparent',
+                      background: isViolationDay ? 'rgba(248,81,73,0.06)' : 'transparent',
+                      border: isViolationDay ? '1px solid rgba(248,81,73,0.19)' : '1px solid transparent',
                     }}>
                       <span style={{
                         fontSize: 11, color: isViolationDay ? COLORS.text : COLORS.textMuted,
@@ -707,14 +707,6 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
       >
         <div className="flex items-center justify-between" style={{ height: 56 }}>
           <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-1 text-sm transition-colors hover:opacity-80"
-              style={{ color: COLORS.textMuted }}
-            >
-              <ArrowLeft size={16} />
-              돌아가기
-            </button>
             <div className="flex items-center gap-2">
               <ShieldCheck size={20} style={{ color: COLORS.blue }} />
               <h1 className="text-lg font-bold" style={{ color: COLORS.text }}>
@@ -724,7 +716,7 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
             {target && (
               <span
                 className="text-sm px-2 py-0.5 rounded"
-                style={{ color: COLORS.textMuted, backgroundColor: `${COLORS.border}80` }}
+                style={{ color: COLORS.textMuted, backgroundColor: 'rgba(48,54,61,0.5)' }}
               >
                 {target.name}
               </span>
@@ -851,7 +843,7 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
               {violations.filter((v) => !v.resolvedAt).length > 0 && (
                 <span
                   className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ backgroundColor: `${COLORS.red}20`, color: COLORS.red }}
+                  style={{ backgroundColor: 'rgba(248,81,73,0.12)', color: COLORS.red }}
                 >
                   미해결 {violations.filter((v) => !v.resolvedAt).length}건
                 </span>
@@ -943,7 +935,7 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
                           <span
                             className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
                             style={{
-                              backgroundColor: v.severity === 'critical' ? `${COLORS.red}20` : `${COLORS.yellow}20`,
+                              backgroundColor: v.severity === 'critical' ? 'rgba(248,81,73,0.12)' : 'rgba(210,153,34,0.12)',
                               color: v.severity === 'critical' ? COLORS.red : COLORS.yellow,
                             }}
                           >
@@ -961,14 +953,14 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
                           {v.resolvedAt ? (
                             <span
                               className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
-                              style={{ backgroundColor: `${COLORS.green}20`, color: COLORS.green }}
+                              style={{ backgroundColor: 'rgba(63,185,80,0.12)', color: COLORS.green }}
                             >
                               해결
                             </span>
                           ) : (
                             <span
                               className="text-xs px-2.5 py-1 rounded-full font-medium inline-block"
-                              style={{ backgroundColor: `${COLORS.red}20`, color: COLORS.red }}
+                              style={{ backgroundColor: 'rgba(248,81,73,0.12)', color: COLORS.red }}
                             >
                               미해결
                             </span>

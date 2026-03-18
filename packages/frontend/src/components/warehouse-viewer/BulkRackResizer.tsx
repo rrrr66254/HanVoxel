@@ -373,9 +373,9 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
   const hRange = range.height;
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{typeLabel} 크기 일괄 수정</h3>
@@ -383,9 +383,9 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
               {objects.length}개
             </span>
           </div>
-          <span style={{ fontSize: 10, color: '#484F58' }}>슬라이더를 조절하면 실시간으로 반영됩니다</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>슬라이더를 조절하면 실시간으로 반영됩니다</span>
         </div>
-        <button onClick={handleCancel} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={handleCancel} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <X size={14} />
         </button>
       </div>
@@ -399,25 +399,25 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
         {/* 랙 전용: 단수/단간높이 */}
         {isRack && 'levels' in range && (
           <>
-            <div style={{ height: 1, background: '#2A2F38' }} />
+            <div style={{ height: 1, background: 'var(--border-muted)' }} />
             <SliderField label={(range as typeof RANGE_RACK).levels.label} value={levels} onChange={(v) => setLevels(Math.round(v))} min={(range as typeof RANGE_RACK).levels.min} max={(range as typeof RANGE_RACK).levels.max} step={(range as typeof RANGE_RACK).levels.step} unit="단" color="#F59E0B" />
             <SliderField label={(range as typeof RANGE_RACK).levelHeight.label} value={levelHeight} onChange={setLevelHeight} min={(range as typeof RANGE_RACK).levelHeight.min} max={(range as typeof RANGE_RACK).levelHeight.max} step={(range as typeof RANGE_RACK).levelHeight.step} unit="m" color="#A78BFA" />
           </>
         )}
 
-        <div style={{ height: 1, background: '#2A2F38' }} />
+        <div style={{ height: 1, background: 'var(--border-muted)' }} />
 
         {/* 자동 재배치 토글 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#E6EDF3' }}>오버랩 방지 자동 배치</div>
-            <div style={{ fontSize: 10, color: '#484F58', marginTop: 2 }}>크기 변경 시 오브젝트 간 겹침 자동 해소</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>오버랩 방지 자동 배치</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>크기 변경 시 오브젝트 간 겹침 자동 해소</div>
           </div>
           <button
             onClick={() => setAutoReposition((v) => !v)}
             style={{
               width: 40, height: 22, borderRadius: 11, border: 'none',
-              background: autoReposition ? '#2D7DD2' : '#30363D',
+              background: autoReposition ? 'var(--accent-blue)' : 'var(--border-default)',
               cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
             }}
           >
@@ -435,7 +435,7 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
             borderRadius: 6, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.25)',
-            fontSize: 11, color: '#F85149',
+            fontSize: 11, color: 'var(--accent-red)',
           }}>
             <AlertTriangle size={14} />
             {typeLabel}이(가) 다른 오브젝트와 겹칩니다. 자동 배치를 켜거나 크기를 줄이세요.
@@ -445,7 +445,7 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
         {/* 현재 값 요약 */}
         <div style={{
           display: 'grid', gridTemplateColumns: isRack ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: 8,
-          padding: '10px', borderRadius: 8, background: '#0D1117', border: '1px solid #21262D',
+          padding: '10px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border-muted)',
         }}>
           <SummaryCell label="W" value={`${width.toFixed(step2dp(wRange.step))}m`} color="#F85149" />
           <SummaryCell label="D" value={`${depth.toFixed(step2dp(dRange.step))}m`} color="#2D7DD2" />
@@ -464,7 +464,7 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
           onClick={handleSave}
           style={{
             width: '100%', padding: '10px', borderRadius: 8, border: 'none',
-            background: '#2D7DD2', color: '#fff', fontSize: 13, fontWeight: 700,
+            background: 'var(--accent-blue)', color: '#fff', fontSize: 13, fontWeight: 700,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             fontFamily: 'inherit',
           }}
@@ -475,7 +475,7 @@ function BulkResizerCore({ objects, allObjects, onPreview, onSave, onClose }: Bu
         <button onClick={handleReset} style={{
           width: '100%', padding: '9px', borderRadius: 8,
           border: '1px solid rgba(139,148,158,0.2)', background: 'transparent',
-          color: '#8B949E', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           fontFamily: 'inherit',
         }}>
@@ -512,7 +512,7 @@ function SliderField({ label, value, onChange, min, max, step, unit, color }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#8B949E' }}>{label}</label>
+        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <input
             type="number"
@@ -525,14 +525,14 @@ function SliderField({ label, value, onChange, min, max, step, unit, color }: {
             min={min}
             max={max}
             style={{
-              width: 56, borderRadius: 4, border: '1px solid #30363D', background: '#0D1117',
+              width: 56, borderRadius: 4, border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
               padding: '3px 4px', textAlign: 'center', fontSize: 11, fontFamily: 'monospace',
-              color: '#E6EDF3', outline: 'none',
+              color: 'var(--text-primary)', outline: 'none',
             }}
             onFocus={(e) => { e.currentTarget.style.borderColor = color; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
           />
-          <span style={{ fontSize: 10, color: '#484F58' }}>{unit}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{unit}</span>
         </div>
       </div>
       <div style={{ position: 'relative', height: 20, display: 'flex', alignItems: 'center' }}>
@@ -545,7 +545,7 @@ function SliderField({ label, value, onChange, min, max, step, unit, color }: {
           onChange={(e) => onChange(parseFloat(e.target.value))}
           style={{
             width: '100%', height: 4, appearance: 'none', WebkitAppearance: 'none',
-            background: `linear-gradient(to right, ${color} 0%, ${color} ${((value - min) / (max - min)) * 100}%, #30363D ${((value - min) / (max - min)) * 100}%, #30363D 100%)`,
+            background: `linear-gradient(to right, ${color} 0%, ${color} ${((value - min) / (max - min)) * 100}%, var(--border-default) ${((value - min) / (max - min)) * 100}%, var(--border-default) 100%)`,
             borderRadius: 2, outline: 'none', cursor: 'pointer',
           }}
         />
@@ -558,7 +558,7 @@ function SliderField({ label, value, onChange, min, max, step, unit, color }: {
 function SummaryCell({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 9, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
       <div style={{ fontSize: 13, fontWeight: 700, color, fontFamily: 'monospace' }}>{value}</div>
     </div>
   );

@@ -133,6 +133,41 @@ export async function bulkBomUploadHandler(req: Request, res: Response) {
   }
 }
 
+// ── BOM 제품 검색 + 생산 가능 체크 ───────────────
+
+export async function searchBomProductsHandler(req: Request, res: Response) {
+  try {
+    const siteId = String(req.query.siteId ?? '');
+    const q = String(req.query.q ?? '');
+    if (!siteId) {
+      res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'siteId 필수' } });
+      return;
+    }
+    const results = await soService.searchBomProducts(siteId, q);
+    res.json({ success: true, data: results });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'BOM 제품 검색 실패';
+    res.status(500).json({ success: false, error: { code: 'INTERNAL', message: msg } });
+  }
+}
+
+export async function productionCheckHandler(req: Request, res: Response) {
+  try {
+    const siteId = String(req.query.siteId ?? '');
+    const sku = String(req.params.sku ?? '');
+    const qty = Number(req.query.qty ?? 1);
+    if (!siteId || !sku) {
+      res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'siteId, sku 필수' } });
+      return;
+    }
+    const materials = await soService.productionCheck(siteId, sku, qty);
+    res.json({ success: true, data: materials });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '생산 가능 체크 실패';
+    res.status(500).json({ success: false, error: { code: 'INTERNAL', message: msg } });
+  }
+}
+
 // ── 재고 더블체크 ───────────────────────────────
 
 export async function stockChecksHandler(req: Request, res: Response) {

@@ -16,7 +16,6 @@ import {
   Users,
   Box,
   Check,
-  ArrowLeft,
   Sparkles,
   AlertCircle,
   Calendar,
@@ -37,12 +36,12 @@ import {
   createCheckout,
 } from '../../api/billing-api';
 
-// ── 테마 색상 상수 ────────────────────────────────────────
+// ── 테마 색상 상수 (CSS 변수 참조) ────────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
   goldFrom: '#D4A574',
   goldTo: '#B8860B',
 } as const;
@@ -145,7 +144,7 @@ const PLAN_COMPARISON = [
       '사용자 20명',
       '우선 기술 지원',
     ],
-    borderStyle: '2px solid #3B82F6',
+    borderStyle: '2px solid var(--accent-blue)',
     highlight: true,
     gold: false,
   },
@@ -278,7 +277,7 @@ function CircularGauge({
           <Icon size={18} style={{ color: gaugeColor }} />
           <span
             className="mt-0.5 text-lg font-bold"
-            style={{ color: isNearLimit ? gaugeColor : '#E6EDF3' }}
+            style={{ color: isNearLimit ? gaugeColor : 'var(--text-primary)' }}
           >
             {pct}%
           </span>
@@ -287,13 +286,13 @@ function CircularGauge({
 
       {/* 라벨 */}
       <div className="text-center">
-        <p className="text-sm font-medium" style={{ color: '#8B949E' }}>
+        <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
           {label}
         </p>
-        <p className="mt-1 text-sm font-semibold" style={{ color: '#E6EDF3' }}>
+        <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
           {animatedCurrent.toLocaleString()}
-          <span style={{ color: '#484F58' }}> / </span>
-          <span style={{ color: '#8B949E' }}>
+          <span style={{ color: 'var(--text-muted)' }}> / </span>
+          <span style={{ color: 'var(--text-secondary)' }}>
             {max >= 99999 ? '무제한' : max.toLocaleString()}
           </span>
         </p>
@@ -332,10 +331,10 @@ function KpiCard({
           <Icon size={20} style={{ color: topColor }} />
         </div>
         <div>
-          <p className="text-xs" style={{ color: '#8B949E' }}>
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             {label}
           </p>
-          <p className="text-lg font-bold" style={{ color: '#E6EDF3' }}>
+          <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
             {value}
           </p>
         </div>
@@ -405,7 +404,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
             className="h-10 w-10 animate-spin rounded-full border-2 border-t-transparent"
             style={{ borderColor: `${COLORS.border}`, borderTopColor: 'transparent' }}
           />
-          <span style={{ color: '#8B949E' }}>로딩 중...</span>
+          <span style={{ color: 'var(--text-secondary)' }}>로딩 중...</span>
         </div>
       </div>
     );
@@ -420,31 +419,21 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
     : 0;
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.bg, color: '#E6EDF3' }}>
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.bg, color: 'var(--text-primary)' }}>
       {/* ── 헤더 ── */}
       <header
         className="sticky top-0 z-10 backdrop-blur-md"
         style={{
-          backgroundColor: `${COLORS.bg}E6`,
+          backgroundColor: 'rgba(13,17,23,0.9)',
           borderBottom: `1px solid ${COLORS.border}`,
         }}
       >
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
-            style={{ color: '#8B949E' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#E6EDF3')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#8B949E')}
-          >
-            <ArrowLeft size={18} />
-            <span>돌아가기</span>
-          </button>
-          <div className="ml-2">
-            <h1 className="text-lg font-bold" style={{ color: '#E6EDF3' }}>
+          <div>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
               구독 관리
             </h1>
-            <p className="text-xs" style={{ color: '#484F58' }}>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {s.companyName}
             </p>
           </div>
@@ -457,7 +446,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
           <div
             className="flex items-center gap-3 rounded-xl px-5 py-4"
             style={{
-              background: 'linear-gradient(135deg, #1E3A5F 0%, #0D1117 100%)',
+              background: 'linear-gradient(135deg, #1E3A5F 0%, var(--bg-primary) 100%)',
               border: '1px solid #1E4976',
             }}
           >
@@ -510,7 +499,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
             icon={Calendar}
             label="다음 결제일"
             value={s.currentPeriodEnd ? formatDate(s.currentPeriodEnd) : '-'}
-            topColor="#8B5CF6"
+            topColor="var(--accent-purple)"
           />
           <KpiCard
             icon={TrendingUp}
@@ -554,7 +543,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                 {isEnterprise && <Crown size={28} style={{ color: '#FFF8E7' }} />}
                 <h2
                   className="text-2xl font-bold"
-                  style={{ color: isEnterprise ? '#FFF8E7' : '#E6EDF3' }}
+                  style={{ color: isEnterprise ? '#FFF8E7' : 'var(--text-primary)' }}
                 >
                   {s.planName}
                 </h2>
@@ -579,7 +568,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
               </div>
               <p
                 className="mt-2 text-sm"
-                style={{ color: isEnterprise ? 'rgba(255,248,231,0.7)' : '#8B949E' }}
+                style={{ color: isEnterprise ? 'rgba(255,248,231,0.7)' : 'var(--text-secondary)' }}
               >
                 {s.billingInterval === 'yearly' ? '연간' : '월간'} 결제
                 {s.currentPeriodEnd && ` / 다음 결제: ${formatDate(s.currentPeriodEnd)}`}
@@ -588,7 +577,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
             <div className="text-right">
               <div
                 className="text-3xl font-bold"
-                style={{ color: isEnterprise ? '#FFF8E7' : '#E6EDF3' }}
+                style={{ color: isEnterprise ? '#FFF8E7' : 'var(--text-primary)' }}
               >
                 {s.pricing.monthly === 0
                   ? '커스텀'
@@ -600,7 +589,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
               </div>
               <div
                 className="text-xs"
-                style={{ color: isEnterprise ? 'rgba(255,248,231,0.6)' : '#484F58' }}
+                style={{ color: isEnterprise ? 'rgba(255,248,231,0.6)' : 'var(--text-muted)' }}
               >
                 {s.pricing.monthly > 0 ? '/월' : ''}
                 {s.billingInterval === 'yearly' &&
@@ -622,20 +611,20 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                       color: '#FFF8E7',
                       backdropFilter: 'blur(4px)',
                     }
-                  : { backgroundColor: '#3B82F6', color: '#FFFFFF' }
+                  : { backgroundColor: 'var(--accent-blue)', color: '#FFFFFF' }
               }
               onMouseEnter={(e) => {
                 if (isEnterprise) {
                   e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)';
                 } else {
-                  e.currentTarget.style.backgroundColor = '#2563EB';
+                  e.currentTarget.style.backgroundColor = 'var(--accent-blue-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (isEnterprise) {
                   e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
                 } else {
-                  e.currentTarget.style.backgroundColor = '#3B82F6';
+                  e.currentTarget.style.backgroundColor = 'var(--accent-blue)';
                 }
               }}
             >
@@ -685,8 +674,8 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
           style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
         >
           <div className="mb-5 flex items-center gap-2">
-            <Shield size={16} style={{ color: '#8B949E' }} />
-            <h3 className="text-sm font-semibold" style={{ color: '#8B949E' }}>
+            <Shield size={16} style={{ color: 'var(--text-secondary)' }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
               리소스 사용량
             </h3>
           </div>
@@ -703,7 +692,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
               max={s.usage.users.max}
               label="사용자"
               icon={Users}
-              color="#8B5CF6"
+              color="var(--accent-purple)"
             />
             <CircularGauge
               current={s.usage.objects.current}
@@ -721,8 +710,8 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
           style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
         >
           <div className="flex items-center gap-2 px-6 py-4">
-            <CreditCard size={16} style={{ color: '#8B949E' }} />
-            <h3 className="text-sm font-semibold" style={{ color: '#8B949E' }}>
+            <CreditCard size={16} style={{ color: 'var(--text-secondary)' }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
               결제 내역
             </h3>
           </div>
@@ -730,8 +719,8 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
           {payments.length === 0 ? (
             /* 빈 상태 */
             <div className="flex flex-col items-center gap-3 py-12">
-              <CreditCard size={40} style={{ color: '#30363D' }} />
-              <p className="text-sm" style={{ color: '#484F58' }}>
+              <CreditCard size={40} style={{ color: 'var(--border-default)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 결제 내역이 없습니다
               </p>
             </div>
@@ -742,31 +731,31 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                   <tr style={{ backgroundColor: COLORS.card }}>
                     <th
                       className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                      style={{ color: '#484F58', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ color: 'var(--text-muted)', borderBottom: `1px solid ${COLORS.border}` }}
                     >
                       날짜
                     </th>
                     <th
                       className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                      style={{ color: '#484F58', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ color: 'var(--text-muted)', borderBottom: `1px solid ${COLORS.border}` }}
                     >
                       설명
                     </th>
                     <th
                       className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                      style={{ color: '#484F58', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ color: 'var(--text-muted)', borderBottom: `1px solid ${COLORS.border}` }}
                     >
                       기간
                     </th>
                     <th
                       className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
-                      style={{ color: '#484F58', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ color: 'var(--text-muted)', borderBottom: `1px solid ${COLORS.border}` }}
                     >
                       금액
                     </th>
                     <th
                       className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
-                      style={{ color: '#484F58', borderBottom: `1px solid ${COLORS.border}` }}
+                      style={{ color: 'var(--text-muted)', borderBottom: `1px solid ${COLORS.border}` }}
                     >
                       상태
                     </th>
@@ -778,7 +767,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                       key={p.id}
                       className="transition-colors"
                       style={{
-                        backgroundColor: idx % 2 === 0 ? 'transparent' : '#0D1117',
+                        backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--bg-primary)',
                         borderBottom: `1px solid ${COLORS.border}`,
                       }}
                       onMouseEnter={(e) => {
@@ -786,21 +775,21 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor =
-                          idx % 2 === 0 ? 'transparent' : '#0D1117';
+                          idx % 2 === 0 ? 'transparent' : 'var(--bg-primary)';
                       }}
                     >
-                      <td className="whitespace-nowrap px-6 py-4" style={{ color: '#8B949E' }}>
+                      <td className="whitespace-nowrap px-6 py-4" style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(p.createdAt)}
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#E6EDF3' }}>
+                      <td className="px-6 py-4" style={{ color: 'var(--text-primary)' }}>
                         {p.description ?? `${p.planCode} 구독`}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-xs" style={{ color: '#484F58' }}>
+                      <td className="whitespace-nowrap px-6 py-4 text-xs" style={{ color: 'var(--text-muted)' }}>
                         {formatDate(p.periodStart)} ~ {formatDate(p.periodEnd)}
                       </td>
                       <td
                         className="whitespace-nowrap px-6 py-4 text-right font-medium"
-                        style={{ color: '#E6EDF3' }}
+                        style={{ color: 'var(--text-primary)' }}
                       >
                         {formatPrice(p.amount)}
                       </td>
@@ -819,7 +808,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                                 ? '#34D399'
                                 : p.status === 'failed'
                                   ? '#F87171'
-                                  : '#8B949E',
+                                  : 'var(--text-secondary)',
                           }}
                         >
                           {paymentStatusLabel[p.status] ?? p.status}
@@ -836,8 +825,8 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
         {/* ── 플랜 비교 카드 ── */}
         <div>
           <div className="mb-5 flex items-center gap-2">
-            <Sparkles size={16} style={{ color: '#8B949E' }} />
-            <h3 className="text-sm font-semibold" style={{ color: '#8B949E' }}>
+            <Sparkles size={16} style={{ color: 'var(--text-secondary)' }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
               플랜 비교
             </h3>
           </div>
@@ -867,8 +856,8 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                     <div
                       className="absolute right-4 top-4 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase"
                       style={{
-                        backgroundColor: plan.gold ? `${COLORS.goldFrom}20` : '#3B82F620',
-                        color: plan.gold ? COLORS.goldFrom : '#3B82F6',
+                        backgroundColor: plan.gold ? 'rgba(212,165,116,0.12)' : 'rgba(59,130,246,0.12)',
+                        color: plan.gold ? COLORS.goldFrom : 'var(--accent-blue)',
                       }}
                     >
                       현재 플랜
@@ -880,14 +869,14 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                     {plan.gold ? (
                       <Crown size={20} style={{ color: COLORS.goldFrom }} />
                     ) : plan.highlight ? (
-                      <Sparkles size={20} style={{ color: '#3B82F6' }} />
+                      <Sparkles size={20} style={{ color: 'var(--accent-blue)' }} />
                     ) : (
-                      <Box size={20} style={{ color: '#8B949E' }} />
+                      <Box size={20} style={{ color: 'var(--text-secondary)' }} />
                     )}
                     <h4
                       className="text-lg font-bold"
                       style={{
-                        color: plan.gold ? COLORS.goldFrom : '#E6EDF3',
+                        color: plan.gold ? COLORS.goldFrom : 'var(--text-primary)',
                       }}
                     >
                       {plan.name}
@@ -898,17 +887,17 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                   <div className="mb-1">
                     <span
                       className="text-3xl font-bold"
-                      style={{ color: '#E6EDF3' }}
+                      style={{ color: 'var(--text-primary)' }}
                     >
                       {plan.price === 0 ? '커스텀' : plan.priceLabel}
                     </span>
                     {plan.price > 0 && (
-                      <span className="text-sm" style={{ color: '#484F58' }}>
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         /월
                       </span>
                     )}
                   </div>
-                  <p className="mb-5 text-xs" style={{ color: '#8B949E' }}>
+                  <p className="mb-5 text-xs" style={{ color: 'var(--text-secondary)' }}>
                     {plan.description}
                   </p>
 
@@ -923,11 +912,11 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                             color: plan.gold
                               ? COLORS.goldFrom
                               : plan.highlight
-                                ? '#3B82F6'
-                                : '#8B949E',
+                                ? 'var(--accent-blue)'
+                                : 'var(--text-secondary)',
                           }}
                         />
-                        <span style={{ color: '#C9D1D9' }}>{feature}</span>
+                        <span style={{ color: 'var(--text-primary)' }}>{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -941,7 +930,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                       isCurrent
                         ? {
                             backgroundColor: COLORS.border,
-                            color: '#484F58',
+                            color: 'var(--text-muted)',
                           }
                         : plan.gold
                           ? {
@@ -949,10 +938,10 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                               color: '#FFFFFF',
                             }
                           : plan.highlight
-                            ? { backgroundColor: '#3B82F6', color: '#FFFFFF' }
+                            ? { backgroundColor: 'var(--accent-blue)', color: '#FFFFFF' }
                             : {
                                 backgroundColor: 'transparent',
-                                color: '#E6EDF3',
+                                color: 'var(--text-primary)',
                                 border: `1px solid ${COLORS.border}`,
                               }
                     }
@@ -961,9 +950,9 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                         if (plan.gold) {
                           e.currentTarget.style.opacity = '0.9';
                         } else if (plan.highlight) {
-                          e.currentTarget.style.backgroundColor = '#2563EB';
+                          e.currentTarget.style.backgroundColor = 'var(--accent-blue-hover)';
                         } else {
-                          e.currentTarget.style.borderColor = '#8B949E';
+                          e.currentTarget.style.borderColor = 'var(--text-secondary)';
                         }
                       }
                     }}
@@ -972,7 +961,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                         if (plan.gold) {
                           e.currentTarget.style.opacity = '1';
                         } else if (plan.highlight) {
-                          e.currentTarget.style.backgroundColor = '#3B82F6';
+                          e.currentTarget.style.backgroundColor = 'var(--accent-blue)';
                         } else {
                           e.currentTarget.style.borderColor = COLORS.border;
                         }
@@ -998,7 +987,7 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
             {/* 모달 상단 경고 바 */}
             <div
               className="h-1"
-              style={{ backgroundColor: '#EF4444' }}
+              style={{ backgroundColor: 'var(--accent-red)' }}
             />
             <div className="p-6">
               <div className="mb-4 flex items-center gap-3">
@@ -1008,11 +997,11 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                 >
                   <AlertCircle size={20} style={{ color: '#F87171' }} />
                 </div>
-                <h3 className="text-lg font-bold" style={{ color: '#E6EDF3' }}>
+                <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                   구독을 취소하시겠습니까?
                 </h3>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: '#8B949E' }}>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 현재 결제 기간이 끝나면 구독이 해지됩니다. 해지 후에는
                 Starter(무료) 플랜으로 전환됩니다.
               </p>
@@ -1020,12 +1009,12 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                 <button
                   onClick={handleCancel}
                   className="flex-1 rounded-lg py-2.5 text-sm font-bold text-white transition-colors"
-                  style={{ backgroundColor: '#DC2626' }}
+                  style={{ backgroundColor: 'var(--accent-red)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#B91C1C';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#DC2626';
+                    e.currentTarget.style.backgroundColor = 'var(--accent-red)';
                   }}
                 >
                   구독 취소
@@ -1033,14 +1022,14 @@ export function SubscriptionDashboard({ onBack, onUpgrade }: SubscriptionDashboa
                 <button
                   onClick={() => setCancelConfirm(false)}
                   className="flex-1 rounded-lg py-2.5 text-sm transition-colors"
-                  style={{ color: '#8B949E', border: `1px solid ${COLORS.border}` }}
+                  style={{ color: 'var(--text-secondary)', border: `1px solid ${COLORS.border}` }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#8B949E';
-                    e.currentTarget.style.color = '#E6EDF3';
+                    e.currentTarget.style.borderColor = 'var(--text-secondary)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = COLORS.border;
-                    e.currentTarget.style.color = '#8B949E';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
                   }}
                 >
                   돌아가기

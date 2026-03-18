@@ -29,7 +29,6 @@ import {
   TrendingUp,
   BarChart3,
   Target,
-  ArrowLeft,
   Award,
   Lightbulb,
 } from 'lucide-react';
@@ -46,22 +45,22 @@ import {
   getBenchmarkHistory,
 } from '../../api/benchmark-api';
 
-// ── 디자인 토큰 ──
+// ── 디자인 토큰 (CSS 변수 참조) ──
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  grid: '#21262D',
-  accent: '#58A6FF',
-  accentGreen: '#3FB950',
-  accentOrange: '#D29922',
-  accentRed: '#F85149',
-  accentPurple: '#BC8CFF',
-  radarMine: '#58A6FF',
-  radarIndustry: '#8B949E',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  grid: 'var(--bg-tertiary)',
+  accent: 'var(--accent-blue)',
+  accentGreen: 'var(--accent-green)',
+  accentOrange: 'var(--accent-orange)',
+  accentRed: 'var(--accent-red)',
+  accentPurple: 'var(--accent-purple)',
+  radarMine: 'var(--accent-blue)',
+  radarIndustry: 'var(--text-secondary)',
 } as const;
 
 interface Props {
@@ -75,12 +74,12 @@ const DEMO_SITE = 'demo-site-001';
 
 // KPI 메타 정보
 const KPI_META: Record<string, { label: string; unit: string; higherIsBetter: boolean; icon: typeof Trophy; color: string }> = {
-  picking_accuracy: { label: '피킹 정확도', unit: '%', higherIsBetter: true, icon: Target, color: '#58A6FF' },
-  inventory_turnover: { label: '재고회전율', unit: '회/년', higherIsBetter: true, icon: TrendingUp, color: '#3FB950' },
-  space_utilization: { label: '공간활용률', unit: '%', higherIsBetter: true, icon: BarChart3, color: '#BC8CFF' },
-  on_time_delivery: { label: '납기준수율', unit: '%', higherIsBetter: true, icon: Trophy, color: '#D29922' },
-  receiving_time: { label: '입고처리 시간', unit: '시간', higherIsBetter: false, icon: Award, color: '#F78166' },
-  order_cycle_time: { label: '주문처리 시간', unit: '시간', higherIsBetter: false, icon: Lightbulb, color: '#F85149' },
+  picking_accuracy: { label: '피킹 정확도', unit: '%', higherIsBetter: true, icon: Target, color: 'var(--accent-blue)' },
+  inventory_turnover: { label: '재고회전율', unit: '회/년', higherIsBetter: true, icon: TrendingUp, color: 'var(--accent-green)' },
+  space_utilization: { label: '공간활용률', unit: '%', higherIsBetter: true, icon: BarChart3, color: 'var(--accent-purple)' },
+  on_time_delivery: { label: '납기준수율', unit: '%', higherIsBetter: true, icon: Trophy, color: 'var(--accent-orange)' },
+  receiving_time: { label: '입고처리 시간', unit: '시간', higherIsBetter: false, icon: Award, color: 'var(--accent-orange)' },
+  order_cycle_time: { label: '주문처리 시간', unit: '시간', higherIsBetter: false, icon: Lightbulb, color: 'var(--accent-red)' },
 };
 const KPI_KEYS = Object.keys(KPI_META);
 
@@ -96,10 +95,10 @@ function gradeFromScore(score: number): string {
 
 function gradeColor(grade: string): string {
   const map: Record<string, string> = {
-    S: '#D29922', A: '#3FB950', B: '#58A6FF',
-    C: '#8B949E', D: '#F78166', F: '#F85149',
+    S: 'var(--accent-orange)', A: 'var(--accent-green)', B: 'var(--accent-blue)',
+    C: 'var(--text-secondary)', D: 'var(--accent-orange)', F: 'var(--accent-red)',
   };
-  return map[grade] ?? '#8B949E';
+  return map[grade] ?? 'var(--text-secondary)';
 }
 
 // ── 애니메이션 카운터 훅 ──
@@ -202,14 +201,6 @@ export function BenchmarkDashboard({ onBack }: Props) {
         style={{ borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:opacity-80"
-            style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}
-          >
-            <ArrowLeft size={14} />
-            뒤로
-          </button>
           <h1 className="text-xl font-bold" style={{ color: COLORS.text }}>
             업계 벤치마크
           </h1>
@@ -277,7 +268,7 @@ export function BenchmarkDashboard({ onBack }: Props) {
           className="mx-6 mt-4 flex items-center justify-between rounded-lg px-4 py-2 text-sm"
           style={{
             background: 'rgba(248,81,73,0.1)',
-            border: `1px solid ${COLORS.accentRed}40`,
+            border: '1px solid rgba(248,81,73,0.25)',
             color: COLORS.accentRed,
           }}
         >
@@ -298,7 +289,7 @@ export function BenchmarkDashboard({ onBack }: Props) {
           <div className="flex items-center justify-center py-20">
             <div
               className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-              style={{ borderColor: `${COLORS.accent} transparent transparent transparent` }}
+              style={{ borderColor: 'var(--accent-blue) transparent transparent transparent' }}
             />
           </div>
         ) : data ? (
@@ -636,7 +627,7 @@ function DetailsTab({ data }: { data: BenchmarkData }) {
                     style={{
                       background: COLORS.accent,
                       left: `${normalize(myVal, pct)}%`,
-                      boxShadow: `0 0 8px ${COLORS.accent}80`,
+                      boxShadow: '0 0 8px rgba(88,166,255,0.5)',
                     }}
                   />
                 </div>
@@ -657,10 +648,10 @@ function DetailsTab({ data }: { data: BenchmarkData }) {
               <span
                 className="rounded-full px-4 py-1.5 text-sm font-bold"
                 style={{
-                  background: rank <= 10 ? `${COLORS.accentOrange}20` :
-                             rank <= 25 ? `${COLORS.accentGreen}20` :
-                             rank <= 50 ? `${COLORS.accent}20` :
-                             `${COLORS.accentRed}20`,
+                  background: rank <= 10 ? 'rgba(210,153,34,0.12)' :
+                             rank <= 25 ? 'rgba(63,185,80,0.12)' :
+                             rank <= 50 ? 'rgba(88,166,255,0.12)' :
+                             'rgba(248,81,73,0.12)',
                   color: rank <= 10 ? COLORS.accentOrange :
                          rank <= 25 ? COLORS.accentGreen :
                          rank <= 50 ? COLORS.accent :
@@ -732,10 +723,10 @@ function ReportsTab({
                 className="rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style={{
                   background: r.status === 'GENERATED'
-                    ? `${COLORS.accentGreen}20`
+                    ? 'rgba(63,185,80,0.12)'
                     : r.status === 'FAILED'
-                      ? `${COLORS.accentRed}20`
-                      : `${COLORS.textDim}20`,
+                      ? 'rgba(248,81,73,0.12)'
+                      : 'rgba(72,79,88,0.12)',
                   color: r.status === 'GENERATED'
                     ? COLORS.accentGreen
                     : r.status === 'FAILED'
@@ -825,9 +816,9 @@ function DarkCard({ title, children }: { title: string; children: React.ReactNod
 // ── 개선 권고 카드 ──
 function RecommendationCard({ rec }: { rec: RecommendationItem }) {
   const priorityConfig: Record<string, { text: string; color: string; bg: string }> = {
-    HIGH: { text: '긴급', color: '#F85149', bg: 'rgba(248,81,73,0.15)' },
-    MEDIUM: { text: '보통', color: '#D29922', bg: 'rgba(210,153,34,0.15)' },
-    LOW: { text: '낮음', color: '#3FB950', bg: 'rgba(63,185,80,0.15)' },
+    HIGH: { text: '긴급', color: 'var(--accent-red)', bg: 'rgba(248,81,73,0.15)' },
+    MEDIUM: { text: '보통', color: 'var(--accent-orange)', bg: 'rgba(210,153,34,0.15)' },
+    LOW: { text: '낮음', color: 'var(--accent-green)', bg: 'rgba(63,185,80,0.15)' },
   };
 
   const config = priorityConfig[rec.priority] ?? priorityConfig.LOW;

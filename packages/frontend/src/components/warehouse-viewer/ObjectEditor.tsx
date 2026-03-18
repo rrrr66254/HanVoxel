@@ -46,8 +46,8 @@ const CATEGORY_BADGE: Record<ObjectCategory, { bg: string; color: string }> = {
   aisle: { bg: 'rgba(107,114,128,0.15)', color: '#6B7280' },
   floor: { bg: 'rgba(148,163,184,0.15)', color: '#94A3B8' },
   wall: { bg: 'rgba(120,130,150,0.15)', color: '#788296' },
-  door: { bg: 'rgba(63,185,80,0.15)', color: '#3FB950' },
-  generic: { bg: 'rgba(45,125,210,0.15)', color: '#2D7DD2' },
+  door: { bg: 'rgba(63,185,80,0.15)', color: 'var(--accent-green)' },
+  generic: { bg: 'rgba(45,125,210,0.15)', color: 'var(--accent-blue)' },
 };
 
 /**
@@ -239,17 +239,17 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
   const showHeight = category !== 'floor';
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{CATEGORY_LABELS[category]} 편집</h3>
             <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: badge.bg, color: badge.color }}>{typeName}</span>
           </div>
-          <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
-        <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <X size={14} />
         </button>
       </div>
@@ -289,14 +289,14 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
             <input
               type="range" min={0} max={1} step={0.05} value={opacity}
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: '#2D7DD2' }}
+              style={{ width: '100%', accentColor: 'var(--accent-blue)' }}
             />
-            <span style={{ fontSize: 10, color: '#484F58', textAlign: 'center', display: 'block' }}>{Math.round(opacity * 100)}%</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', display: 'block' }}>{Math.round(opacity * 100)}%</span>
           </FieldRow>
         )}
 
         {/* 구분선 */}
-        <div style={{ height: 1, background: '#2A2F38' }} />
+        <div style={{ height: 1, background: 'var(--border-muted)' }} />
 
         {/* === 랙 전용 필드 === */}
         {category === 'rack' && (
@@ -359,9 +359,9 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
               <select
                 value={containerType}
                 onChange={(e) => setContainerType(e.target.value)}
-                style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+                style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
               >
                 <option value="DRY_20FT">Dry 20ft</option>
                 <option value="DRY_40FT">Dry 40ft</option>
@@ -396,9 +396,9 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
               <select
                 value={aisleType}
                 onChange={(e) => setAisleType(e.target.value)}
-                style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit' }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+                style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
               >
                 <option value="">일반 통로</option>
                 <option value="MAIN">주 통로</option>
@@ -412,7 +412,7 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
                 <option value="AGV_AMR">AGV (소형 AMR)</option>
               </select>
             </FieldRow>
-            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.15)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               가장자리 핸들을 드래그하여 통로 크기를 조절할 수 있습니다.
             </div>
           </>
@@ -422,11 +422,11 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         {category === 'floor' && (
           <>
             <FieldRow label="바닥 스타일">
-              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', fontSize: 12, color: 'var(--text-secondary)' }}>
                 {(meta.floorStyle as string) ?? 'EPOXY_GRAY'}
               </div>
             </FieldRow>
-            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               가장자리/모서리 핸들을 드래그하여 크기를 조절할 수 있습니다.
             </div>
           </>
@@ -436,11 +436,11 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         {category === 'wall' && (
           <>
             <FieldRow label="벽 스타일">
-              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', fontSize: 12, color: 'var(--text-secondary)' }}>
                 {(meta.wallStyle as string) ?? 'SANDWICH_PANEL'}
               </div>
             </FieldRow>
-            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: '#8B949E', lineHeight: 1.6 }}>
+            <div style={{ padding: '8px', borderRadius: 6, background: 'rgba(45,125,210,0.08)', border: '1px solid rgba(45,125,210,0.15)', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               가장자리/모서리 핸들을 드래그하여 크기를 조절할 수 있습니다.
             </div>
           </>
@@ -450,7 +450,7 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         {category === 'door' && (
           <>
             <FieldRow label="문 스타일">
-              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', fontSize: 12, color: '#8B949E' }}>
+              <div style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', fontSize: 12, color: 'var(--text-secondary)' }}>
                 {(meta.doorStyle as string) ?? 'ROLLING_SHUTTER'}
               </div>
             </FieldRow>
@@ -460,22 +460,22 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
         {/* 적용 버튼 */}
         <button
           onClick={handleApply}
-          style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: '#2D7DD2', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}
+          style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}
         >
           <Save size={14} /> 저장
         </button>
 
-        <div style={{ height: 1, background: '#2A2F38' }} />
+        <div style={{ height: 1, background: 'var(--border-muted)' }} />
 
-        <button onClick={handleReset} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(139,148,158,0.2)', background: 'transparent', color: '#8B949E', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
+        <button onClick={handleReset} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(139,148,158,0.2)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
           <RotateCcw size={14} /> 기본값 리셋
         </button>
 
-        <button onClick={() => onSavePreset(object)} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(63,185,80,0.3)', background: 'rgba(63,185,80,0.08)', color: '#3FB950', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
+        <button onClick={() => onSavePreset(object)} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(63,185,80,0.3)', background: 'rgba(63,185,80,0.08)', color: 'var(--accent-green)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
           <Bookmark size={14} /> 프리셋 저장
         </button>
 
-        <button onClick={() => onDelete(object.id)} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(248,81,73,0.2)', background: 'transparent', color: '#F85149', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
+        <button onClick={() => onDelete(object.id)} style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid rgba(248,81,73,0.2)', background: 'transparent', color: 'var(--accent-red)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
           <Trash2 size={14} /> 삭제
         </button>
       </div>
@@ -487,7 +487,7 @@ export function ObjectEditor({ object, onUpdate, onPreview, onSavePreset, onDele
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', marginBottom: 6, fontSize: 10, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</label>
+      <label style={{ display: 'block', marginBottom: 6, fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</label>
       {children}
     </div>
   );
@@ -497,7 +497,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 function NumField({ label, value, onChange, step = 0.1, min, max, color }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; color?: string }) {
   return (
     <div style={{ flex: 1 }}>
-      <span style={{ display: 'block', textAlign: 'center', fontSize: 9, fontWeight: 600, color: color ?? '#484F58', marginBottom: 3 }}>{label}</span>
+      <span style={{ display: 'block', textAlign: 'center', fontSize: 9, fontWeight: 600, color: color ?? 'var(--text-muted)', marginBottom: 3 }}>{label}</span>
       <input
         type="number"
         step={step}
@@ -505,9 +505,9 @@ function NumField({ label, value, onChange, step = 0.1, min, max, color }: { lab
         max={max}
         value={typeof value === 'number' ? parseFloat(value.toFixed(3)) : value}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 4px', textAlign: 'center', fontSize: 12, fontFamily: 'monospace', color: '#E6EDF3', outline: 'none' }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+        style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', padding: '6px 4px', textAlign: 'center', fontSize: 12, fontFamily: 'monospace', color: 'var(--text-primary)', outline: 'none' }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
       />
     </div>
   );
@@ -520,9 +520,9 @@ function TextInput({ value, onChange }: { value: string; onChange: (v: string) =
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit' }}
-      onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-      onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+      style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit' }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
     />
   );
 }
@@ -534,9 +534,9 @@ function DateInput({ value, onChange }: { value: string; onChange: (v: string) =
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      style={{ width: '100%', borderRadius: 6, border: '1px solid #30363D', background: '#0D1117', padding: '6px 8px', fontSize: 12, color: '#E6EDF3', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
-      onFocus={(e) => { e.currentTarget.style.borderColor = '#2D7DD2'; }}
-      onBlur={(e) => { e.currentTarget.style.borderColor = '#30363D'; }}
+      style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', padding: '6px 8px', fontSize: 12, color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit', colorScheme: 'dark' }}
+      onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
     />
   );
 }

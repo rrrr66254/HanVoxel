@@ -9,10 +9,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_STYLES: Record<ButtonVariant, { bg: string; hoverBg: string; color: string; border: string }> = {
-  primary:   { bg: '#2D7DD2', hoverBg: '#3A8FE0', color: '#FFFFFF', border: 'transparent' },
-  secondary: { bg: '#21262D', hoverBg: '#30363D', color: '#E6EDF3', border: '#30363D' },
-  danger:    { bg: 'rgba(248,81,73,0.12)', hoverBg: 'rgba(248,81,73,0.2)', color: '#F85149', border: 'rgba(248,81,73,0.3)' },
-  ghost:     { bg: 'transparent', hoverBg: '#161B22', color: '#8B949E', border: 'transparent' },
+  primary:   { bg: 'var(--accent-blue)', hoverBg: 'var(--accent-blue-hover)', color: '#FFFFFF', border: 'transparent' },
+  secondary: { bg: 'var(--bg-tertiary)', hoverBg: 'var(--border-default)', color: 'var(--text-primary)', border: 'var(--border-default)' },
+  danger:    { bg: 'rgba(248,81,73,0.12)', hoverBg: 'rgba(248,81,73,0.2)', color: 'var(--accent-red)', border: 'rgba(248,81,73,0.3)' },
+  ghost:     { bg: 'transparent', hoverBg: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: 'transparent' },
 };
 
 const SIZE_STYLES: Record<ButtonSize, { padding: string; fontSize: number; height: number }> = {

@@ -3,7 +3,7 @@
  *
  * 월간 뷰: 날짜별 입고(파랑)/출고(주황) 건수 뱃지
  * 필터: 전체 / 입고만 / 출고만
- * 우측 사이드 패널: 선택 날짜 상세 목록
+ * 우측 사이드 패널: 선택 날짜 상세 목록 (반응형 + 접기/펼치기)
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,10 +11,12 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  ArrowLeft,
   Package,
   Truck,
   Filter,
+  PanelRightClose,
+  PanelRightOpen,
+  X,
 } from 'lucide-react';
 import type { CalendarEntry } from '../../api/inbound-api';
 
@@ -44,18 +46,30 @@ interface CalendarEntryExtended extends Omit<CalendarEntry, 'inboundOrder' | 'ou
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  accent: '#58A6FF',
-  inbound: '#3B82F6',
-  outbound: '#F97316',
-  completed: '#10B981',
-  delayed: '#EF4444',
-  arrived: '#F59E0B',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  accent: 'var(--accent-blue)',
+  inbound: 'var(--accent-blue)',
+  outbound: 'var(--accent-orange)',
+  completed: 'var(--accent-green)',
+  delayed: 'var(--accent-red)',
+  arrived: 'var(--accent-orange)',
 } as const;
+
+// --- 상태 한글 매핑 ---
+const STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: '예정',
+  ARRIVED: '도착',
+  COMPLETED: '완료',
+  ORDERED: '발주',
+  QC_PENDING: '검수대기',
+  STOCKED: '입고완료',
+  PLANNED: '계획',
+  DISPATCHED: '출하완료',
+};
 
 // --- Mock 데이터 ---
 function generateMockCalendar(year: number, month: number): CalendarEntryExtended[] {
@@ -66,7 +80,6 @@ function generateMockCalendar(year: number, month: number): CalendarEntryExtende
   const customers = ['쿠팡', '네이버', '롯데물류', 'CJ대한통운'];
   const types = ['PICKING', 'PALLET', 'CONTAINER', 'DIRECT'];
   const slots = ['AM', 'PM', 'NIGHT'];
-  // 기사 목 데이터
   const driverNames = ['박철수', '김기사', '이운전', '최배달'];
   const driverPhones = ['010-9876-5432', '010-1234-5678', '010-5555-1234', '010-7777-8888'];
 
@@ -77,6 +90,8 @@ function generateMockCalendar(year: number, month: number): CalendarEntryExtende
 
     for (let i = 0; i < inCount; i++) {
       const st = statuses[Math.floor(Math.random() * statuses.length)];
+      const dIdx = Math.floor(Math.random() * driverNames.length);
+      const hasDriver = Math.random() > 0.3;
       entries.push({
         id: `in-${d}-${i}`,
         siteId: 'demo',
@@ -90,14 +105,15 @@ function generateMockCalendar(year: number, month: number): CalendarEntryExtende
           vendorName: vendors[Math.floor(Math.random() * vendors.length)],
           status: st === 'COMPLETED' ? 'STOCKED' : st === 'ARRIVED' ? 'QC_PENDING' : 'ORDERED',
           expectedDate: dateStr,
-          // 기사 정보 (70% 확률로 배정)
-          driverName: Math.random() > 0.3 ? driverNames[Math.floor(Math.random() * driverNames.length)] : undefined,
-          driverPhone: Math.random() > 0.3 ? driverPhones[Math.floor(Math.random() * driverPhones.length)] : undefined,
+          driverName: hasDriver ? driverNames[dIdx] : undefined,
+          driverPhone: hasDriver ? driverPhones[dIdx] : undefined,
         },
       });
     }
     for (let i = 0; i < outCount; i++) {
       const st = statuses[Math.floor(Math.random() * statuses.length)];
+      const dIdx = Math.floor(Math.random() * driverNames.length);
+      const hasDriver = Math.random() > 0.3;
       entries.push({
         id: `out-${d}-${i}`,
         siteId: 'demo',
@@ -113,9 +129,8 @@ function generateMockCalendar(year: number, month: number): CalendarEntryExtende
           status: st === 'COMPLETED' ? 'DISPATCHED' : 'PLANNED',
           manifestNumber: `OUT-${dateStr.replace(/-/g, '')}-${String(i + 1).padStart(4, '0')}`,
           timeSlot: slots[Math.floor(Math.random() * slots.length)],
-          // 기사 정보 (70% 확률로 배정) + 팔레트 수
-          driverName: Math.random() > 0.3 ? driverNames[Math.floor(Math.random() * driverNames.length)] : undefined,
-          driverPhone: Math.random() > 0.3 ? driverPhones[Math.floor(Math.random() * driverPhones.length)] : undefined,
+          driverName: hasDriver ? driverNames[dIdx] : undefined,
+          driverPhone: hasDriver ? driverPhones[dIdx] : undefined,
           palletCount: Math.floor(Math.random() * 20) + 1,
         },
       });
@@ -142,6 +157,122 @@ interface InOutCalendarProps {
   onBack: () => void;
 }
 
+// --- 상세 모달 ---
+function DetailModal({ entry, onClose }: { entry: CalendarEntryExtended; onClose: () => void }) {
+  const isInbound = entry.type === 'INBOUND';
+  const order = isInbound ? entry.inboundOrder : entry.outboundOrder;
+  const driverName = entry.inboundOrder?.driverName ?? entry.outboundOrder?.driverName;
+  const driverPhone = entry.inboundOrder?.driverPhone ?? entry.outboundOrder?.driverPhone;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.6)', zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.card, borderRadius: 12, width: 420, maxWidth: '90vw',
+          border: `1px solid ${C.border}`, padding: 0, overflow: 'hidden',
+        }}
+      >
+        {/* 모달 헤더 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px',
+          borderBottom: `1px solid ${C.border}`,
+          background: isInbound ? 'rgba(59,130,246,0.08)' : 'rgba(249,115,22,0.08)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Package size={18} style={{ color: isInbound ? C.inbound : C.outbound }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: isInbound ? C.inbound : C.outbound }}>
+              {isInbound ? '입고 상세' : '출고 상세'}
+            </span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* 모달 본문 */}
+        <div style={{ padding: '20px' }}>
+          {/* 기본 정보 */}
+          <div style={{ marginBottom: 16 }}>
+            {isInbound && entry.inboundOrder && (
+              <>
+                <InfoRow label="입고번호" value={`INB-${entry.inboundOrder.id}`} />
+                <InfoRow label="거래처" value={entry.inboundOrder.vendorName ?? '미지정'} />
+                <InfoRow label="상태" value={STATUS_LABELS[entry.inboundOrder.status] ?? entry.inboundOrder.status} />
+                <InfoRow label="예정일" value={entry.scheduledDate} />
+                <InfoRow label="시간대" value={entry.timeSlot ?? '-'} />
+              </>
+            )}
+            {!isInbound && entry.outboundOrder && (
+              <>
+                <InfoRow label="출고번호" value={entry.outboundOrder.manifestNumber ?? entry.outboundOrder.id} />
+                <InfoRow label="고객사" value={entry.outboundOrder.customerName ?? '미지정'} />
+                <InfoRow label="출고유형" value={entry.outboundOrder.type} />
+                <InfoRow label="상태" value={STATUS_LABELS[entry.outboundOrder.status] ?? entry.outboundOrder.status} />
+                <InfoRow label="예정일" value={entry.scheduledDate} />
+                <InfoRow label="시간대" value={entry.timeSlot ?? '-'} />
+                {entry.outboundOrder.palletCount != null && (
+                  <InfoRow label="팔레트 수" value={`${entry.outboundOrder.palletCount}PLT`} />
+                )}
+              </>
+            )}
+          </div>
+
+          {/* 기사 정보 */}
+          <div style={{
+            padding: '12px 14px', borderRadius: 8,
+            background: C.bg, border: `1px solid ${C.border}`,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>배송 기사</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Truck size={16} style={{ color: driverName ? C.accent : C.textMuted }} />
+              {driverName ? (
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{driverName}</div>
+                  {driverPhone && <div style={{ fontSize: 12, color: C.textMuted }}>{driverPhone}</div>}
+                </div>
+              ) : (
+                <span style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>미배정</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 모달 하단 */}
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 20px', fontSize: 13, fontWeight: 600,
+              borderRadius: 6, border: `1px solid ${C.border}`,
+              background: C.bg, color: C.text, cursor: 'pointer',
+            }}
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+      <span style={{ width: 80, fontSize: 12, color: C.textMuted, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
+
 export function InOutCalendar({ onBack }: InOutCalendarProps) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -149,6 +280,8 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [entries, setEntries] = useState<CalendarEntryExtended[]>([]);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [detailEntry, setDetailEntry] = useState<CalendarEntryExtended | null>(null);
 
   // API 호출 (mock fallback)
   useEffect(() => {
@@ -206,6 +339,12 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
     setSelectedDate(null);
   }, []);
 
+  // 날짜 클릭 시 패널도 열기
+  const handleDateClick = useCallback((dateStr: string) => {
+    setSelectedDate(dateStr);
+    setPanelOpen(true);
+  }, []);
+
   // 달력 그리드 생성
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
@@ -221,20 +360,17 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 0, height: '100%', background: C.bg }}>
-      {/* 좌측: 달력 */}
-      <div style={{ flex: 1, padding: '24px 28px', overflow: 'auto' }}>
+    <div style={{ display: 'flex', gap: 0, height: '100%', background: C.bg, overflow: 'hidden' }}>
+      {/* 좌측: 달력 (패널 열림 시 70%, 닫힘 시 100%) */}
+      <div style={{ flex: panelOpen ? 7 : 1, minWidth: 0, padding: '24px 28px', overflow: 'auto' }}>
         {/* 헤더 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <Calendar size={22} style={{ color: C.accent }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>입출고 달력</h2>
         </div>
 
         {/* 컨트롤 바 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={prevMonth} style={navBtn}><ChevronLeft size={18} /></button>
             <span style={{ color: C.text, fontSize: 16, fontWeight: 600, minWidth: 120, textAlign: 'center' }}>
@@ -244,9 +380,9 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
             <button onClick={goToday} style={{ ...navBtn, fontSize: 12, padding: '4px 10px' }}>오늘</button>
           </div>
 
-          {/* 필터 */}
-          <div style={{ display: 'flex', gap: 4 }}>
-            <Filter size={14} style={{ color: C.textMuted, marginRight: 4, marginTop: 6 }} />
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {/* 필터 */}
+            <Filter size={14} style={{ color: C.textMuted, marginRight: 4 }} />
             {(['ALL', 'INBOUND', 'OUTBOUND'] as FilterType[]).map((f) => (
               <button
                 key={f}
@@ -264,11 +400,20 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
                 {f === 'ALL' ? '전체' : f === 'INBOUND' ? '입고' : '출고'}
               </button>
             ))}
+
+            {/* 패널 토글 버튼 */}
+            <button
+              onClick={() => setPanelOpen(!panelOpen)}
+              title={panelOpen ? '사이드 패널 닫기' : '사이드 패널 열기'}
+              style={{ ...navBtn, marginLeft: 8 }}
+            >
+              {panelOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            </button>
           </div>
         </div>
 
         {/* 범례 */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
           {[
             { color: C.inbound, label: '입고 예정' },
             { color: C.outbound, label: '출고 예정' },
@@ -287,7 +432,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: C.border, borderRadius: 10, overflow: 'hidden' }}>
           {/* 요일 헤더 */}
           {DAY_NAMES.map((d, i) => (
-            <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: i === 0 ? '#EF4444' : i === 6 ? '#3B82F6' : C.textMuted, background: C.card }}>
+            <div key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: i === 0 ? C.delayed : i === 6 ? C.inbound : C.textMuted, background: C.card }}>
               {d}
             </div>
           ))}
@@ -305,7 +450,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
             return (
               <div
                 key={idx}
-                onClick={() => isValid && setSelectedDate(dateStr)}
+                onClick={() => isValid && handleDateClick(dateStr)}
                 style={{
                   padding: '6px 8px',
                   minHeight: 72,
@@ -321,7 +466,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
                       <span style={{
                         fontSize: 13,
                         fontWeight: isToday ? 700 : 400,
-                        color: isToday ? C.accent : dayOfWeek === 0 ? '#EF4444' : dayOfWeek === 6 ? '#3B82F6' : C.text,
+                        color: isToday ? C.accent : dayOfWeek === 0 ? C.delayed : dayOfWeek === 6 ? C.inbound : C.text,
                         background: isToday ? 'rgba(88,166,255,0.2)' : 'transparent',
                         borderRadius: '50%',
                         width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -351,132 +496,155 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
         </div>
       </div>
 
-      {/* 우측: 사이드 패널 */}
-      <div style={{
-        width: 340,
-        borderLeft: `1px solid ${C.border}`,
-        background: C.card,
-        padding: '24px 20px',
-        overflow: 'auto',
-      }}>
-        <h3 style={{ color: C.text, fontSize: 15, fontWeight: 600, marginBottom: 16, margin: 0 }}>
-          {selectedDate ? `${selectedDate.slice(5).replace('-', '/')} 상세` : '날짜를 선택하세요'}
-        </h3>
-
-        {selectedDate && (
-          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
-            {getDDay(selectedDate)} · {selectedEntries.length}건
+      {/* 우측: 사이드 패널 (반응형) */}
+      {panelOpen && (
+        <div style={{
+          flex: 3,
+          minWidth: 0,
+          borderLeft: `1px solid ${C.border}`,
+          background: C.card,
+          padding: '24px 20px',
+          overflow: 'auto',
+        }}>
+          {/* 패널 헤더 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <h3 style={{ color: C.text, fontSize: 15, fontWeight: 600, margin: 0 }}>
+              {selectedDate ? `${selectedDate.slice(5).replace('-', '/')} 상세` : '날짜를 선택하세요'}
+            </h3>
+            <button
+              onClick={() => setPanelOpen(false)}
+              title="패널 닫기"
+              style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}
+            >
+              <X size={16} />
+            </button>
           </div>
-        )}
 
-        {selectedEntries.length === 0 && selectedDate && (
-          <div style={{ color: C.textMuted, fontSize: 13, textAlign: 'center', marginTop: 40 }}>
-            해당 날짜에 예정된 입출고가 없습니다
-          </div>
-        )}
-
-        {selectedEntries.map((entry) => {
-          // 기사 정보 추출
-          const driverName = entry.inboundOrder?.driverName ?? entry.outboundOrder?.driverName;
-          const driverPhone = entry.inboundOrder?.driverPhone ?? entry.outboundOrder?.driverPhone;
-
-          return (
-            <div key={entry.id} style={{
-              padding: '14px 16px',
-              marginBottom: 10,
-              borderRadius: 8,
-              border: `1px solid ${C.border}`,
-              background: C.bg,
-            }}>
-              {/* 입고 카드 */}
-              {entry.type === 'INBOUND' && entry.inboundOrder && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <Package size={14} style={{ color: C.inbound }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.inbound }}>
-                      📥 INB-{entry.inboundOrder.id}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
-                    {entry.inboundOrder.vendorName ?? '미지정'}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
-                    상태: {entry.inboundOrder.status}
-                    {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
-                  </div>
-                </div>
-              )}
-
-              {/* 출고 카드 */}
-              {entry.type === 'OUTBOUND' && entry.outboundOrder && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <Package size={14} style={{ color: C.outbound }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.outbound }}>
-                      📤 {entry.outboundOrder.manifestNumber ?? entry.outboundOrder.id}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
-                    → {entry.outboundOrder.customerName ?? '미지정'}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
-                    {entry.outboundOrder.type}
-                    {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
-                    {entry.outboundOrder.palletCount != null ? ` · ${entry.outboundOrder.palletCount}PLT` : ''}
-                  </div>
-                </div>
-              )}
-
-              {/* 기사 정보 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 0',
-                borderTop: `1px solid ${C.border}`,
-                marginBottom: 8,
-              }}>
-                <Truck size={13} style={{ color: C.textMuted }} />
-                {driverName ? (
-                  <span style={{ fontSize: 12, color: C.text }}>
-                    {driverName} {driverPhone ?? ''}
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 12, color: C.textMuted, fontStyle: 'italic' }}>미배정</span>
-                )}
-              </div>
-
-              {/* 상세보기 버튼 */}
-              <button
-                onClick={() => alert('상세보기: ' + entry.id)}
-                style={{
-                  width: '100%',
-                  padding: '6px 0',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: C.accent,
-                  background: 'rgba(88,166,255,0.08)',
-                  border: `1px solid rgba(88,166,255,0.2)`,
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                }}
-              >
-                상세보기 →
-              </button>
+          {selectedDate && (
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
+              {getDDay(selectedDate)} · {selectedEntries.length}건
             </div>
-          );
-        })}
-      </div>
+          )}
+
+          {selectedEntries.length === 0 && selectedDate && (
+            <div style={{ color: C.textMuted, fontSize: 13, textAlign: 'center', marginTop: 40 }}>
+              해당 날짜에 예정된 입출고가 없습니다
+            </div>
+          )}
+
+          {!selectedDate && (
+            <div style={{ color: C.textMuted, fontSize: 13, textAlign: 'center', marginTop: 40 }}>
+              달력에서 날짜를 클릭하면 상세 정보가 표시됩니다
+            </div>
+          )}
+
+          {selectedEntries.map((entry) => {
+            const driverName = entry.inboundOrder?.driverName ?? entry.outboundOrder?.driverName;
+            const driverPhone = entry.inboundOrder?.driverPhone ?? entry.outboundOrder?.driverPhone;
+
+            return (
+              <div key={entry.id} style={{
+                padding: '14px 16px',
+                marginBottom: 10,
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: C.bg,
+              }}>
+                {/* 입고 카드 */}
+                {entry.type === 'INBOUND' && entry.inboundOrder && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <Package size={14} style={{ color: C.inbound }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.inbound }}>
+                        INB-{entry.inboundOrder.id}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
+                      {entry.inboundOrder.vendorName ?? '미지정'}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+                      {STATUS_LABELS[entry.inboundOrder.status] ?? entry.inboundOrder.status}
+                      {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
+                    </div>
+                  </div>
+                )}
+
+                {/* 출고 카드 */}
+                {entry.type === 'OUTBOUND' && entry.outboundOrder && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <Package size={14} style={{ color: C.outbound }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.outbound }}>
+                        {entry.outboundOrder.manifestNumber ?? entry.outboundOrder.id}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>
+                      → {entry.outboundOrder.customerName ?? '미지정'}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 8 }}>
+                      {entry.outboundOrder.type}
+                      {entry.timeSlot ? ` · ${entry.timeSlot}` : ''}
+                      {entry.outboundOrder.palletCount != null ? ` · ${entry.outboundOrder.palletCount}PLT` : ''}
+                    </div>
+                  </div>
+                )}
+
+                {/* 기사 정보 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 0',
+                  borderTop: `1px solid ${C.border}`,
+                  marginBottom: 8,
+                }}>
+                  <Truck size={13} style={{ color: C.textMuted }} />
+                  {driverName ? (
+                    <span style={{ fontSize: 12, color: C.text }}>
+                      {driverName} {driverPhone ?? ''}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: C.textMuted, fontStyle: 'italic' }}>미배정</span>
+                  )}
+                </div>
+
+                {/* 상세보기 버튼 */}
+                <button
+                  onClick={() => setDetailEntry(entry)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 0',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: C.accent,
+                    background: 'rgba(88,166,255,0.08)',
+                    border: `1px solid rgba(88,166,255,0.2)`,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                  }}
+                >
+                  상세보기 →
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 상세 모달 */}
+      {detailEntry && (
+        <DetailModal entry={detailEntry} onClose={() => setDetailEntry(null)} />
+      )}
     </div>
   );
 }
 
 // --- 스타일 ---
 const navBtn: React.CSSProperties = {
-  background: '#161B22',
-  border: '1px solid #30363D',
-  color: '#C9D1D9',
+  background: 'var(--bg-secondary)',
+  border: '1px solid var(--border-default)',
+  color: 'var(--text-primary)',
   cursor: 'pointer',
   borderRadius: 6,
   padding: '4px 8px',

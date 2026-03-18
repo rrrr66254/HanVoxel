@@ -61,17 +61,29 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
       {/* 상단 스텝 인디케이터 (3단계 제외) */}
       {!isFullScreen && (
         <div
-          className="shrink-0 px-6 py-3"
+          className="shrink-0 px-8 py-4"
           style={{
-            borderBottom: '1px solid #21262D',
-            background: 'rgba(22,27,34,0.8)',
+            borderBottom: '1px solid var(--border-muted)',
+            background: 'rgba(22,27,34,0.9)',
             backdropFilter: 'blur(12px)',
           }}
         >
           <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 960 }}>
             {/* 로고 */}
-            <div className="text-lg font-bold text-white">
-              <span className="text-blue-500">Han</span>Voxel
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ background: 'var(--accent-blue)', boxShadow: '0 0 12px rgba(45,125,210,0.35)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <span className="text-lg font-bold tracking-tight text-white">
+                <span className="text-blue-400">Han</span>Voxel
+              </span>
             </div>
 
             {/* 스텝 바 */}
@@ -86,7 +98,7 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
                       <div
                         className="flex h-7 w-7 items-center justify-center rounded-lg transition-all"
                         style={{
-                          background: isDone ? '#3FB950' : isActive ? '#2D7DD2' : '#21262D',
+                          background: isDone ? 'var(--accent-green)' : isActive ? 'var(--accent-blue)' : 'var(--bg-tertiary)',
                           boxShadow: isActive ? '0 0 12px rgba(45,125,210,0.4)' : 'none',
                         }}
                       >
@@ -95,7 +107,7 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
                         ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isActive ? 'white' : '#484F58'} strokeWidth="2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isActive ? 'white' : 'var(--text-muted)'} strokeWidth="2">
                             <path d={STEP_ICONS[i]} />
                           </svg>
                         )}
@@ -105,7 +117,7 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
                       <span
                         className="hidden text-xs font-medium sm:inline"
                         style={{
-                          color: isDone ? '#3FB950' : isActive ? '#F0F6FC' : '#484F58',
+                          color: isDone ? 'var(--accent-green)' : isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                         }}
                       >
                         {label}
@@ -116,7 +128,7 @@ export function WarehouseWizard({ onComplete }: WarehouseWizardProps) {
                     {i < STEP_LABELS.length - 1 && (
                       <div
                         className="mx-1 h-px w-8"
-                        style={{ background: isDone ? '#3FB950' : '#21262D' }}
+                        style={{ background: isDone ? 'var(--accent-green)' : 'var(--bg-tertiary)' }}
                       />
                     )}
                   </div>

@@ -8,22 +8,22 @@ import type { RoiDashboardData } from '../../api/roi-api';
 
 // ─── 색상 상수 ───
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  focusBorder: '#2D7DD2',
-  textPrimary: '#E6EDF3',
-  textSecondary: '#8B949E',
-  textMuted: '#484F58',
-  green: '#3FB950',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  focusBorder: 'var(--accent-blue)',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
+  green: 'var(--accent-green)',
   greenGradientStart: '#0D4429',
   greenGradientEnd: '#1B7A3D',
-  blue: '#2D7DD2',
-  purple: '#A371F7',
-  orange: '#D29922',
-  red: '#F85149',
-  chartGrid: '#21262D',
-  barColors: ['#2D7DD2', '#3FB950', '#A371F7'],
+  blue: 'var(--accent-blue)',
+  purple: 'var(--accent-purple)',
+  orange: 'var(--accent-orange)',
+  red: 'var(--accent-red)',
+  chartGrid: 'var(--bg-tertiary)',
+  barColors: ['var(--accent-blue)', 'var(--accent-green)', 'var(--accent-purple)'],
 };
 
 interface RoiCalculatorProps {

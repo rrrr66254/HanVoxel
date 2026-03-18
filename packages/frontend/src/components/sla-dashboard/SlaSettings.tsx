@@ -7,22 +7,22 @@ import type { SlaTargetData } from '../../api/sla-api';
 import { upsertSlaTarget } from '../../api/sla-api';
 import { getPartners, type PartnerData } from '../../api/erp-api';
 
-/* 다크 테마 색상 (SlaDashboard와 동일) */
+/* 테마 색상 (CSS 변수 참조) */
 const C = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  borderFocus: '#2D7DD2',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  blue: '#2D7DD2',
-  blueHover: '#3D8DE2',
-  green: '#3FB950',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  borderFocus: 'var(--accent-blue)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  blue: 'var(--accent-blue)',
+  blueHover: 'var(--accent-blue-hover)',
+  green: 'var(--accent-green)',
   greenBg: 'rgba(63,185,80,0.1)',
-  red: '#F85149',
-  yellow: '#D29922',
-  input: '#0D1117',
+  red: 'var(--accent-red)',
+  yellow: 'var(--accent-orange)',
+  input: 'var(--bg-primary)',
 };
 
 /* localStorage 키 */

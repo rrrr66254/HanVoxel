@@ -14,7 +14,6 @@ import {
   XCircle,
   AlertCircle,
   Settings,
-  ArrowLeft,
   Loader2,
   Zap,
   Activity,
@@ -44,19 +43,19 @@ import {
   syncVoucher,
 } from '../../api/connector-api';
 
-// ── 디자인 토큰 ──────────────────────────────────────
+// ── 디자인 토큰 (CSS 변수 참조) ──────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
-  connected: '#3FB950',
-  disconnected: '#F85149',
-  error: '#D29922',
-  accent: '#58A6FF',
-  textPrimary: '#E6EDF3',
-  textSecondary: '#8B949E',
-  textMuted: '#484F58',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
+  connected: 'var(--accent-green)',
+  disconnected: 'var(--accent-red)',
+  error: 'var(--accent-orange)',
+  accent: 'var(--accent-blue)',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
 } as const;
 
 interface Props {
@@ -233,14 +232,6 @@ export function ConnectorDashboard({ onBack }: Props) {
         style={{ borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
-            style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textSecondary }}
-          >
-            <ArrowLeft size={14} />
-            뒤로
-          </button>
           <div className="flex items-center gap-2.5">
             <Plug size={20} style={{ color: COLORS.accent }} />
             <h1 className="text-xl font-bold">ERP 커넥터 관리</h1>
@@ -249,9 +240,9 @@ export function ConnectorDashboard({ onBack }: Props) {
             <span
               className="rounded-full px-3 py-1 text-xs font-medium"
               style={{
-                backgroundColor: `${COLORS.accent}15`,
+                backgroundColor: 'rgba(88,166,255,0.08)',
                 color: COLORS.accent,
-                border: `1px solid ${COLORS.accent}30`,
+                border: `1px solid rgba(88,166,255,0.19)`,
               }}
             >
               {selectedConnector.displayName}
@@ -314,8 +305,8 @@ export function ConnectorDashboard({ onBack }: Props) {
         <div
           className="mx-6 mt-4 flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm"
           style={{
-            backgroundColor: `${COLORS.disconnected}15`,
-            border: `1px solid ${COLORS.disconnected}40`,
+            backgroundColor: 'rgba(248,81,73,0.08)',
+            border: `1px solid rgba(248,81,73,0.25)`,
             color: COLORS.disconnected,
           }}
         >
@@ -509,7 +500,7 @@ function ConnectorsTab({
                 border: isSelected
                   ? `1px solid ${COLORS.accent}`
                   : `1px solid ${COLORS.border}`,
-                boxShadow: isSelected ? `0 0 0 1px ${COLORS.accent}40` : 'none',
+                boxShadow: isSelected ? `0 0 0 1px rgba(88,166,255,0.25)` : 'none',
               }}
             >
               {/* 헤더 */}
@@ -520,7 +511,7 @@ function ConnectorsTab({
                     style={{
                       backgroundColor: c.erpType === 'DOUZON'
                         ? '#1F6FEB20'
-                        : `${COLORS.connected}20`,
+                        : 'rgba(63,185,80,0.12)',
                       color: c.erpType === 'DOUZON'
                         ? COLORS.accent
                         : COLORS.connected,
@@ -577,7 +568,7 @@ function ConnectorsTab({
                 <div
                   className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
                   style={{
-                    backgroundColor: `${COLORS.accent}15`,
+                    backgroundColor: 'rgba(88,166,255,0.08)',
                     color: COLORS.accent,
                   }}
                 >
@@ -590,8 +581,8 @@ function ConnectorsTab({
                   className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition-all duration-300"
                   style={{
                     backgroundColor: ping.ok
-                      ? `${COLORS.connected}15`
-                      : `${COLORS.disconnected}15`,
+                      ? 'rgba(63,185,80,0.08)'
+                      : 'rgba(248,81,73,0.08)',
                     color: ping.ok ? COLORS.connected : COLORS.disconnected,
                   }}
                 >
@@ -627,10 +618,10 @@ function ConnectorsTab({
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                   style={{
                     backgroundColor: c.isActive
-                      ? `${COLORS.connected}15`
-                      : `${COLORS.textMuted}20`,
+                      ? 'rgba(63,185,80,0.08)'
+                      : 'rgba(72,79,88,0.12)',
                     color: c.isActive ? COLORS.connected : COLORS.textMuted,
-                    border: `1px solid ${c.isActive ? `${COLORS.connected}30` : COLORS.border}`,
+                    border: `1px solid ${c.isActive ? `rgba(63,185,80,0.19)` : COLORS.border}`,
                   }}
                 >
                   {c.isActive ? '활성' : '비활성'}
@@ -706,7 +697,7 @@ function AddConnectorForm({
       className="rounded-xl p-5 space-y-4"
       style={{
         backgroundColor: COLORS.card,
-        border: `1px solid ${COLORS.accent}40`,
+        border: `1px solid rgba(88,166,255,0.25)`,
       }}
     >
       <div className="flex items-center gap-2">
@@ -943,14 +934,14 @@ function LogsTab({
                 key={log.id}
                 className="transition-colors"
                 style={{
-                  backgroundColor: idx % 2 === 0 ? 'transparent' : `${COLORS.card}80`,
-                  borderTop: `1px solid ${COLORS.border}40`,
+                  backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(22,27,34,0.5)',
+                  borderTop: `1px solid rgba(48,54,61,0.25)`,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = COLORS.hoverRow;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = idx % 2 === 0 ? 'transparent' : `${COLORS.card}80`;
+                  e.currentTarget.style.backgroundColor = idx % 2 === 0 ? 'transparent' : 'rgba(22,27,34,0.5)';
                 }}
               >
                 {/* 상태 */}
@@ -974,7 +965,7 @@ function LogsTab({
                     className="rounded px-2 py-0.5 text-xs font-medium"
                     style={{
                       backgroundColor: log.direction === 'PUSH' ? '#1F6FEB20' : '#8957E520',
-                      color: log.direction === 'PUSH' ? COLORS.accent : '#BC8CFF',
+                      color: log.direction === 'PUSH' ? COLORS.accent : 'var(--accent-purple)',
                     }}
                   >
                     {log.direction === 'PUSH' ? 'PUSH' : 'PULL'}
@@ -1012,7 +1003,7 @@ function LogsTab({
                       onClick={() => onRetry(log)}
                       className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs transition-colors hover:bg-white/5"
                       style={{
-                        border: `1px solid ${COLORS.disconnected}40`,
+                        border: `1px solid rgba(248,81,73,0.25)`,
                         color: COLORS.disconnected,
                       }}
                     >
@@ -1140,7 +1131,7 @@ function MappingsTab({
 
   const transformColors: Record<string, string> = {
     DIRECT: COLORS.accent,
-    CONSTANT: '#BC8CFF',
+    CONSTANT: 'var(--accent-purple)',
     FORMAT: COLORS.error,
     LOOKUP: COLORS.connected,
   };
@@ -1186,7 +1177,7 @@ function MappingsTab({
           className="rounded-xl p-5 space-y-4"
           style={{
             backgroundColor: COLORS.card,
-            border: `1px solid ${COLORS.accent}40`,
+            border: `1px solid rgba(88,166,255,0.25)`,
           }}
         >
           <div className="flex items-center gap-2">
@@ -1316,7 +1307,7 @@ function MappingsTab({
             <span
               className="rounded-full px-2 py-0.5 text-xs"
               style={{
-                backgroundColor: `${COLORS.accent}15`,
+                backgroundColor: 'rgba(88,166,255,0.08)',
                 color: COLORS.accent,
               }}
             >
@@ -1336,7 +1327,7 @@ function MappingsTab({
                     border: `1px solid ${COLORS.border}`,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = `${COLORS.border}80`;
+                    e.currentTarget.style.borderColor = 'rgba(48,54,61,0.5)';
                     e.currentTarget.style.backgroundColor = COLORS.hoverRow;
                   }}
                   onMouseLeave={(e) => {
@@ -1349,7 +1340,7 @@ function MappingsTab({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs"
                     style={{
                       backgroundColor: COLORS.bg,
-                      border: `1px solid ${COLORS.accent}40`,
+                      border: `1px solid rgba(88,166,255,0.25)`,
                       color: COLORS.accent,
                       minWidth: '140px',
                     }}
@@ -1387,7 +1378,7 @@ function MappingsTab({
                     className="flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs"
                     style={{
                       backgroundColor: COLORS.bg,
-                      border: `1px solid ${COLORS.connected}40`,
+                      border: `1px solid rgba(63,185,80,0.25)`,
                       color: COLORS.connected,
                       minWidth: '140px',
                     }}
@@ -1402,7 +1393,7 @@ function MappingsTab({
                       <span
                         className="flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium"
                         style={{
-                          backgroundColor: `${COLORS.error}15`,
+                          backgroundColor: 'rgba(210,153,34,0.08)',
                           color: COLORS.error,
                         }}
                       >

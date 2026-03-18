@@ -25,40 +25,39 @@ import {
   BarChart3,
   Star,
   Database,
-  ArrowLeft,
 } from 'lucide-react';
 import { HsCodeSearch } from './HsCodeSearch';
 import { CountrySelector } from './CountrySelector';
 import type { TradeRecord, WatchItem, CoverageStats } from '../../api/trade-api';
 import * as tradeApi from '../../api/trade-api';
 
-// --- 디자인 토큰 ---
+// --- 디자인 토큰 (CSS 변수 참조) ---
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
-  gridLine: '#21262D',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  accent: '#58A6FF',
-  teal: '#3FB950',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
+  gridLine: 'var(--bg-tertiary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  accent: 'var(--accent-blue)',
+  teal: 'var(--accent-green)',
   export: '#58A6FF',
   import: '#F0883E',
-  danger: '#F85149',
-  purple: '#BC8CFF',
-  yellow: '#D29922',
+  danger: 'var(--accent-red)',
+  purple: 'var(--accent-purple)',
+  yellow: 'var(--accent-orange)',
 } as const;
 
 // 국가별 차트 색상
 const COUNTRY_CHART_COLORS: Record<string, string> = {
-  KOR: '#3FB950',
-  USA: '#58A6FF',
-  CHN: '#F85149',
-  DEU: '#D29922',
-  JPN: '#BC8CFF',
+  KOR: 'var(--accent-green)',
+  USA: 'var(--accent-blue)',
+  CHN: 'var(--accent-red)',
+  DEU: 'var(--accent-orange)',
+  JPN: 'var(--accent-purple)',
   VNM: '#39D353',
-  W00: '#8B949E',
+  W00: 'var(--text-secondary)',
 };
 
 // 국가 이름 매핑
@@ -322,7 +321,7 @@ function KpiCard({
         {change !== undefined && change !== null && (
           <span
             className="mb-0.5 text-xs font-medium"
-            style={{ color: change >= 0 ? '#3FB950' : '#F85149' }}
+            style={{ color: change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}
           >
             {change >= 0 ? '\u25B2' : '\u25BC'} {Math.abs(change).toFixed(1)}%
           </span>
@@ -548,14 +547,6 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
         style={{ borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
-            style={{ color: COLORS.textMuted, border: `1px solid ${COLORS.border}` }}
-          >
-            <ArrowLeft size={14} />
-            뒤로
-          </button>
           <div>
             <div className="flex items-center gap-2">
               <Globe size={18} style={{ color: COLORS.accent }} />
@@ -586,7 +577,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
               style={{
                 background: 'rgba(248, 81, 73, 0.1)',
                 border: `1px solid rgba(248, 81, 73, 0.3)`,
-                color: '#F85149',
+                color: 'var(--accent-red)',
               }}
             >
               <span>{error}</span>
@@ -643,7 +634,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
                   onClick={() => handleSelectHsCode(selectedHsCode, selectedDescription)}
                   disabled={loading}
                   className="rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-50"
-                  style={{ background: '#238636' }}
+                  style={{ background: 'var(--accent-green)' }}
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -813,7 +804,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
                         className="rounded-md px-3 py-1 text-xs transition-colors"
                         style={{
                           background: flowFilter === f ? COLORS.accent : 'transparent',
-                          color: flowFilter === f ? '#ffffff' : COLORS.textMuted,
+                          color: flowFilter === f ? 'var(--text-primary)' : COLORS.textMuted,
                         }}
                       >
                         {f === 'EXPORT' ? '수출' : '수입'}
@@ -879,7 +870,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
                           {item.yoyChange !== null && (
                             <span
                               style={{
-                                color: item.yoyChange >= 0 ? '#3FB950' : '#F85149',
+                                color: item.yoyChange >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
                               }}
                             >
                               {item.yoyChange >= 0 ? '\u25B2' : '\u25BC'}
@@ -995,14 +986,14 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
                         key={code.hsCode}
                         className="transition-colors"
                         style={{
-                          background: idx % 2 === 1 ? 'rgba(22, 27, 34, 0.5)' : 'transparent',
+                          background: idx % 2 === 1 ? 'var(--bg-hover)' : 'transparent',
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background = COLORS.hoverRow;
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background =
-                            idx % 2 === 1 ? 'rgba(22, 27, 34, 0.5)' : 'transparent';
+                            idx % 2 === 1 ? 'var(--bg-hover)' : 'transparent';
                         }}
                       >
                         <td

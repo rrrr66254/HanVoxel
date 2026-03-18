@@ -104,10 +104,10 @@ export function ContextMenu({
     headerContent = (
       <div style={{
         padding: '8px 14px 6px',
-        borderBottom: '1px solid #21262D',
+        borderBottom: '1px solid var(--border-muted)',
         marginBottom: 4,
       }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
@@ -116,7 +116,7 @@ export function ContextMenu({
           </svg>
           {multiSelectedIds.size}개 선택됨
         </div>
-        <div style={{ fontSize: 10, color: '#484F58' }}>그룹 작업</div>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>그룹 작업</div>
       </div>
     );
     // 동일 타입 여부 판별
@@ -139,18 +139,18 @@ export function ContextMenu({
     items = [
       ...(allSameType ? [{ icon: <Scaling size={13} />, label: bulkResizeLabel, onClick: () => { onBulkResize?.(multiSelectedIds); onClose(); }, dividerAfter: true }] : []),
       { icon: <Move size={13} />, label: '그룹 이동', onClick: () => { onMultiMove?.(multiSelectedIds); onClose(); }, dividerAfter: true },
-      { icon: <Trash2 size={13} />, label: '그룹 삭제', onClick: () => { onMultiDelete?.(multiSelectedIds); onClose(); }, color: '#F85149' },
+      { icon: <Trash2 size={13} />, label: '그룹 삭제', onClick: () => { onMultiDelete?.(multiSelectedIds); onClose(); }, color: 'var(--accent-red)' },
     ];
   } else if (object) {
     // 단일 오브젝트 메뉴
     headerContent = (
       <div style={{
         padding: '8px 14px 6px',
-        borderBottom: '1px solid #21262D',
+        borderBottom: '1px solid var(--border-muted)',
         marginBottom: 4,
       }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3' }}>{object.name}</div>
-        <div style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{object.name}</div>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{object.code}</div>
       </div>
     );
     items = [
@@ -158,7 +158,7 @@ export function ContextMenu({
       { icon: <Copy size={13} />, label: '복제', onClick: () => { onDuplicate?.(object); onClose(); } },
       { icon: <RotateCw size={13} />, label: '90도 회전', onClick: () => { onRotate90?.(object); onClose(); }, dividerAfter: true },
       { icon: <Move size={13} />, label: '이동', onClick: () => { onMove?.(object); onClose(); }, dividerAfter: true },
-      { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: '#F85149' },
+      { icon: <Trash2 size={13} />, label: '삭제', onClick: () => { onDelete?.(object.id); onClose(); }, color: 'var(--accent-red)' },
     ];
   } else {
     // 빈 공간 메뉴
@@ -202,7 +202,7 @@ export function ContextMenu({
     zIndex: 100,
     minWidth: MENU_WIDTH,
     background: 'rgba(22,27,34,0.98)',
-    border: '1px solid #30363D',
+    border: '1px solid var(--border-default)',
     borderRadius: 10,
     padding: '4px 0',
     boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(45,125,210,0.1)',
@@ -226,21 +226,21 @@ export function ContextMenu({
               padding: '8px 14px',
               border: 'none',
               background: 'transparent',
-              color: item.color ?? '#E6EDF3',
+              color: item.color ?? 'var(--text-primary)',
               fontSize: 12,
               cursor: 'pointer',
               fontFamily: 'inherit',
               transition: 'background 0.1s ease',
               textAlign: 'left',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#1C2A3A'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
           >
-            <span style={{ color: item.color ?? '#8B949E', display: 'flex' }}>{item.icon}</span>
+            <span style={{ color: item.color ?? 'var(--text-secondary)', display: 'flex' }}>{item.icon}</span>
             {item.label}
           </button>
           {item.dividerAfter && (
-            <div style={{ height: 1, background: '#21262D', margin: '4px 8px' }} />
+            <div style={{ height: 1, background: 'var(--border-muted)', margin: '4px 8px' }} />
           )}
         </div>
       ))}

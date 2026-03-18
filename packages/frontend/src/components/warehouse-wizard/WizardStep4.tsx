@@ -81,7 +81,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
           </svg>
         </div>
 
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#F0F6FC', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           창고 생성 완료!
         </h2>
         <p className="mt-3 text-center text-sm text-gray-400 leading-relaxed">
@@ -93,7 +93,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
         {/* 요약 그리드 */}
         <div
           className="mt-8 w-full rounded-xl p-5"
-          style={{ background: '#161B22', border: '1px solid #21262D' }}
+          style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-tertiary)' }}
         >
           <div className="grid grid-cols-2 gap-4">
             <StatBlock label="총 면적" value={`${totalArea.toLocaleString()} m²`} />
@@ -115,7 +115,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
           onClick={onComplete}
           className="mt-4 rounded-xl px-8 py-3 text-sm font-semibold text-white transition-all hover:opacity-90"
           style={{
-            background: 'linear-gradient(135deg, #2D7DD2, #3FB950)',
+            background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))',
             boxShadow: '0 4px 16px rgba(45,125,210,0.3)',
           }}
         >
@@ -129,7 +129,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
     <div className="mx-auto max-w-xl space-y-6 py-6">
       {/* 헤더 */}
       <div className="text-center">
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: '#F0F6FC', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           저장 및 완료
         </h2>
         <p className="mt-2 text-sm text-gray-400">아래 내용을 확인하고 저장하세요</p>
@@ -138,12 +138,12 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
       {/* 요약 카드 */}
       <div
         className="rounded-xl overflow-hidden"
-        style={{ border: '1px solid #21262D' }}
+        style={{ border: '1px solid var(--bg-tertiary)' }}
       >
         {/* 상단 헤더 */}
         <div
           className="flex items-center gap-3 px-5 py-4"
-          style={{ background: `${industryColor}08`, borderBottom: '1px solid #21262D' }}
+          style={{ background: `${industryColor}08`, borderBottom: '1px solid var(--bg-tertiary)' }}
         >
           <div
             className="h-3 w-3 rounded-full"
@@ -156,7 +156,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
         </div>
 
         {/* 기본 정보 */}
-        <div className="px-5 py-4" style={{ background: '#161B22' }}>
+        <div className="px-5 py-4" style={{ background: 'var(--bg-secondary)' }}>
           <div className="grid grid-cols-3 gap-4">
             <StatBlock label="면적" value={`${form.areaWidth} × ${form.areaDepth}m`} />
             <StatBlock label="총 면적" value={`${totalArea.toLocaleString()} m²`} />
@@ -165,7 +165,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
         </div>
 
         {/* 템플릿 구성 */}
-        <div className="px-5 py-4" style={{ background: '#161B22', borderTop: '1px solid #21262D' }}>
+        <div className="px-5 py-4" style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--bg-tertiary)' }}>
           <h4 className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">템플릿 구성</h4>
           <div className="grid grid-cols-2 gap-4">
             <StatBlock label="템플릿" value={template.name} />
@@ -176,7 +176,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
         </div>
 
         {/* 생성 레이아웃 */}
-        <div className="px-5 py-4" style={{ background: '#161B22', borderTop: '1px solid #21262D' }}>
+        <div className="px-5 py-4" style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--bg-tertiary)' }}>
           <h4 className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">생성될 레이아웃</h4>
           <div className="grid grid-cols-3 gap-4">
             <StatBlock label="총 객체" value={`${generatedObjects.length}개`} />
@@ -188,7 +188,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
 
       {/* 저장 진행률 바 */}
       {saving && (
-        <div className="rounded-lg p-4" style={{ background: '#161B22', border: '1px solid #21262D' }}>
+        <div className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-tertiary)' }}>
           <div className="mb-2 flex items-center justify-between text-xs">
             <span className="text-gray-400">저장 중...</span>
             <span className="font-mono text-gray-300">{progress}%</span>
@@ -198,7 +198,7 @@ export function WizardStep4({ form, template, onComplete, onBack }: WizardStep4P
               className="h-full rounded-full transition-all duration-300"
               style={{
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #2D7DD2, #3FB950)',
+                background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))',
               }}
             />
           </div>

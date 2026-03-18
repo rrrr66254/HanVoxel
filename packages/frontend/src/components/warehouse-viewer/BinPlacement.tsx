@@ -192,11 +192,11 @@ export function BinGhostMesh({ dragItem, racks, occupancy, onPlace }: BinGhostPr
         <Html distanceFactor={10} position={[0, dragItem.height / 2 + 0.3, 0]} style={{ pointerEvents: 'none' }}>
           <div style={{
             background: snapTarget.valid ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)',
-            border: `1px solid ${snapTarget.valid ? '#3FB950' : '#F85149'}`,
+            border: `1px solid ${snapTarget.valid ? 'var(--accent-green)' : 'var(--accent-red)'}`,
             borderRadius: 6,
             padding: '4px 8px',
             fontSize: 10,
-            color: snapTarget.valid ? '#3FB950' : '#F85149',
+            color: snapTarget.valid ? 'var(--accent-green)' : 'var(--accent-red)',
             whiteSpace: 'nowrap',
           }}>
             {snapTarget.valid ? '클릭하여 적재' : '적재 불가'}
@@ -271,28 +271,28 @@ export function RackDetailPanel({
       style={{
         width: '100%',
         height: '100%',
-        background: '#1A1D24',
-        color: '#E6EDF3',
+        background: 'var(--bg-secondary)',
+        color: 'var(--text-primary)',
         overflow: 'auto',
       }}
     >
       <div style={{
         padding: '14px 16px',
-        borderBottom: '1px solid #21262D',
+        borderBottom: '1px solid var(--border-muted)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{rack.name}</h3>
-          <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{rack.code}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{rack.code}</span>
         </div>
         <button
           onClick={onClose}
           style={{
             width: 24, height: 24, borderRadius: 6,
-            border: '1px solid #30363D', background: 'transparent',
-            color: '#8B949E', cursor: 'pointer', fontSize: 12,
+            border: '1px solid var(--border-default)', background: 'transparent',
+            color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -304,17 +304,17 @@ export function RackDetailPanel({
         {/* 적재율 바 */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
-            <span style={{ color: '#8B949E' }}>적재율</span>
-            <span style={{ fontWeight: 700, color: occupancyRate > 80 ? '#F85149' : '#3FB950' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>적재율</span>
+            <span style={{ fontWeight: 700, color: occupancyRate > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
               {occupancyRate}%
             </span>
           </div>
-          <div style={{ height: 6, borderRadius: 3, background: '#21262D' }}>
+          <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-tertiary)' }}>
             <div style={{
               height: '100%',
               width: `${occupancyRate}%`,
               borderRadius: 3,
-              background: occupancyRate > 80 ? '#F85149' : '#3FB950',
+              background: occupancyRate > 80 ? 'var(--accent-red)' : 'var(--accent-green)',
               transition: 'width 0.3s ease',
             }} />
           </div>
@@ -331,13 +331,13 @@ export function RackDetailPanel({
                 gap: 8,
                 padding: '6px 10px',
                 borderRadius: 6,
-                background: item ? 'rgba(63,185,80,0.08)' : '#0D1117',
-                border: `1px solid ${item ? 'rgba(63,185,80,0.2)' : '#21262D'}`,
+                background: item ? 'rgba(63,185,80,0.08)' : 'var(--bg-primary)',
+                border: `1px solid ${item ? 'rgba(63,185,80,0.2)' : 'var(--bg-tertiary)'}`,
               }}>
                 <span style={{
                   fontSize: 10,
                   fontWeight: 700,
-                  color: '#484F58',
+                  color: 'var(--text-muted)',
                   minWidth: 28,
                   fontFamily: 'monospace',
                 }}>
@@ -349,13 +349,13 @@ export function RackDetailPanel({
                       width: 8, height: 8, borderRadius: 2,
                       background: item.itemColor,
                     }} />
-                    <span style={{ fontSize: 11, color: '#E6EDF3', flex: 1 }}>{item.itemName}</span>
-                    <span style={{ fontSize: 10, color: '#484F58' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1 }}>{item.itemName}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                       {item.width}×{item.depth}m
                     </span>
                   </>
                 ) : (
-                  <span style={{ fontSize: 11, color: '#484F58' }}>빈 슬롯</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>빈 슬롯</span>
                 )}
               </div>
             );

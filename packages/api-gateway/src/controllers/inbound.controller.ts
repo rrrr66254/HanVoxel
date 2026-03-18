@@ -76,6 +76,19 @@ export async function arriveHandler(req: Request, res: Response) {
   }
 }
 
+// ── 도착 확인 취소 ───────────────────────────────
+
+export async function cancelArriveHandler(req: Request, res: Response) {
+  try {
+    const id = String(req.params.id ?? '');
+    const result = await inboundService.cancelArrivalInboundOrder(id);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '도착 확인 취소 실패';
+    res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: msg } });
+  }
+}
+
 // ── QC 통과 처리 ──────────────────────────────────
 
 export async function qcPassHandler(req: Request, res: Response) {

@@ -12,15 +12,15 @@ interface KPICardProps {
 /**
  * KPI 카드 — 핵심 지표 표시 (아이콘 + 값 + 트렌드)
  */
-export function KPICard({ label, value, unit, icon: Icon, trend, color = '#2D7DD2' }: KPICardProps) {
+export function KPICard({ label, value, unit, icon: Icon, trend, color = 'var(--accent-blue)' }: KPICardProps) {
   const trendUp = trend && trend.value > 0;
-  const trendColor = trendUp ? '#3FB950' : '#F85149';
+  const trendColor = trendUp ? 'var(--accent-green)' : 'var(--accent-red)';
 
   return (
     <div
       style={{
-        background: '#161B22',
-        border: '1px solid #21262D',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-muted)',
         borderRadius: 12,
         padding: '20px',
         display: 'flex',
@@ -28,11 +28,11 @@ export function KPICard({ label, value, unit, icon: Icon, trend, color = '#2D7DD
         gap: 12,
         transition: 'border-color 0.15s ease',
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = `${color}40`; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#21262D'; }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-muted)'; }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 12, color: '#8B949E', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
         <div style={{
           width: 32, height: 32, borderRadius: 8,
           background: `${color}15`,
@@ -43,10 +43,10 @@ export function KPICard({ label, value, unit, icon: Icon, trend, color = '#2D7DD
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-        <span style={{ fontSize: 28, fontWeight: 800, color: '#E6EDF3', letterSpacing: '-0.5px' }}>
+        <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
           {value}
         </span>
-        {unit && <span style={{ fontSize: 13, color: '#484F58', fontWeight: 500 }}>{unit}</span>}
+        {unit && <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>{unit}</span>}
       </div>
 
       {trend && (
@@ -54,7 +54,7 @@ export function KPICard({ label, value, unit, icon: Icon, trend, color = '#2D7DD
           <span style={{ color: trendColor, fontWeight: 600 }}>
             {trendUp ? '+' : ''}{trend.value}%
           </span>
-          <span style={{ color: '#484F58' }}>{trend.label}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{trend.label}</span>
         </div>
       )}
     </div>

@@ -394,3 +394,45 @@ refactor: trade-aggregator 병렬 처리 최적화
 - 프론트에서 비즈니스 로직 처리 금지
 - 외부 API 직접 호출 금지 (반드시 캐시 레이어 경유)
 - UN Comtrade 500 calls/일 한도 초과 금지 (배분 전략 준수)
+
+---
+
+## 🗺️ 프론트엔드 페이지 추가 시 필수 체크리스트
+
+> 새 AppMode(페이지)를 추가할 때 반드시 아래 항목을 모두 업데이트해야 한다.
+
+### 새 페이지 추가 시 수정 필수 파일
+
+| 파일 | 위치 | 작업 내용 |
+|------|------|----------|
+| `App.tsx` | `type AppMode` | 새 모드 문자열 추가 |
+| `App.tsx` | `renderSubPage()` switch | 새 케이스 추가 |
+| `components/layout/Sidebar.tsx` | `MENU_ITEMS` 배열 | 메뉴 항목 + labelKey 추가 |
+| `components/layout/Header.tsx` | `MODE_LABEL_KEYS` 객체 | `'모드id': 'sidebar.키'` 추가 ← **자주 누락됨** |
+| `i18n/locales/ko.json` | `sidebar` 섹션 | 한국어 라벨 추가 |
+| `i18n/locales/en.json` | `sidebar` 섹션 | 영어 라벨 추가 |
+| `i18n/locales/ja.json` | `sidebar` 섹션 | 일본어 라벨 추가 |
+
+### ⚠️ 특히 자주 누락되는 항목
+
+```
+Header.tsx의 MODE_LABEL_KEYS에 누락되면
+→ 헤더 브레드크럼에 'ceo-dashboard' 같은 raw id가 그대로 노출됨
+→ 반드시 AppMode 추가와 동시에 MODE_LABEL_KEYS에도 추가할 것
+```
+
+### 예시
+
+```typescript
+// Header.tsx - MODE_LABEL_KEYS
+const MODE_LABEL_KEYS: Record<string, string> = {
+  // ... 기존 항목들 ...
+  'new-page': 'sidebar.newPage',  // ← 반드시 추가
+};
+
+// Sidebar.tsx - MENU_ITEMS
+{ id: 'new-page', icon: SomeIcon, labelKey: 'sidebar.newPage', sectionKey: 'sidebar.operations' },
+
+// ko.json - sidebar 섹션
+{ "newPage": "새 페이지 이름" }
+```

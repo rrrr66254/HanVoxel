@@ -36,7 +36,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
         className="flex shrink-0 items-center justify-between px-6"
         style={{
           height: 56,
-          borderBottom: '1px solid #30363D',
+          borderBottom: '1px solid var(--border-default)',
           background: 'rgba(13,17,23,0.95)',
           backdropFilter: 'blur(8px)',
         }}
@@ -64,7 +64,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
             onClick={onNext}
             className="rounded-lg px-6 py-2 text-xs font-semibold text-white transition-all hover:opacity-90"
             style={{
-              background: 'linear-gradient(135deg, #2D7DD2, #3FB950)',
+              background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))',
               boxShadow: '0 2px 8px rgba(45,125,210,0.3)',
             }}
           >
@@ -90,7 +90,7 @@ export function WizardStep3({ form, template, onNext, onBack }: WizardStep3Props
         className="flex shrink-0 items-center justify-center text-[11px] text-gray-600"
         style={{
           height: 36,
-          borderTop: '1px solid #21262D',
+          borderTop: '1px solid var(--bg-tertiary)',
           background: 'rgba(13,17,23,0.95)',
         }}
       >

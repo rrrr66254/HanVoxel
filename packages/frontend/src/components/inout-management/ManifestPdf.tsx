@@ -6,13 +6,13 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { ArrowLeft, Printer, Download } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 import type { OutboundOrder } from '../../api/outbound-api';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
 } as const;
 
 interface ManifestPdfProps {
@@ -75,9 +75,6 @@ export function ManifestPdf({ order, onBack }: ManifestPdfProps) {
       {/* 컨트롤 바 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>출고 명세표</h2>
           <span style={{ fontSize: 13, color: C.accent }}>{order.manifestNumber}</span>
         </div>
@@ -226,6 +223,6 @@ const tdStyle: React.CSSProperties = { padding: '8px 10px', border: '1px solid #
 const btnStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 6,
   padding: '8px 16px', borderRadius: 8,
-  background: '#161B22', border: '1px solid #30363D',
-  color: '#C9D1D9', cursor: 'pointer', fontSize: 13,
+  background: 'var(--bg-secondary)', border: '1px solid var(--border-default)',
+  color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13,
 };

@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import {
   Building2, FileText, TrendingUp, DollarSign,
-  Users, Plus, ArrowLeft, Package, AlertCircle,
+  Users, Plus, Package, AlertCircle,
 } from 'lucide-react';
 import type {
   PartnerData, VoucherData, SkuMarginData,
@@ -22,21 +22,21 @@ import {
   getSkuMargins, updateSellingPrice,
 } from '../../api/erp-api';
 
-// ── 테마 색상 ──────────────────────────────────────────
+// ── 테마 색상 (CSS 변수 참조) ──────────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
-  zebraRow: '#131920',
-  purchase: '#2D7DD2',
-  sales: '#3FB950',
-  warning: '#D29922',
-  danger: '#F85149',
-  purple: '#A371F7',
-  textPrimary: '#E6EDF3',
-  textSecondary: '#8B949E',
-  textMuted: '#484F58',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
+  zebraRow: 'var(--bg-tertiary)',
+  purchase: 'var(--accent-blue)',
+  sales: 'var(--accent-green)',
+  warning: 'var(--accent-orange)',
+  danger: 'var(--accent-red)',
+  purple: 'var(--accent-purple)',
+  textPrimary: 'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-muted)',
 } as const;
 
 // ── Mock 데이터 ────────────────────────────────────────
@@ -328,23 +328,16 @@ export function ErpDashboard({ onBack }: Props) {
       <header
         className="sticky top-0 z-10 backdrop-blur-md"
         style={{
-          backgroundColor: `${COLORS.bg}e6`,
+          backgroundColor: 'rgba(13,17,23,0.9)',
           borderBottom: `1px solid ${COLORS.border}`,
         }}
       >
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="rounded-lg p-2 transition-colors hover:bg-white/5"
-              style={{ color: COLORS.textSecondary }}
-            >
-              <ArrowLeft size={20} />
-            </button>
             <div className="flex items-center gap-3">
               <div
                 className="flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{ backgroundColor: `${COLORS.purchase}20` }}
+                style={{ backgroundColor: 'rgba(45,125,210,0.12)' }}
               >
                 <Building2 size={18} style={{ color: COLORS.purchase }} />
               </div>
@@ -533,7 +526,7 @@ export function ErpDashboard({ onBack }: Props) {
                   <div className="flex items-center gap-3">
                     <div
                       className="flex h-10 w-10 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${COLORS.purchase}20` }}
+                      style={{ backgroundColor: 'rgba(45,125,210,0.12)' }}
                     >
                       <FileText size={18} style={{ color: COLORS.purchase }} />
                     </div>
@@ -552,7 +545,7 @@ export function ErpDashboard({ onBack }: Props) {
                   <div className="flex items-center gap-3">
                     <div
                       className="flex h-10 w-10 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${COLORS.sales}20` }}
+                      style={{ backgroundColor: 'rgba(63,185,80,0.12)' }}
                     >
                       <FileText size={18} style={{ color: COLORS.sales }} />
                     </div>
@@ -702,7 +695,7 @@ export function ErpDashboard({ onBack }: Props) {
                       className="transition-colors"
                       style={{
                         backgroundColor: idx % 2 === 1 ? COLORS.zebraRow : 'transparent',
-                        borderBottom: `1px solid ${COLORS.border}40`,
+                        borderBottom: `1px solid rgba(48,54,61,0.25)`,
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = COLORS.hoverRow;
@@ -893,7 +886,7 @@ export function ErpDashboard({ onBack }: Props) {
                         className="transition-colors"
                         style={{
                           backgroundColor: idx % 2 === 1 ? COLORS.zebraRow : 'transparent',
-                          borderBottom: `1px solid ${COLORS.border}40`,
+                          borderBottom: `1px solid rgba(48,54,61,0.25)`,
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = COLORS.hoverRow;
@@ -935,7 +928,7 @@ export function ErpDashboard({ onBack }: Props) {
                               onClick={() => handleConfirmVoucher(v.id)}
                               className="rounded px-2.5 py-1 text-[10px] font-medium transition-colors"
                               style={{
-                                backgroundColor: `${COLORS.sales}20`,
+                                backgroundColor: 'rgba(63,185,80,0.12)',
                                 color: COLORS.sales,
                               }}
                             >
@@ -954,7 +947,7 @@ export function ErpDashboard({ onBack }: Props) {
                             }
                             className="rounded px-2.5 py-1 text-[10px] font-medium transition-colors"
                             style={{
-                              backgroundColor: `${COLORS.textSecondary}20`,
+                              backgroundColor: 'rgba(139,148,158,0.12)',
                               color: COLORS.textSecondary,
                             }}
                           >
@@ -1123,7 +1116,7 @@ export function ErpDashboard({ onBack }: Props) {
                           style={{
                             backgroundColor:
                               idx % 2 === 1 ? COLORS.zebraRow : 'transparent',
-                            borderBottom: `1px solid ${COLORS.border}40`,
+                            borderBottom: `1px solid rgba(48,54,61,0.25)`,
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.backgroundColor = COLORS.hoverRow;

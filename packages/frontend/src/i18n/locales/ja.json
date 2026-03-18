@@ -25,7 +25,16 @@
     "partner": "取引先管理",
     "partnerDashboard": "取引状況",
     "driver": "ドライバー管理",
-    "currentPlan": "現在のプラン"
+    "production": "生産管理",
+    "productionBoard": "生産現況板",
+    "productionPlan": "生産計画",
+    "workOrders": "生産指示書",
+    "productionEntry": "実績入力",
+    "workCenters": "作業場管理",
+    "productionAnalytics": "生産分析",
+    "currentPlan": "現在のプラン",
+    "ceoDashboard": "CEO ダッシュボード",
+    "overview": "概要"
   },
   "header": {
     "alerts": "通知"

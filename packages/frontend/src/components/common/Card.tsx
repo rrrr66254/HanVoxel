@@ -14,8 +14,8 @@ export function Card({ title, subtitle, headerRight, children, padding = 20, noB
   return (
     <div
       style={{
-        background: '#161B22',
-        border: noBorder ? 'none' : '1px solid #21262D',
+        background: 'var(--bg-secondary)',
+        border: noBorder ? 'none' : '1px solid var(--border-muted)',
         borderRadius: 12,
         overflow: 'hidden',
       }}
@@ -23,14 +23,14 @@ export function Card({ title, subtitle, headerRight, children, padding = 20, noB
       {(title || headerRight) && (
         <div style={{
           padding: '16px 20px',
-          borderBottom: '1px solid #21262D',
+          borderBottom: '1px solid var(--border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
           <div>
-            {title && <h3 style={{ fontSize: 14, fontWeight: 700, color: '#E6EDF3', margin: 0 }}>{title}</h3>}
-            {subtitle && <p style={{ fontSize: 11, color: '#484F58', margin: '2px 0 0' }}>{subtitle}</p>}
+            {title && <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{title}</h3>}
+            {subtitle && <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{subtitle}</p>}
           </div>
           {headerRight}
         </div>

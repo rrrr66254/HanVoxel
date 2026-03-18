@@ -29,7 +29,6 @@ import {
   Package,
   Check,
   X,
-  ArrowLeft,
 } from 'lucide-react';
 import type { ReorderRecommendation, ReorderSummary } from '../../api/reorder-api';
 import * as reorderApi from '../../api/reorder-api';
@@ -37,14 +36,14 @@ import * as reorderApi from '../../api/reorder-api';
 // --- 디자인 토큰 ---
 
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  textDim: '#484F58',
-  grid: '#21262D',
-  accent: '#58A6FF',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  textDim: 'var(--text-muted)',
+  grid: 'var(--bg-tertiary)',
+  accent: 'var(--accent-blue)',
 } as const;
 
 // --- Mock 데이터 ---
@@ -222,7 +221,7 @@ function KpiCard({ icon, label, value, color, trend }: KpiCardProps) {
             {trend && (
               <span
                 className="text-xs font-medium"
-                style={{ color: trend.up ? '#F85149' : '#3FB950' }}
+                style={{ color: trend.up ? 'var(--accent-red)' : 'var(--accent-green)' }}
               >
                 {trend.up ? '▲' : '▼'} {Math.abs(trend.value)}
               </span>
@@ -326,14 +325,6 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
         style={{ borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
-            style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textMuted }}
-          >
-            <ArrowLeft size={14} />
-            뒤로
-          </button>
           <div>
             <h1 className="text-lg font-bold text-white">자동 발주 추천</h1>
             <p className="text-xs" style={{ color: COLORS.textDim }}>
@@ -353,20 +344,20 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
             icon={<AlertTriangle size={16} />}
             label="긴급 대기"
             value={summary.urgentCount}
-            color="#F85149"
+            color="var(--accent-red)"
             trend={{ value: 1, up: true }}
           />
           <KpiCard
             icon={<Package size={16} />}
             label="전체 대기"
             value={summary.pendingCount}
-            color="#D29922"
+            color="var(--accent-orange)"
           />
           <KpiCard
             icon={<ShoppingCart size={16} />}
             label="자동발주(30일)"
             value={summary.autoOrderedLast30d}
-            color="#3FB950"
+            color="var(--accent-green)"
             trend={{ value: 2, up: false }}
           />
         </div>
@@ -383,8 +374,8 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm transition-colors ${
               tab === key
-                ? 'border-b-2 border-[#58A6FF] text-white'
-                : 'text-[#8B949E] hover:text-[#C9D1D9]'
+                ? 'border-b-2 border-[var(--accent-blue)] text-white'
+                : 'text-[#8B949E] hover:text-[var(--text-primary)]'
             }`}
           >
             {icon}
@@ -448,7 +439,7 @@ function RecommendationsTab({
                     : 'text-[#8B949E] hover:text-[#C9D1D9] hover:bg-white/5'
                 }`}
                 style={{
-                  border: `1px solid ${isActive ? '#58A6FF' : COLORS.border}`,
+                  border: `1px solid ${isActive ? 'var(--accent-blue)' : COLORS.border}`,
                 }}
               >
                 {style && (
@@ -538,10 +529,10 @@ function RecommendationCard({
   const timelinePct = rec.daysUntilOut !== null ? Math.min((rec.daysUntilOut / 30) * 100, 100) : 0;
   const timelineColor =
     rec.daysUntilOut !== null && rec.daysUntilOut <= 3
-      ? '#F85149'
+      ? 'var(--accent-red)'
       : rec.daysUntilOut !== null && rec.daysUntilOut <= 7
-        ? '#D29922'
-        : '#3FB950';
+        ? 'var(--accent-orange)'
+        : 'var(--accent-green)';
 
   return (
     <div
@@ -570,7 +561,7 @@ function RecommendationCard({
                 style={{
                   backgroundColor:
                     rec.status === 'AUTO_ORDERED' ? 'rgba(56,139,253,0.15)' : 'rgba(139,148,158,0.15)',
-                  color: rec.status === 'AUTO_ORDERED' ? '#58A6FF' : '#8B949E',
+                  color: rec.status === 'AUTO_ORDERED' ? 'var(--accent-blue)' : 'var(--text-secondary)',
                 }}
               >
                 {rec.status === 'AUTO_ORDERED' ? '발주 완료' : '무시됨'}
@@ -633,7 +624,7 @@ function RecommendationCard({
             </div>
             <div>
               <div style={{ color: COLORS.textDim }}>추천 발주량</div>
-              <div className="mt-0.5 font-bold text-[#58A6FF]">
+              <div className="mt-0.5 font-bold text-[var(--accent-blue)]">
                 {rec.reorderQty.toLocaleString()}개
               </div>
             </div>
@@ -651,7 +642,7 @@ function RecommendationCard({
             >
               <div
                 className={`h-full rounded-full transition-all ${
-                  currentPct < safetyPct ? 'bg-[#F85149]' : 'bg-[#3FB950]'
+                  currentPct < safetyPct ? 'bg-[#F85149]' : 'bg-[var(--accent-green)]'
                 }`}
                 style={{ width: `${Math.min(currentPct, 100)}%` }}
               />
@@ -779,7 +770,7 @@ function ForecastTab() {
             className="rounded-md px-2.5 py-1 text-xs font-medium"
             style={{
               backgroundColor: 'rgba(88,166,255,0.1)',
-              color: '#58A6FF',
+              color: 'var(--accent-blue)',
               border: '1px solid rgba(88,166,255,0.2)',
             }}
           >
@@ -810,18 +801,18 @@ function ForecastTab() {
             <Line
               type="monotone"
               dataKey="forecast"
-              stroke="#58A6FF"
+              stroke="var(--accent-blue)"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#58A6FF', stroke: COLORS.card, strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: 'var(--accent-blue)', stroke: COLORS.card, strokeWidth: 2 }}
             />
             <Line
               type="monotone"
               dataKey="actual"
-              stroke="#3FB950"
+              stroke="var(--accent-green)"
               strokeWidth={2}
               strokeDasharray="4 4"
-              dot={{ r: 3, fill: '#3FB950', stroke: COLORS.card, strokeWidth: 2 }}
+              dot={{ r: 3, fill: 'var(--accent-green)', stroke: COLORS.card, strokeWidth: 2 }}
               connectNulls={false}
             />
           </LineChart>
@@ -831,7 +822,7 @@ function ForecastTab() {
         <div className="mt-4 grid grid-cols-4 gap-4 text-center text-xs">
           <div>
             <div style={{ color: COLORS.textDim }}>일평균 예측</div>
-            <div className="mt-1 text-base font-bold text-[#58A6FF]">15개</div>
+            <div className="mt-1 text-base font-bold text-[var(--accent-blue)]">15개</div>
           </div>
           <div>
             <div style={{ color: COLORS.textDim }}>30일 합계</div>
@@ -892,7 +883,7 @@ function ForecastTab() {
               }}
               labelStyle={{ color: 'white', fontWeight: 600 }}
             />
-            <Bar dataKey="d7" name="7일 예측" fill="#58A6FF" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="d7" name="7일 예측" fill="var(--accent-blue)" radius={[3, 3, 0, 0]} />
             <Bar dataKey="d14" name="14일 예측" fill="#388BFD50" radius={[3, 3, 0, 0]} />
             <Bar dataKey="d30" name="30일 예측" fill="#388BFD25" radius={[3, 3, 0, 0]} />
           </BarChart>
@@ -922,7 +913,7 @@ function ForecastTab() {
                   className="transition-colors hover:bg-white/[0.03]"
                   style={{ borderBottom: `1px solid ${COLORS.grid}` }}
                 >
-                  <td className="px-3 py-2.5 font-mono text-[#58A6FF]">{row.model}</td>
+                  <td className="px-3 py-2.5 font-mono text-[var(--accent-blue)]">{row.model}</td>
                   <td className="px-3 py-2.5 text-right" style={{ color: COLORS.text }}>
                     {row.d7}
                   </td>
@@ -1023,7 +1014,7 @@ function LeadTimeTab() {
               }}
               labelStyle={{ color: 'white', fontWeight: 600 }}
             />
-            <Bar dataKey="avg" name="평균" fill="#58A6FF" radius={[0, 4, 4, 0]} barSize={16} />
+            <Bar dataKey="avg" name="평균" fill="var(--accent-blue)" radius={[0, 4, 4, 0]} barSize={16} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -1040,7 +1031,7 @@ function LeadTimeTab() {
         <div className="space-y-3">
           {mockStats.map((s) => {
             const reliabilityColor =
-              s.reliability >= 80 ? '#3FB950' : s.reliability >= 60 ? '#D29922' : '#F85149';
+              s.reliability >= 80 ? 'var(--accent-green)' : s.reliability >= 60 ? 'var(--accent-orange)' : 'var(--accent-red)';
 
             return (
               <div
@@ -1052,7 +1043,7 @@ function LeadTimeTab() {
                   <div className="flex items-center gap-3">
                     <div
                       className="flex h-8 w-8 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${COLORS.accent}15` }}
+                      style={{ backgroundColor: 'rgba(88,166,255,0.08)' }}
                     >
                       <Clock size={14} style={{ color: COLORS.accent }} />
                     </div>
@@ -1067,11 +1058,11 @@ function LeadTimeTab() {
                     <span style={{ color: COLORS.textMuted }}>
                       {s.minDays}~{s.maxDays}일
                     </span>
-                    <span className="text-sm font-bold text-[#58A6FF]">평균 {s.avgDays}일</span>
+                    <span className="text-sm font-bold text-[var(--accent-blue)]">평균 {s.avgDays}일</span>
                     <span
                       className="flex items-center gap-0.5 font-medium"
                       style={{
-                        color: s.trend < 0 ? '#3FB950' : s.trend > 0 ? '#F85149' : COLORS.textDim,
+                        color: s.trend < 0 ? 'var(--accent-green)' : s.trend > 0 ? 'var(--accent-red)' : COLORS.textDim,
                       }}
                     >
                       {s.trend > 0 ? '▲' : s.trend < 0 ? '▼' : '—'}
@@ -1147,7 +1138,7 @@ function LeadTimeTab() {
                   <td className="px-3 py-2.5" style={{ color: COLORS.text }}>
                     {r.partner}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-[#58A6FF]">{r.sku}</td>
+                  <td className="px-3 py-2.5 font-mono text-[var(--accent-blue)]">{r.sku}</td>
                   <td className="px-3 py-2.5 text-right" style={{ color: COLORS.textMuted }}>
                     {r.ordered}
                   </td>

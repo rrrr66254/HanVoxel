@@ -35,7 +35,7 @@ interface ApiKeyConfig {
 const API_SERVICES: ApiKeyConfig[] = [
   { id: 'stripe', service: 'Stripe', icon: CreditCard, color: '#635BFF', descKey: 'settings.apikeys.stripDesc', placeholder: 'sk_live_...' },
   { id: 'comtrade', service: 'UN Comtrade', icon: Globe, color: '#00A3E0', descKey: 'settings.apikeys.comtradeDesc', placeholder: 'comtrade_api_key_...' },
-  { id: 'customs', service: '한국 관세청', icon: Database, color: '#2D7DD2', descKey: 'settings.apikeys.customsDesc', placeholder: 'customs_api_key_...' },
+  { id: 'customs', service: '한국 관세청', icon: Database, color: 'var(--accent-blue)', descKey: 'settings.apikeys.customsDesc', placeholder: 'customs_api_key_...' },
   { id: 'douzon', service: '더존 iCUBE', icon: Link2, color: '#00B050', descKey: 'settings.apikeys.douzonDesc', placeholder: 'douzon_client_id_...' },
   { id: 'mlservice', service: 'ML Service', icon: Cpu, color: '#F0B429', descKey: 'settings.apikeys.mlDesc', placeholder: 'http://localhost:8000' },
 ];
@@ -77,17 +77,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   return (
     <div style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto' }}>
       {/* 페이지 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        {onBack && (
-          <button onClick={onBack} style={{
-            width: 36, height: 36, borderRadius: 8,
-            border: '1px solid var(--border-default)', background: 'var(--bg-secondary)',
-            color: 'var(--text-secondary)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            ←
-          </button>
-        )}
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t('settings.title')}</h1>
       </div>
 

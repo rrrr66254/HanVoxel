@@ -182,9 +182,9 @@ export function KeyboardHint({ visible, onToggle }: KeyboardHintProps) {
           left: 16,
           padding: '6px 10px',
           borderRadius: 8,
-          border: '1px solid #30363D',
-          background: visible ? '#1C2A3A' : '#161B22',
-          color: visible ? '#2D7DD2' : '#6E7681',
+          border: '1px solid var(--border-default)',
+          background: visible ? 'var(--bg-hover)' : 'var(--bg-secondary)',
+          color: visible ? 'var(--accent-blue)' : 'var(--text-icon)',
           fontSize: 11,
           fontWeight: 600,
           cursor: 'pointer',
@@ -208,7 +208,7 @@ export function KeyboardHint({ visible, onToggle }: KeyboardHintProps) {
             bottom: 92,
             left: 16,
             background: 'rgba(13,17,23,0.92)',
-            border: '1px solid #30363D',
+            border: '1px solid var(--border-default)',
             borderRadius: 12,
             padding: '16px 20px',
             zIndex: 25,
@@ -216,7 +216,7 @@ export function KeyboardHint({ visible, onToggle }: KeyboardHintProps) {
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#E6EDF3', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
             키보드 단축키
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -235,18 +235,18 @@ export function KeyboardHint({ visible, onToggle }: KeyboardHintProps) {
                     minWidth: 72,
                     padding: '3px 8px',
                     borderRadius: 4,
-                    background: '#21262D',
-                    border: '1px solid #30363D',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-default)',
                     fontSize: 10,
                     fontWeight: 600,
-                    color: '#E6EDF3',
+                    color: 'var(--text-primary)',
                     fontFamily: 'monospace',
                     textAlign: 'center',
                   }}
                 >
                   {keys}
                 </span>
-                <span style={{ fontSize: 11, color: '#8B949E' }}>{desc}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{desc}</span>
               </div>
             ))}
           </div>

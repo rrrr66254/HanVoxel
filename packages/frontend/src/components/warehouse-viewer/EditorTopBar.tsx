@@ -57,27 +57,27 @@ export function EditorTopBar({
   onRedo,
 }: EditorTopBarProps) {
   return (
-    <div className="flex h-12 items-center border-b border-[#2A2F38] bg-[#1A1D24] px-4 select-none">
+    <div className="flex h-12 items-center border-b border-[var(--border-muted)] bg-[var(--bg-secondary)] px-4 select-none">
       {/* 뒤로가기 버튼 (마법사 모드에서만 표시) */}
       {onBack && (
         <>
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 transition-all hover:bg-[#21262D] hover:text-gray-200"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 transition-all hover:bg-[var(--bg-tertiary)] hover:text-gray-200"
             title="이전 단계로 돌아가기"
           >
             <ArrowLeft size={14} />
             이전
           </button>
-          <div className="mx-2 h-6 w-px bg-[#2A2F38]" />
+          <div className="mx-2 h-6 w-px bg-[var(--border-muted)]" />
         </>
       )}
 
       {/* 구분선 */}
-      <div className="mx-2 h-6 w-px bg-[#2A2F38]" />
+      <div className="mx-2 h-6 w-px bg-[var(--border-muted)]" />
 
       {/* 뷰 모드 전환 */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-[#12151A] p-0.5">
+      <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-primary)] p-0.5">
         <ViewBtn
           label="3D"
           icon={<Box size={13} />}
@@ -96,7 +96,7 @@ export function EditorTopBar({
           active={viewMode === 'front'}
           onClick={() => onViewModeChange('front')}
         />
-        <div className="mx-0.5 h-4 w-px bg-[#2A2F38]" />
+        <div className="mx-0.5 h-4 w-px bg-[var(--border-muted)]" />
         <ViewBtn
           label="2D 편집"
           icon={<Layout size={13} />}
@@ -106,10 +106,10 @@ export function EditorTopBar({
       </div>
 
       {/* 구분선 */}
-      <div className="mx-3 h-6 w-px bg-[#2A2F38]" />
+      <div className="mx-3 h-6 w-px bg-[var(--border-muted)]" />
 
       {/* 편집 도구 */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-[#12151A] p-0.5">
+      <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-primary)] p-0.5">
         <ToolBtn
           icon={<MousePointer2 size={14} />}
           tooltip="선택 (V)"
@@ -137,14 +137,14 @@ export function EditorTopBar({
       </div>
 
       {/* 구분선 */}
-      <div className="mx-3 h-6 w-px bg-[#2A2F38]" />
+      <div className="mx-3 h-6 w-px bg-[var(--border-muted)]" />
 
       {/* Undo / Redo */}
       <div className="flex items-center gap-0.5">
         <button
           className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
             canUndo
-              ? 'text-gray-400 hover:bg-[#1A1D24] hover:text-gray-200'
+              ? 'text-gray-400 hover:bg-[var(--bg-secondary)] hover:text-gray-200'
               : 'text-gray-600 cursor-not-allowed'
           }`}
           disabled={!canUndo}
@@ -156,7 +156,7 @@ export function EditorTopBar({
         <button
           className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
             canRedo
-              ? 'text-gray-400 hover:bg-[#1A1D24] hover:text-gray-200'
+              ? 'text-gray-400 hover:bg-[var(--bg-secondary)] hover:text-gray-200'
               : 'text-gray-600 cursor-not-allowed'
           }`}
           disabled={!canRedo}
@@ -176,16 +176,16 @@ export function EditorTopBar({
         </div>
 
         {/* 구분선 */}
-        <div className="h-6 w-px bg-[#2A2F38]" />
+        <div className="h-6 w-px bg-[var(--border-muted)]" />
 
         {/* 편집 레이어 모드 스위치 */}
-        <div className="flex items-center rounded-lg border border-[#2A2F38] bg-[#0D1117] p-0.5">
+        <div className="flex items-center rounded-lg border border-[var(--border-muted)] bg-[var(--bg-primary)] p-0.5">
           <button
             onClick={() => onEditLayerChange?.('structure')}
             className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
               editLayer === 'structure'
                 ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/10'
-                : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+                : 'text-gray-500 hover:bg-[var(--bg-secondary)] hover:text-gray-300'
             }`}
             title="구조물 편집 모드 (바닥/벽/통로/구역)"
           >
@@ -197,7 +197,7 @@ export function EditorTopBar({
             className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
               editLayer === 'objects'
                 ? 'bg-blue-500/20 text-blue-400 shadow-sm shadow-blue-500/10'
-                : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+                : 'text-gray-500 hover:bg-[var(--bg-secondary)] hover:text-gray-300'
             }`}
             title="오브젝트 편집 모드 (랙/팔레트/컨테이너)"
           >
@@ -207,7 +207,7 @@ export function EditorTopBar({
         </div>
 
         {/* 구분선 */}
-        <div className="h-6 w-px bg-[#2A2F38]" />
+        <div className="h-6 w-px bg-[var(--border-muted)]" />
 
         {/* 저장 버튼 (프리미엄 스타일) */}
         <button
@@ -249,7 +249,7 @@ function ViewBtn({
       className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
         active
           ? 'bg-blue-600/20 text-blue-400'
-          : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+          : 'text-gray-500 hover:bg-[var(--bg-secondary)] hover:text-gray-300'
       }`}
     >
       {icon}
@@ -277,7 +277,7 @@ function ToolBtn({
       className={`flex h-7 w-7 items-center justify-center rounded-md transition-all ${
         active
           ? 'bg-blue-600/20 text-blue-400'
-          : 'text-gray-500 hover:bg-[#1A1D24] hover:text-gray-300'
+          : 'text-gray-500 hover:bg-[var(--bg-secondary)] hover:text-gray-300'
       }`}
     >
       {icon}

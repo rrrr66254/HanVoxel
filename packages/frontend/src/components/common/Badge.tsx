@@ -7,11 +7,11 @@ interface BadgeProps {
 }
 
 const VARIANT_STYLES: Record<BadgeVariant, { bg: string; color: string; border: string }> = {
-  info:    { bg: 'rgba(45,125,210,0.12)', color: '#2D7DD2', border: 'rgba(45,125,210,0.25)' },
-  success: { bg: 'rgba(63,185,80,0.12)',  color: '#3FB950', border: 'rgba(63,185,80,0.25)' },
-  warning: { bg: 'rgba(210,153,34,0.12)', color: '#D29922', border: 'rgba(210,153,34,0.25)' },
-  danger:  { bg: 'rgba(248,81,73,0.12)',  color: '#F85149', border: 'rgba(248,81,73,0.25)' },
-  neutral: { bg: '#21262D',               color: '#8B949E', border: '#30363D' },
+  info:    { bg: 'rgba(45,125,210,0.12)', color: 'var(--accent-blue)', border: 'rgba(45,125,210,0.25)' },
+  success: { bg: 'rgba(63,185,80,0.12)',  color: 'var(--accent-green)', border: 'rgba(63,185,80,0.25)' },
+  warning: { bg: 'rgba(210,153,34,0.12)', color: 'var(--accent-orange)', border: 'rgba(210,153,34,0.25)' },
+  danger:  { bg: 'rgba(248,81,73,0.12)',  color: 'var(--accent-red)', border: 'rgba(248,81,73,0.25)' },
+  neutral: { bg: 'var(--bg-tertiary)',     color: 'var(--text-secondary)', border: 'var(--border-default)' },
 };
 
 /**

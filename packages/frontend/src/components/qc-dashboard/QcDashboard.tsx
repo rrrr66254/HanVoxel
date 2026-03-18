@@ -24,24 +24,25 @@ import QcSupplierScorecard from './QcSupplierScorecard';
 import type { QcStatsData, InspectionData, SupplierData } from '../../api/qc-api';
 import { getQcStats, getInspections, getSuppliers } from '../../api/qc-api';
 
-// ── 다크 테마 색상 상수 ──────────────────────────────────
+// ── 테마 색상 상수 (CSS 변수 참조) ──────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  hoverRow: '#1C2128',
-  text: '#C9D1D9',
-  textMuted: '#8B949E',
-  gridLine: '#21262D',
-  green: '#3FB950',
-  blue: '#2D7DD2',
-  yellow: '#D29922',
-  red: '#F85149',
-  orange: '#D29922',
-  purple: '#A371F7',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  hoverRow: 'var(--bg-hover)',
+  text: 'var(--text-primary)',
+  textMuted: 'var(--text-secondary)',
+  gridLine: 'var(--bg-tertiary)',
+  green: 'var(--accent-green)',
+  blue: 'var(--accent-blue)',
+  yellow: 'var(--accent-orange)',
+  red: 'var(--accent-red)',
+  orange: 'var(--accent-orange)',
+  purple: 'var(--accent-purple)',
 } as const;
 
-// ── 차트 바 색상 팔레트 ─────────────────────────────────
+// ── 차트 바 색상 팔레트 (Recharts용 — hex 유지 필수) ─────
+// prettier-ignore
 const BAR_COLORS = ['#58A6FF', '#3FB950', '#D29922', '#F85149', '#A371F7', '#79C0FF', '#8B949E'];
 
 // ── 목 데이터 ───────────────────────────────────────────
@@ -314,19 +315,11 @@ export default function QcDashboard({ onBack }: QcDashboardProps) {
       {/* ── 헤더 ────────────────────────────────────────── */}
       <header
         className="sticky top-0 z-10 backdrop-blur-md"
-        style={{ backgroundColor: `${COLORS.bg}E6`, borderBottom: `1px solid ${COLORS.border}` }}
+        style={{ backgroundColor: 'rgba(13,17,23,0.9)', borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={onBack}
-                className="flex items-center gap-1.5 text-sm transition-colors hover:opacity-80"
-                style={{ color: COLORS.textMuted }}
-              >
-                <ArrowLeft size={16} />
-                돌아가기
-              </button>
               <div className="flex items-center gap-2">
                 <ClipboardCheck size={20} style={{ color: COLORS.blue }} />
                 <h1 className="text-lg font-bold" style={{ color: COLORS.text }}>
@@ -515,7 +508,7 @@ export default function QcDashboard({ onBack }: QcDashboardProps) {
                           <span
                             className="text-xs px-2.5 py-1 rounded-full font-medium"
                             style={{
-                              backgroundColor: insp.type === 'INBOUND' ? `${COLORS.blue}20` : `${COLORS.purple}20`,
+                              backgroundColor: insp.type === 'INBOUND' ? 'rgba(45,125,210,0.12)' : 'rgba(163,113,247,0.12)',
                               color: insp.type === 'INBOUND' ? COLORS.blue : COLORS.purple,
                             }}
                           >
@@ -636,7 +629,7 @@ export default function QcDashboard({ onBack }: QcDashboardProps) {
                     />
                     <Tooltip
                       content={<ChartTooltip />}
-                      cursor={{ fill: `${COLORS.hoverRow}80` }}
+                      cursor={{ fill: 'rgba(28,33,40,0.5)' }}
                     />
                     <Bar
                       dataKey="qty"

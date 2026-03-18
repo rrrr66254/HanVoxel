@@ -8,9 +8,9 @@ interface ObjectInfoPanelProps {
 
 // 상태 배지 색상
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-  ACTIVE: { bg: 'rgba(63, 185, 80, 0.15)', color: '#3FB950' },
-  INACTIVE: { bg: 'rgba(139, 148, 158, 0.15)', color: '#8B949E' },
-  MAINTENANCE: { bg: 'rgba(210, 153, 34, 0.15)', color: '#D29922' },
+  ACTIVE: { bg: 'rgba(63, 185, 80, 0.15)', color: 'var(--accent-green)' },
+  INACTIVE: { bg: 'rgba(139, 148, 158, 0.15)', color: 'var(--text-secondary)' },
+  MAINTENANCE: { bg: 'rgba(210, 153, 34, 0.15)', color: 'var(--accent-orange)' },
 };
 
 /**
@@ -28,11 +28,11 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
         top: 70,
         right: 16,
         width: 280,
-        background: '#161B22',
-        border: '1px solid #30363D',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-default)',
         borderRadius: 12,
         padding: 0,
-        color: '#E6EDF3',
+        color: 'var(--text-primary)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         zIndex: 20,
         overflow: 'hidden',
@@ -42,7 +42,7 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
       <div
         style={{
           padding: '14px 16px',
-          borderBottom: '1px solid #21262D',
+          borderBottom: '1px solid var(--border-muted)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
@@ -50,7 +50,7 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
       >
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{object.name}</h3>
-          <span style={{ fontSize: 11, color: '#484F58', fontFamily: 'monospace' }}>{object.code}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{object.code}</span>
         </div>
         <button
           onClick={onClose}
@@ -58,9 +58,9 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
             width: 28,
             height: 28,
             borderRadius: 6,
-            border: '1px solid #30363D',
+            border: '1px solid var(--border-default)',
             background: 'transparent',
-            color: '#8B949E',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -79,7 +79,7 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
             padding: '3px 10px',
             borderRadius: 6,
             background: 'rgba(45, 125, 210, 0.15)',
-            color: '#2D7DD2',
+            color: 'var(--accent-blue)',
             fontWeight: 600,
           }}
         >
@@ -110,10 +110,10 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
           />
           {object.color && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-              <span style={{ color: '#8B949E' }}>색상</span>
+              <span style={{ color: 'var(--text-secondary)' }}>색상</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 14, height: 14, borderRadius: 3, background: object.color, border: '1px solid #30363D' }} />
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#E6EDF3' }}>{object.color}</span>
+                <div style={{ width: 14, height: 14, borderRadius: 3, background: object.color, border: '1px solid var(--border-default)' }} />
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-primary)' }}>{object.color}</span>
               </div>
             </div>
           )}
@@ -122,8 +122,8 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
 
         {/* 메타데이터 */}
         {object.metadata && Object.keys(object.metadata).length > 0 && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #21262D' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-muted)' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               메타데이터
             </span>
             <pre
@@ -132,12 +132,12 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
                 maxHeight: 120,
                 overflow: 'auto',
                 borderRadius: 8,
-                background: '#0D1117',
-                border: '1px solid #21262D',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-muted)',
                 padding: 10,
                 fontSize: 10,
                 fontFamily: 'monospace',
-                color: '#8B949E',
+                color: 'var(--text-secondary)',
                 lineHeight: 1.5,
               }}
             >
@@ -153,8 +153,8 @@ export function ObjectInfoPanel({ object, onClose }: ObjectInfoPanelProps) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-      <span style={{ color: '#8B949E' }}>{label}</span>
-      <span style={{ fontFamily: 'monospace', color: '#E6EDF3' }}>{value}</span>
+      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>{value}</span>
     </div>
   );
 }

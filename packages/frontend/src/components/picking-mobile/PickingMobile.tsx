@@ -44,13 +44,13 @@ import {
 
 // ── 테마 색상 상수 ──────────────────────────────────────
 const COLORS = {
-  bg: '#0D1117',
-  card: '#161B22',
-  border: '#30363D',
-  critical: '#F85149',
-  high: '#D29922',
-  medium: '#D29922',
-  low: '#484F58',
+  bg: 'var(--bg-primary)',
+  card: 'var(--bg-secondary)',
+  border: 'var(--border-default)',
+  critical: 'var(--accent-red)',
+  high: 'var(--accent-orange)',
+  medium: 'var(--accent-orange)',
+  low: 'var(--text-muted)',
 } as const;
 
 // ── 긴급도 매핑 (priority 숫자 → 레이블/색상) ──────────
@@ -126,10 +126,10 @@ const statusLabel: Record<string, string> = {
   COMPLETED: '완료',
 };
 const statusBadgeStyle: Record<string, { bg: string; text: string }> = {
-  PENDING: { bg: 'rgba(72,79,88,0.3)', text: '#8B949E' },
-  ASSIGNED: { bg: 'rgba(210,153,34,0.15)', text: '#D29922' },
-  IN_PROGRESS: { bg: 'rgba(56,139,253,0.15)', text: '#388BFD' },
-  COMPLETED: { bg: 'rgba(63,185,80,0.15)', text: '#3FB950' },
+  PENDING: { bg: 'rgba(72,79,88,0.3)', text: 'var(--text-secondary)' },
+  ASSIGNED: { bg: 'rgba(210,153,34,0.15)', text: 'var(--accent-orange)' },
+  IN_PROGRESS: { bg: 'rgba(56,139,253,0.15)', text: 'var(--accent-blue)' },
+  COMPLETED: { bg: 'rgba(63,185,80,0.15)', text: 'var(--accent-green)' },
 };
 const lineStatusLabel: Record<string, string> = {
   PENDING: '대기',
@@ -197,12 +197,12 @@ function KpiCard({ topColor, icon, label, value, suffix }: KpiCardProps) {
 // ── 진행률 바 컴포넌트 ──────────────────────────────────
 function ProgressBar({ percent, height = 'h-2' }: { percent: number; height?: string }) {
   return (
-    <div className={`${height} w-full overflow-hidden rounded-full`} style={{ backgroundColor: '#21262D' }}>
+    <div className={`${height} w-full overflow-hidden rounded-full`} style={{ backgroundColor: 'var(--bg-tertiary)' }}>
       <div
         className={`${height} rounded-full transition-all duration-500`}
         style={{
           width: `${percent}%`,
-          backgroundColor: percent === 100 ? '#3FB950' : '#388BFD',
+          backgroundColor: percent === 100 ? 'var(--accent-green)' : '#388BFD',
         }}
       />
     </div>
@@ -408,10 +408,10 @@ export function PickingMobile({ onBack }: Props) {
       lines: w.lines,
       errors: w.errors,
     }));
-    const barColors = ['#388BFD', '#3FB950', '#D29922', '#F85149', '#A371F7'];
+    const barColors = ['#388BFD', 'var(--accent-green)', 'var(--accent-orange)', 'var(--accent-red)', 'var(--accent-purple)'];
 
     return (
-      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: '#E6EDF3' }}>
+      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: 'var(--text-primary)' }}>
         {/* 헤더 */}
         <header
           className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
@@ -435,19 +435,19 @@ export function PickingMobile({ onBack }: Props) {
               value={s.totalOrders}
             />
             <KpiCard
-              topColor="#3FB950"
+              topColor="var(--accent-green)"
               icon={<CheckCircle size={20} className="text-green-400" />}
               label="완료"
               value={s.completed}
             />
             <KpiCard
-              topColor="#D29922"
+              topColor="var(--accent-orange)"
               icon={<Clock size={20} className="text-yellow-400" />}
               label="진행 중"
               value={s.inProgress}
             />
             <KpiCard
-              topColor="#F85149"
+              topColor="var(--accent-red)"
               icon={<AlertTriangle size={20} className="text-red-400" />}
               label="오류율"
               value={Math.round(s.errorRate * 100) / 100}
@@ -460,7 +460,7 @@ export function PickingMobile({ onBack }: Props) {
             className="relative overflow-hidden rounded-lg p-4"
             style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
           >
-            <div className="h-[3px] absolute top-0 left-0 w-full" style={{ backgroundColor: '#A371F7' }} />
+            <div className="h-[3px] absolute top-0 left-0 w-full" style={{ backgroundColor: 'var(--accent-purple)' }} />
             <div className="flex items-center gap-3">
               <Clock size={20} className="text-purple-400 opacity-60" />
               <div>
@@ -488,12 +488,12 @@ export function PickingMobile({ onBack }: Props) {
                 <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: '#8B949E', fontSize: 12 }}
+                    tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
                     axisLine={{ stroke: COLORS.border }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fill: '#8B949E', fontSize: 12 }}
+                    tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
                     axisLine={{ stroke: COLORS.border }}
                     tickLine={false}
                   />
@@ -514,26 +514,26 @@ export function PickingMobile({ onBack }: Props) {
             style={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.border}` }}
           >
             <div className="mb-3 text-sm font-medium text-gray-300">주문 상태 분포</div>
-            <div className="flex h-4 overflow-hidden rounded-full" style={{ backgroundColor: '#21262D' }}>
+            <div className="flex h-4 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
               {s.completed > 0 && (
-                <div style={{ width: `${(s.completed / s.totalOrders) * 100}%`, backgroundColor: '#3FB950' }} />
+                <div style={{ width: `${(s.completed / s.totalOrders) * 100}%`, backgroundColor: 'var(--accent-green)' }} />
               )}
               {s.inProgress > 0 && (
                 <div style={{ width: `${(s.inProgress / s.totalOrders) * 100}%`, backgroundColor: '#388BFD' }} />
               )}
               {s.pending > 0 && (
-                <div style={{ width: `${(s.pending / s.totalOrders) * 100}%`, backgroundColor: '#484F58' }} />
+                <div style={{ width: `${(s.pending / s.totalOrders) * 100}%`, backgroundColor: 'var(--text-muted)' }} />
               )}
             </div>
             <div className="mt-2 flex gap-4 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: '#3FB950' }} />완료 {s.completed}
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--accent-green)' }} />완료 {s.completed}
               </span>
               <span className="flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: '#388BFD' }} />진행 {s.inProgress}
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: '#484F58' }} />대기 {s.pending}
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--text-muted)' }} />대기 {s.pending}
               </span>
             </div>
           </div>
@@ -547,7 +547,7 @@ export function PickingMobile({ onBack }: Props) {
   // ════════════════════════════════════════════════════════
   if (view === 'scan' && currentLine) {
     return (
-      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: '#E6EDF3' }}>
+      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: 'var(--text-primary)' }}>
         <header
           className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
           style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}
@@ -559,7 +559,7 @@ export function PickingMobile({ onBack }: Props) {
           <h1 className="text-lg font-bold">바코드 스캔</h1>
           <span
             className="ml-auto rounded px-2 py-0.5 text-xs font-mono"
-            style={{ backgroundColor: '#21262D', color: '#8B949E' }}
+            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
           >
             {currentLine.binCode}
           </span>
@@ -606,7 +606,7 @@ export function PickingMobile({ onBack }: Props) {
                 onChange={(e) => { setScanInput(e.target.value); setScanResult('idle'); }}
                 placeholder="바코드를 스캔하세요"
                 className="flex-1 rounded-lg px-4 py-3 text-lg text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ backgroundColor: '#21262D', border: `1px solid ${COLORS.border}` }}
+                style={{ backgroundColor: 'var(--bg-tertiary)', border: `1px solid ${COLORS.border}` }}
                 autoFocus
                 onKeyDown={(e) => e.key === 'Enter' && handleScan()}
               />
@@ -621,7 +621,7 @@ export function PickingMobile({ onBack }: Props) {
             {scanResult === 'success' && (
               <div
                 className="mt-3 flex items-center gap-2 rounded-lg p-3"
-                style={{ backgroundColor: 'rgba(63,185,80,0.1)', color: '#3FB950' }}
+                style={{ backgroundColor: 'rgba(63,185,80,0.1)', color: 'var(--accent-green)' }}
               >
                 <CheckCircle size={18} />
                 바코드 일치 확인됨
@@ -630,7 +630,7 @@ export function PickingMobile({ onBack }: Props) {
             {scanResult === 'fail' && (
               <div
                 className="mt-3 flex items-center gap-2 rounded-lg p-3"
-                style={{ backgroundColor: 'rgba(248,81,73,0.1)', color: '#F85149' }}
+                style={{ backgroundColor: 'rgba(248,81,73,0.1)', color: 'var(--accent-red)' }}
               >
                 <XCircle size={18} />
                 바코드 불일치 -- 올바른 상품인지 확인하세요
@@ -648,7 +648,7 @@ export function PickingMobile({ onBack }: Props) {
               <button
                 onClick={() => setPickedQty(Math.max(0, pickedQty - 1))}
                 className="rounded-lg p-3 transition-colors hover:opacity-80"
-                style={{ backgroundColor: '#21262D' }}
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
                 <Minus size={20} />
               </button>
@@ -657,12 +657,12 @@ export function PickingMobile({ onBack }: Props) {
                 value={pickedQty}
                 onChange={(e) => setPickedQty(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-24 rounded-lg px-3 py-3 text-center text-2xl font-bold text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ backgroundColor: '#21262D', border: `1px solid ${COLORS.border}` }}
+                style={{ backgroundColor: 'var(--bg-tertiary)', border: `1px solid ${COLORS.border}` }}
               />
               <button
                 onClick={() => setPickedQty(pickedQty + 1)}
                 className="rounded-lg p-3 transition-colors hover:opacity-80"
-                style={{ backgroundColor: '#21262D' }}
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
                 <Plus size={20} />
               </button>
@@ -679,7 +679,7 @@ export function PickingMobile({ onBack }: Props) {
           <button
             onClick={handlePickComplete}
             className="w-full rounded-xl py-4 text-lg font-bold text-white transition-colors hover:opacity-90"
-            style={{ backgroundColor: '#3FB950' }}
+            style={{ backgroundColor: 'var(--accent-green)' }}
           >
             피킹 완료
           </button>
@@ -692,7 +692,7 @@ export function PickingMobile({ onBack }: Props) {
                 style={{
                   backgroundColor: 'rgba(248,81,73,0.08)',
                   border: `1px solid rgba(248,81,73,0.3)`,
-                  color: '#F85149',
+                  color: 'var(--accent-red)',
                 }}
               >
                 {reason}
@@ -717,7 +717,7 @@ export function PickingMobile({ onBack }: Props) {
     const badge = statusBadgeStyle[selectedOrder.status] ?? statusBadgeStyle.PENDING;
 
     return (
-      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: '#E6EDF3' }}>
+      <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: 'var(--text-primary)' }}>
         <header
           className="sticky top-0 z-10 px-4 py-3"
           style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}
@@ -755,7 +755,7 @@ export function PickingMobile({ onBack }: Props) {
               <button
                 onClick={handleAssign}
                 className="w-full rounded-xl py-3 font-bold text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: '#D29922' }}
+                style={{ backgroundColor: 'var(--accent-orange)' }}
               >
                 내 작업으로 배정
               </button>
@@ -778,7 +778,7 @@ export function PickingMobile({ onBack }: Props) {
             const isDone = line.status !== 'PENDING';
             const borderColor = isDone
               ? line.status === 'ERROR' ? 'rgba(248,81,73,0.3)' : 'rgba(63,185,80,0.3)'
-              : isActive ? COLORS.border : '#21262D';
+              : isActive ? COLORS.border : 'var(--bg-tertiary)';
             const bgColor = isDone
               ? line.status === 'ERROR' ? 'rgba(248,81,73,0.05)' : 'rgba(63,185,80,0.05)'
               : COLORS.card;
@@ -796,7 +796,7 @@ export function PickingMobile({ onBack }: Props) {
                     <div className="flex items-center gap-2">
                       <span
                         className="rounded px-1.5 py-0.5 text-xs font-mono"
-                        style={{ backgroundColor: '#21262D', color: '#8B949E' }}
+                        style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                       >
                         {line.pickSequence}
                       </span>
@@ -814,7 +814,7 @@ export function PickingMobile({ onBack }: Props) {
                     {isDone ? (
                       <span
                         className="text-sm font-bold"
-                        style={{ color: line.status === 'ERROR' ? '#F85149' : '#3FB950' }}
+                        style={{ color: line.status === 'ERROR' ? 'var(--accent-red)' : 'var(--accent-green)' }}
                       >
                         {lineStatusLabel[line.status]}
                       </span>
@@ -822,13 +822,13 @@ export function PickingMobile({ onBack }: Props) {
                       <span className="text-lg font-bold text-gray-100">{line.requestedQty}</span>
                     )}
                     {line.scanVerified && (
-                      <div className="mt-0.5 flex items-center justify-end gap-1 text-xs" style={{ color: '#3FB950' }}>
+                      <div className="mt-0.5 flex items-center justify-end gap-1 text-xs" style={{ color: 'var(--accent-green)' }}>
                         <CheckCircle size={10} />
                         스캔 확인됨
                       </div>
                     )}
                     {line.errorReason && (
-                      <div className="mt-0.5 text-xs" style={{ color: '#F85149' }}>{line.errorReason}</div>
+                      <div className="mt-0.5 text-xs" style={{ color: 'var(--accent-red)' }}>{line.errorReason}</div>
                     )}
                   </div>
                 </div>
@@ -843,7 +843,7 @@ export function PickingMobile({ onBack }: Props) {
             className="sticky bottom-0 p-4 text-center"
             style={{ backgroundColor: 'rgba(63,185,80,0.1)', borderTop: `1px solid rgba(63,185,80,0.3)` }}
           >
-            <span className="flex items-center justify-center gap-2 text-lg font-bold" style={{ color: '#3FB950' }}>
+            <span className="flex items-center justify-center gap-2 text-lg font-bold" style={{ color: 'var(--accent-green)' }}>
               <CheckCircle size={20} />
               피킹 완료
             </span>
@@ -861,16 +861,13 @@ export function PickingMobile({ onBack }: Props) {
     : orders.filter((o) => o.status === statusFilter);
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: '#E6EDF3' }}>
+    <div className="flex min-h-screen flex-col" style={{ backgroundColor: COLORS.bg, color: 'var(--text-primary)' }}>
       {/* 헤더 */}
       <header
         className="sticky top-0 z-10 px-4 py-3"
         style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}` }}
       >
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
-            <ChevronLeft size={24} />
-          </button>
           <ScanBarcode size={20} className="text-blue-400" />
           <h1 className="text-lg font-bold">모바일 피킹</h1>
 
@@ -886,7 +883,7 @@ export function PickingMobile({ onBack }: Props) {
                 className="p-1.5 transition-colors"
                 style={{
                   backgroundColor: listMode === 'card' ? '#388BFD' : 'transparent',
-                  color: listMode === 'card' ? '#FFFFFF' : '#8B949E',
+                  color: listMode === 'card' ? '#FFFFFF' : 'var(--text-secondary)',
                 }}
                 title="카드 뷰"
               >
@@ -897,7 +894,7 @@ export function PickingMobile({ onBack }: Props) {
                 className="p-1.5 transition-colors"
                 style={{
                   backgroundColor: listMode === 'table' ? '#388BFD' : 'transparent',
-                  color: listMode === 'table' ? '#FFFFFF' : '#8B949E',
+                  color: listMode === 'table' ? '#FFFFFF' : 'var(--text-secondary)',
                 }}
                 title="리스트 뷰"
               >
@@ -907,7 +904,7 @@ export function PickingMobile({ onBack }: Props) {
             <button
               onClick={() => setShowDashboard(true)}
               className="rounded-lg p-1.5 transition-colors"
-              style={{ border: `1px solid ${COLORS.border}`, color: '#8B949E' }}
+              style={{ border: `1px solid ${COLORS.border}`, color: 'var(--text-secondary)' }}
               title="대시보드"
             >
               <BarChart3 size={16} />
@@ -929,8 +926,8 @@ export function PickingMobile({ onBack }: Props) {
               onClick={() => setStatusFilter(key)}
               className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors"
               style={{
-                backgroundColor: statusFilter === key ? '#388BFD' : '#21262D',
-                color: statusFilter === key ? '#FFFFFF' : '#8B949E',
+                backgroundColor: statusFilter === key ? '#388BFD' : 'var(--bg-tertiary)',
+                color: statusFilter === key ? '#FFFFFF' : 'var(--text-secondary)',
               }}
             >
               {label}
@@ -943,19 +940,19 @@ export function PickingMobile({ onBack }: Props) {
       {stats && (
         <div className="grid grid-cols-3 gap-2 p-3" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
           <KpiCard
-            topColor="#D29922"
+            topColor="var(--accent-orange)"
             icon={<Clock size={16} className="text-yellow-400" />}
             label="미완료"
             value={stats.pending + stats.inProgress}
           />
           <KpiCard
-            topColor="#3FB950"
+            topColor="var(--accent-green)"
             icon={<CheckCircle size={16} className="text-green-400" />}
             label="완료"
             value={stats.completed}
           />
           <KpiCard
-            topColor="#F85149"
+            topColor="var(--accent-red)"
             icon={<AlertTriangle size={16} className="text-red-400" />}
             label="오류율"
             value={Math.round(stats.errorRate * 100) / 100}
@@ -1028,7 +1025,7 @@ export function PickingMobile({ onBack }: Props) {
                           {order.assigneeName}
                         </span>
                       )}
-                      <span className="rounded px-1.5 py-0.5 font-mono" style={{ backgroundColor: '#21262D' }}>
+                      <span className="rounded px-1.5 py-0.5 font-mono" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                         {order.policy}
                       </span>
                     </div>
@@ -1049,7 +1046,7 @@ export function PickingMobile({ onBack }: Props) {
                       <button
                         onClick={() => openOrder(order)}
                         className="flex-1 rounded-lg py-2 text-xs font-bold text-white transition-colors hover:opacity-90"
-                        style={{ backgroundColor: '#D29922' }}
+                        style={{ backgroundColor: 'var(--accent-orange)' }}
                       >
                         시작
                       </button>
@@ -1067,7 +1064,7 @@ export function PickingMobile({ onBack }: Props) {
                       <button
                         onClick={() => openOrder(order)}
                         className="flex-1 rounded-lg py-2 text-xs font-bold transition-colors hover:opacity-80"
-                        style={{ backgroundColor: '#21262D', color: '#3FB950' }}
+                        style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-green)' }}
                       >
                         완료 확인
                       </button>
@@ -1084,7 +1081,7 @@ export function PickingMobile({ onBack }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
-                <tr style={{ backgroundColor: '#21262D' }}>
+                <tr style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                   {['작업번호', 'SKU', '수량', '위치', '긴급도', '상태', '액션'].map((col) => (
                     <th
                       key={col}
@@ -1109,10 +1106,10 @@ export function PickingMobile({ onBack }: Props) {
                         onClick={() => setDetailPanelOrder(isExpanded ? null : order)}
                         className="cursor-pointer transition-colors"
                         style={{
-                          backgroundColor: isExpanded ? '#1C2128' : COLORS.card,
+                          backgroundColor: isExpanded ? 'var(--bg-hover)' : COLORS.card,
                         }}
                         onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#1C2128';
+                          (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'var(--bg-hover)';
                         }}
                         onMouseLeave={(e) => {
                           if (!isExpanded) {
@@ -1166,7 +1163,7 @@ export function PickingMobile({ onBack }: Props) {
                           <td
                             colSpan={7}
                             className="px-4 py-3"
-                            style={{ backgroundColor: '#1C2128', borderBottom: `1px solid ${COLORS.border}` }}
+                            style={{ backgroundColor: 'var(--bg-hover)', borderBottom: `1px solid ${COLORS.border}` }}
                           >
                             <div className="space-y-2">
                               <div className="flex items-center gap-4 text-xs text-gray-400">

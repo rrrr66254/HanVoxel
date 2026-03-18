@@ -15,8 +15,12 @@ router.post('/sales-orders/:id/trigger-reorders', soCtrl.triggerReordersHandler)
 
 // ── BOM 관리 ────────────────────────────────────
 router.post('/bom', soCtrl.createBomHandler);
+router.get('/bom/search', soCtrl.searchBomProductsHandler);
 router.get('/bom/:productSku', soCtrl.getBomHandler);
 router.post('/bom/upload', soCtrl.bulkBomUploadHandler);
+
+// ── BOM 생산 가능 체크 ──────────────────────────
+router.get('/bom/:sku/production-check', soCtrl.productionCheckHandler);
 
 // ── 재고 더블체크 ───────────────────────────────
 router.get('/stock-checks', soCtrl.stockChecksHandler);

@@ -6,7 +6,6 @@
  */
 import { useState, useMemo } from 'react';
 import {
-  ArrowLeft,
   Plus,
   Search,
   LayoutGrid,
@@ -234,7 +233,7 @@ function typeBadgeColor(type: PartnerType): { bg: string; text: string } {
   switch (type) {
     case 'SUPPLIER': return { bg: 'rgba(59,130,246,0.15)', text: 'var(--accent-blue)' };
     case 'CUSTOMER': return { bg: 'rgba(16,185,129,0.15)', text: 'var(--accent-green)' };
-    case 'BOTH': return { bg: 'rgba(168,85,247,0.15)', text: '#A855F7' };
+    case 'BOTH': return { bg: 'rgba(168,85,247,0.15)', text: 'var(--accent-purple)' };
   }
 }
 
@@ -305,30 +304,13 @@ export function PartnerList({ onBack, onSelectPartner, onAddPartner }: PartnerLi
         justifyContent: 'space-between',
         marginBottom: 24,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={onBack}
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-default)',
-              borderRadius: 8,
-              color: 'var(--text-secondary)',
-              padding: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
-              업체 관리
-            </h1>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
-              매입처 / 매출처 통합 관리
-            </p>
-          </div>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
+            업체 관리
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+            매입처 / 매출처 통합 관리
+          </p>
         </div>
         <button
           onClick={onAddPartner}

@@ -25,7 +25,16 @@
     "partner": "Partners",
     "partnerDashboard": "Transaction Overview",
     "driver": "Driver Management",
-    "currentPlan": "Current Plan"
+    "production": "Production",
+    "productionBoard": "Production Board",
+    "productionPlan": "Production Plan",
+    "workOrders": "Work Orders",
+    "productionEntry": "Production Entry",
+    "workCenters": "Work Centers",
+    "productionAnalytics": "Production Analytics",
+    "currentPlan": "Current Plan",
+    "ceoDashboard": "CEO Dashboard",
+    "overview": "Overview"
   },
   "header": {
     "alerts": "Alerts"

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I {} basename {})",
+      "Bash(wc -l /c/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/api-gateway/src/routes/*.ts)",
+      "Bash(xargs wc:*)",
+      "Bash(wc -l /c/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/api-gateway/src/services/*.ts)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(netstat -ano)",
+      "Bash(node -e \"console.log\\(process.execPath\\)\")",
+      "Read(//c/Users/USER/Desktop/HanVoxel/packages/frontend/node_modules/.bin/**)",
+      "Read(//c/Users/USER/Desktop/HanVoxel/packages/api-gateway/node_modules/.bin/**)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"console.log\\(require.resolve\\(''vite/bin/vite.js'', {paths: [''C:/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/frontend'']}\\)\\)\")",
+      "Bash(npx prisma:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/frontend/src/components/partner/**)",
+      "Bash(done)",
+      "Bash(npx tsc:*)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Yes, reset it\" npx prisma migrate reset --force)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Yes, reset it\" npx prisma migrate dev --name partner-management)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(find /c/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/frontend/src -name *locale* -o -name *i18n*)",
+      "Bash(npm ls:*)",
+      "Bash(find C:UsersUSERDesktopHanVoxel.claudeworktreescompetent-fermatpackagesfrontendsrccomponentsinout-management -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))",
+      "Bash(find /c/Users/USER/Desktop/HanVoxel -type f -name *.prisma)",
+      "Bash(grep -n ^export /c/Users/USER/Desktop/HanVoxel/.claude/worktrees/competent-fermat/packages/frontend/src/components/production/*.tsx)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

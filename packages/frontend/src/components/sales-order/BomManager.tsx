@@ -10,7 +10,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Wrench,
-  ArrowLeft,
   Plus,
   X,
   Search,
@@ -19,10 +18,10 @@ import type { BomItem } from '../../api/sales-order-api';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444',
-  purple: '#8B5CF6',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)',
+  purple: 'var(--accent-purple)',
 } as const;
 
 // --- Mock 데이터 ---
@@ -79,9 +78,6 @@ export function BomManager({ onBack }: BomManagerProps) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <Wrench size={22} style={{ color: C.accent }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>BOM 관리</h2>
         </div>
@@ -116,7 +112,7 @@ export function BomManager({ onBack }: BomManagerProps) {
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ background: '#1C2128' }}>
+              <tr style={{ background: 'var(--bg-hover)' }}>
                 {['자재 SKU', '자재명', '소요량/단위', '단위', '리드타임'].map((h) => (
                   <th key={h} style={{ padding: '6px 12px', textAlign: 'left', color: C.textMuted, fontWeight: 600 }}>{h}</th>
                 ))}
@@ -162,10 +158,10 @@ function AddBomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '7px 10px', fontSize: 13,
-    background: '#0D1117', border: '1px solid #30363D', borderRadius: 6,
-    color: '#C9D1D9', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--bg-primary)', border: '1px solid var(--border-default)', borderRadius: 6,
+    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
   };
-  const labelStyle: React.CSSProperties = { fontSize: 11, color: '#8B949E', marginBottom: 4, display: 'block' };
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 
   const handleSubmit = async () => {
     if (!productSku || !materialSku || !qtyPerUnit) return;
@@ -178,10 +174,10 @@ function AddBomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: 14, padding: 28, width: 500 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)', borderRadius: 14, padding: 28, width: 500 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h3 style={{ color: '#C9D1D9', margin: 0, fontSize: 16 }}>BOM 등록</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer' }}><X size={18} /></button>
+          <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: 16 }}>BOM 등록</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
@@ -198,8 +194,8 @@ function AddBomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: '1px solid #30363D', color: '#8B949E', cursor: 'pointer', fontSize: 13 }}>취소</button>
-          <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 6, background: '#58A6FF', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>등록</button>
+          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}>취소</button>
+          <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 6, background: 'var(--accent-blue)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>등록</button>
         </div>
       </div>
     </div>

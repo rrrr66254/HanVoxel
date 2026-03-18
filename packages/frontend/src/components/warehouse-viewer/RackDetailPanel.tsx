@@ -58,9 +58,9 @@ export function RackDetailPanel({
 
   // 적재율 색상
   const getOccupancyColor = (rate: number) => {
-    if (rate >= 90) return '#F85149';
+    if (rate >= 90) return 'var(--accent-red)';
     if (rate >= 70) return '#F59E0B';
-    return '#3FB950';
+    return 'var(--accent-green)';
   };
 
   // 층 높이 변경 → 즉시 3D 반영
@@ -135,14 +135,14 @@ export function RackDetailPanel({
   }, [expandedLevel]);
 
   return (
-    <div ref={panelRef} style={{ width: '100%', height: '100%', background: '#1A1D24', color: '#E6EDF3', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div ref={panelRef} style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
       {/* 헤더 */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid #2A2F38', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>랙 상세</h3>
-          <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>{rack.code}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{rack.code}</span>
         </div>
-        <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <X size={14} />
         </button>
       </div>
@@ -161,12 +161,12 @@ export function RackDetailPanel({
         <Section title="적재 현황">
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6 }}>
-              <span style={{ color: '#8B949E' }}>총 적재율</span>
+              <span style={{ color: 'var(--text-secondary)' }}>총 적재율</span>
               <span style={{ fontWeight: 700, color: getOccupancyColor(occupancyRate) }}>
                 {occupancyRate}%
               </span>
             </div>
-            <div style={{ height: 8, borderRadius: 4, background: '#12151A' }}>
+            <div style={{ height: 8, borderRadius: 4, background: 'var(--bg-primary)' }}>
               <div style={{
                 height: '100%',
                 width: `${occupancyRate}%`,
@@ -176,7 +176,7 @@ export function RackDetailPanel({
               }} />
             </div>
           </div>
-          <div style={{ fontSize: 10, color: '#484F58' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
             {rackOccupancy.length} / {levels} 슬롯 사용 중
           </div>
         </Section>
@@ -188,7 +188,7 @@ export function RackDetailPanel({
             <button
               onClick={() => navigateLevel('down')}
               disabled={expandedLevel === null || expandedLevel <= 0}
-              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid #30363D', background: 'transparent', color: expandedLevel !== null && expandedLevel > 0 ? '#8B949E' : '#30363D', cursor: expandedLevel !== null && expandedLevel > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid var(--border-default)', background: 'transparent', color: expandedLevel !== null && expandedLevel > 0 ? 'var(--text-secondary)' : 'var(--border-default)', cursor: expandedLevel !== null && expandedLevel > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
               <ArrowDown size={12} />
             </button>
@@ -203,9 +203,9 @@ export function RackDetailPanel({
                     onClick={() => setExpandedLevel(isActive ? null : levelIdx)}
                     style={{
                       minWidth: 28, height: 22, borderRadius: 4, fontSize: 9, fontWeight: 700,
-                      border: isActive ? '1px solid #2D7DD2' : '1px solid #21262D',
-                      background: isActive ? '#2D7DD2' : isOccupied ? 'rgba(63,185,80,0.15)' : '#12151A',
-                      color: isActive ? '#fff' : isOccupied ? '#3FB950' : '#484F58',
+                      border: isActive ? '1px solid var(--accent-blue)' : '1px solid var(--border-muted)',
+                      background: isActive ? 'var(--accent-blue)' : isOccupied ? 'rgba(63,185,80,0.15)' : 'var(--bg-primary)',
+                      color: isActive ? '#fff' : isOccupied ? 'var(--accent-green)' : 'var(--text-muted)',
                       cursor: 'pointer', fontFamily: 'monospace',
                     }}
                   >
@@ -217,12 +217,12 @@ export function RackDetailPanel({
             <button
               onClick={() => navigateLevel('up')}
               disabled={expandedLevel === null || expandedLevel >= levels - 1}
-              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid #30363D', background: 'transparent', color: expandedLevel !== null && expandedLevel < levels - 1 ? '#8B949E' : '#30363D', cursor: expandedLevel !== null && expandedLevel < levels - 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              style={{ width: 24, height: 24, borderRadius: 4, border: '1px solid var(--border-default)', background: 'transparent', color: expandedLevel !== null && expandedLevel < levels - 1 ? 'var(--text-secondary)' : 'var(--border-default)', cursor: expandedLevel !== null && expandedLevel < levels - 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
               <ArrowUp size={12} />
             </button>
           </div>
-          <div style={{ fontSize: 9, color: '#484F58', textAlign: 'center', marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
             ↑↓ 화살표 키로 층 이동
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -234,18 +234,18 @@ export function RackDetailPanel({
               const minH = item ? item.height + 0.1 : 0.3;
 
               return (
-                <div key={levelIdx} id={`rack-level-${levelIdx}`} style={{ borderRadius: 8, border: `1px solid ${isExpanded ? '#2D7DD2' : item ? 'rgba(63,185,80,0.2)' : '#21262D'}`, background: isExpanded ? 'rgba(45,125,210,0.05)' : item ? 'rgba(63,185,80,0.05)' : '#12151A', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}>
+                <div key={levelIdx} id={`rack-level-${levelIdx}`} style={{ borderRadius: 8, border: `1px solid ${isExpanded ? 'var(--accent-blue)' : item ? 'rgba(63,185,80,0.2)' : 'var(--border-muted)'}`, background: isExpanded ? 'rgba(45,125,210,0.05)' : item ? 'rgba(63,185,80,0.05)' : 'var(--bg-primary)', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}>
                   {/* 층 헤더 */}
                   <button
                     onClick={() => toggleLevel(levelIdx)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: 'none', background: 'transparent', color: '#E6EDF3', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', textAlign: 'left' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: 'none', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', textAlign: 'left' }}
                   >
                     {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    <span style={{ fontWeight: 700, color: '#484F58', minWidth: 28, fontFamily: 'monospace' }}>L{levelIdx + 1}</span>
-                    <span style={{ flex: 1, color: item ? '#E6EDF3' : '#484F58' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-muted)', minWidth: 28, fontFamily: 'monospace' }}>L{levelIdx + 1}</span>
+                    <span style={{ flex: 1, color: item ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                       {item ? item.itemName : '빈 슬롯'}
                     </span>
-                    <span style={{ fontSize: 10, color: '#484F58', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                       {height.toFixed(2)}m
                     </span>
                     {item && (
@@ -255,11 +255,11 @@ export function RackDetailPanel({
 
                   {/* 확장 영역 */}
                   {isExpanded && (
-                    <div style={{ padding: '8px 10px 12px', borderTop: '1px solid #21262D' }}>
+                    <div style={{ padding: '8px 10px 12px', borderTop: '1px solid var(--border-muted)' }}>
                       {/* 층 높이 슬라이더 */}
                       <div style={{ marginBottom: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ fontSize: 10, color: '#8B949E' }}>층 높이</span>
+                          <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>층 높이</span>
                           <input
                             type="number"
                             step="0.05"
@@ -267,7 +267,7 @@ export function RackDetailPanel({
                             max={3.0}
                             value={height.toFixed(2)}
                             onChange={(e) => handleLevelHeightChange(levelIdx, parseFloat(e.target.value) || minH)}
-                            style={{ width: 60, padding: '3px 6px', borderRadius: 4, border: '1px solid #30363D', background: '#0D1117', color: '#E6EDF3', fontSize: 11, fontFamily: 'monospace', textAlign: 'center', outline: 'none' }}
+                            style={{ width: 60, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 11, fontFamily: 'monospace', textAlign: 'center', outline: 'none' }}
                           />
                         </div>
                         <input
@@ -277,23 +277,23 @@ export function RackDetailPanel({
                           step={0.05}
                           value={height}
                           onChange={(e) => handleLevelHeightChange(levelIdx, parseFloat(e.target.value))}
-                          style={{ width: '100%', height: 4, accentColor: '#2D7DD2' }}
+                          style={{ width: '100%', height: 4, accentColor: 'var(--accent-blue)' }}
                         />
                       </div>
 
                       {/* 적재 아이템 정보 */}
                       {item ? (
-                        <div style={{ fontSize: 10, color: '#8B949E', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>타입</span>
-                            <span style={{ color: '#E6EDF3' }}>{item.itemType === 'pallet' ? '팔레트' : '박스'}</span>
+                            <span style={{ color: 'var(--text-primary)' }}>{item.itemType === 'pallet' ? '팔레트' : '박스'}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>크기</span>
-                            <span style={{ color: '#E6EDF3' }}>{item.width} × {item.depth} × {item.height}m</span>
+                            <span style={{ color: 'var(--text-primary)' }}>{item.width} × {item.depth} × {item.height}m</span>
                           </div>
                           {item.height > height && (
-                            <div style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: '#F85149', fontSize: 10 }}>
+                            <div style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(248,81,73,0.1)', border: '1px solid rgba(248,81,73,0.3)', color: 'var(--accent-red)', fontSize: 10 }}>
                               높이 초과 ({item.height.toFixed(2)}m &gt; {height.toFixed(2)}m)
                             </div>
                           )}
@@ -304,7 +304,7 @@ export function RackDetailPanel({
                       {item && (
                         <button
                           onClick={() => onRemoveBinItem?.(rack.id, levelIdx)}
-                          style={{ width: '100%', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px', borderRadius: 6, border: '1px solid rgba(248,81,73,0.2)', background: 'transparent', color: '#F85149', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ width: '100%', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px', borderRadius: 6, border: '1px solid rgba(248,81,73,0.2)', background: 'transparent', color: 'var(--accent-red)', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           <Trash2 size={10} /> 비우기
                         </button>
@@ -320,7 +320,7 @@ export function RackDetailPanel({
         {/* 리셋 버튼 */}
         <button
           onClick={handleResetHeights}
-          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #30363D', background: 'transparent', color: '#8B949E', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit' }}
+          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: 'inherit' }}
         >
           <RotateCcw size={12} /> 기본값 리셋
         </button>
@@ -333,7 +333,7 @@ export function RackDetailPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 style={{ fontSize: 11, fontWeight: 600, color: '#484F58', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0, marginBottom: 8 }}>{title}</h4>
+      <h4 style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0, marginBottom: 8 }}>{title}</h4>
       {children}
     </div>
   );
@@ -343,8 +343,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: 11 }}>
-      <span style={{ color: '#8B949E' }}>{label}</span>
-      <span style={{ color: '#E6EDF3', fontFamily: 'monospace', fontSize: 10 }}>{value}</span>
+      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 10 }}>{value}</span>
     </div>
   );
 }

@@ -10,6 +10,7 @@ router.get('/inbound/orders/:id', inboundCtrl.detailHandler);
 
 // ── 상태 변경 ────────────────────────────────────
 router.patch('/inbound/orders/:id/arrive', inboundCtrl.arriveHandler);
+router.patch('/inbound/orders/:id/cancel-arrive', inboundCtrl.cancelArriveHandler);
 router.patch('/inbound/orders/:id/qc-pass', inboundCtrl.qcPassHandler);
 router.patch('/inbound/orders/:id/reschedule', inboundCtrl.rescheduleHandler);
 

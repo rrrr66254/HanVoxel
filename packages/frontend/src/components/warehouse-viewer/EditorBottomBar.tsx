@@ -36,7 +36,7 @@ export function EditorBottomBar({
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   return (
-    <div className="relative flex h-9 items-center border-t border-[#2A2F38] bg-[#1A1D24] px-3 text-[11px] select-none">
+    <div className="relative flex h-9 items-center border-t border-[var(--border-muted)] bg-[var(--bg-secondary)] px-3 text-[11px] select-none">
       {/* 좌측 — 토글 */}
       <div className="flex items-center gap-1">
         <BottomToggle
@@ -54,25 +54,25 @@ export function EditorBottomBar({
       </div>
 
       {/* 구분선 */}
-      <div className="mx-3 h-4 w-px bg-[#2A2F38]" />
+      <div className="mx-3 h-4 w-px bg-[var(--border-muted)]" />
 
       {/* 마우스 조작 힌트 */}
       <div className="flex items-center gap-2 text-[10px] text-gray-500">
         <span>좌드래그: <span className="text-gray-400">이동</span></span>
-        <span className="text-[#2A2F38]">|</span>
+        <span className="text-[var(--border-muted)]">|</span>
         <span>우드래그: <span className="text-gray-400">회전</span></span>
-        <span className="text-[#2A2F38]">|</span>
+        <span className="text-[var(--border-muted)]">|</span>
         <span>휠: <span className="text-gray-400">줌</span></span>
-        <span className="text-[#2A2F38]">|</span>
+        <span className="text-[var(--border-muted)]">|</span>
         <span>클릭: <span className="text-gray-400">선택</span></span>
-        <span className="text-[#2A2F38]">|</span>
+        <span className="text-[var(--border-muted)]">|</span>
         <span>더블클릭: <span className="text-gray-400">편집</span></span>
-        <span className="text-[#2A2F38]">|</span>
+        <span className="text-[var(--border-muted)]">|</span>
         <span>우클릭: <span className="text-gray-400">메뉴</span></span>
       </div>
 
       {/* 구분선 */}
-      <div className="mx-3 h-4 w-px bg-[#2A2F38]" />
+      <div className="mx-3 h-4 w-px bg-[var(--border-muted)]" />
 
       {/* 중앙 — 좌표 */}
       <div className="flex items-center gap-3 font-mono text-[11px]">
@@ -98,33 +98,33 @@ export function EditorBottomBar({
           className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
             showShortcuts
               ? 'bg-blue-600/20 text-blue-400'
-              : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+              : 'text-gray-500 hover:bg-[var(--bg-tertiary)] hover:text-gray-300'
           }`}
           title="단축키"
         >
           <Keyboard size={13} />
         </button>
 
-        <div className="mx-1.5 h-4 w-px bg-[#2A2F38]" />
+        <div className="mx-1.5 h-4 w-px bg-[var(--border-muted)]" />
 
         {/* 줌 */}
         <button
           onClick={onZoomOut}
-          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[var(--bg-tertiary)] hover:text-gray-300"
           title="줌 아웃"
         >
           <ZoomOut size={13} />
         </button>
         <button
           onClick={onZoomIn}
-          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[var(--bg-tertiary)] hover:text-gray-300"
           title="줌 인"
         >
           <ZoomIn size={13} />
         </button>
         <button
           onClick={onResetView}
-          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[#22262E] hover:text-gray-300"
+          className="flex h-6 w-6 items-center justify-center rounded text-gray-500 transition-colors hover:bg-[var(--bg-tertiary)] hover:text-gray-300"
           title="뷰 초기화"
         >
           <Maximize2 size={13} />
@@ -133,7 +133,7 @@ export function EditorBottomBar({
 
       {/* 단축키 패널 */}
       {showShortcuts && (
-        <div className="absolute bottom-10 right-3 rounded-lg border border-[#2A2F38] bg-[#1A1D24] p-3 shadow-xl">
+        <div className="absolute bottom-10 right-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-secondary)] p-3 shadow-xl">
           <h4 className="mb-2 text-xs font-semibold text-white">마우스 조작</h4>
           <div className="space-y-1 text-[11px]">
             <ShortcutRow keys="좌클릭 드래그" desc="카메라 패닝" />
@@ -179,7 +179,7 @@ function BottomToggle({
       className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors ${
         active
           ? 'bg-blue-600/15 text-blue-400'
-          : 'text-gray-500 hover:bg-[#22262E] hover:text-gray-300'
+          : 'text-gray-500 hover:bg-[var(--bg-tertiary)] hover:text-gray-300'
       }`}
     >
       {icon}

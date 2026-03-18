@@ -17,6 +17,7 @@ export interface InboundItem {
   qcInspectionId: string | null;
   spatialObjectId: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface InboundOrder {
@@ -123,6 +124,12 @@ export async function arriveInboundOrder(
 
 export async function passQcInboundOrder(id: string): Promise<{ success: boolean; orderId: string }> {
   const resp = await fetch(`${API_BASE}/inbound/orders/${id}/qc-pass`, { method: 'PATCH' });
+  const json = await resp.json();
+  return json.data;
+}
+
+export async function cancelArriveInboundOrder(id: string): Promise<{ success: boolean; orderId: string }> {
+  const resp = await fetch(`${API_BASE}/inbound/orders/${id}/cancel-arrive`, { method: 'PATCH' });
   const json = await resp.json();
   return json.data;
 }

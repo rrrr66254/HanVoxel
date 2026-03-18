@@ -255,19 +255,6 @@ export function DriverManager({ onBack }: DriverManagerProps) {
         marginBottom: '24px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={onBack}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '14px',
-              padding: '4px 8px',
-            }}
-          >
-            &larr; 뒤로
-          </button>
           <Truck size={24} style={{ color: 'var(--accent-blue)' }} />
           <h1 style={{
             fontSize: '24px',

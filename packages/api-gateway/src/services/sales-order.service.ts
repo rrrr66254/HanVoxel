@@ -391,6 +391,92 @@ export async function bulkCreateBom(siteId: string, items: Array<{
   return { created };
 }
 
+// ── BOM 제품 검색 ───────────────────────────────
+
+export async function searchBomProducts(siteId: string, query: string) {
+  // BOM 테이블에서 productSku 기준으로 그룹핑하여 검색
+  const bomItems = await prisma.bomItem.findMany({
+    where: {
+      siteId,
+      OR: query
+        ? [
+            { productSku: { contains: query, mode: 'insensitive' } },
+            { notes: { contains: query, mode: 'insensitive' } },
+          ]
+        : undefined,
+    },
+    orderBy: { productSku: 'asc' },
+  });
+
+  // productSku별 그룹핑
+  const grouped: Record<string, { sku: string; processCount: number; processes: string[] }> = {};
+  for (const item of bomItems) {
+    if (!grouped[item.productSku]) {
+      grouped[item.productSku] = {
+        sku: item.productSku,
+        processCount: 0,
+        processes: [],
+      };
+    }
+  }
+
+  // 결과 매핑
+  const results = Object.values(grouped).map((g) => ({
+    sku: g.sku,
+    name: g.sku, // BOM에 제품명이 없으므로 SKU 사용
+    processCount: g.processCount,
+    processes: g.processes,
+  }));
+
+  return results;
+}
+
+// ── BOM 기반 생산 가능 여부 체크 ─────────────────
+
+export async function productionCheck(siteId: string, sku: string, qty: number) {
+  const bomItems = await prisma.bomItem.findMany({
+    where: { siteId, productSku: sku },
+  });
+
+  const materials: Array<{
+    materialSku: string;
+    materialName: string;
+    qtyPerUnit: number;
+    totalRequired: number;
+    currentStock: number;
+    status: 'sufficient' | 'warning' | 'insufficient';
+  }> = [];
+
+  for (const bom of bomItems) {
+    const totalRequired = bom.qtyPerUnit * qty;
+
+    // 재고 조회 (sku_costs에서 currentQty 사용)
+    const skuCost = await prisma.skuCost.findFirst({
+      where: { siteId, sku: bom.materialSku },
+      select: { currentQty: true },
+    });
+    const currentStock = skuCost?.currentQty ?? 0;
+
+    // 충족 상태 판별
+    let status: 'sufficient' | 'warning' | 'insufficient' = 'sufficient';
+    if (totalRequired > 0) {
+      if (currentStock < totalRequired * 0.5) status = 'insufficient';
+      else if (currentStock < totalRequired) status = 'warning';
+    }
+
+    materials.push({
+      materialSku: bom.materialSku,
+      materialName: bom.notes ?? bom.materialSku,
+      qtyPerUnit: bom.qtyPerUnit,
+      totalRequired,
+      currentStock,
+      status,
+    });
+  }
+
+  return materials;
+}
+
 // ── 재고 더블체크 ───────────────────────────────
 
 export async function getStockChecks(

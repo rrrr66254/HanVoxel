@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  ArrowLeft,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -56,8 +55,8 @@ const PIE_COLORS = [
   'var(--accent-blue)',
   'var(--accent-green)',
   'var(--accent-orange)',
-  '#9b59b6',
-  '#e74c3c',
+  'var(--accent-purple)',
+  'var(--accent-red)',
 ];
 
 // 상위 매출처 Top 5
@@ -110,7 +109,7 @@ const getOverdueSeverityColor = (days: 30 | 60 | 90): string => {
     case 30:
       return 'var(--accent-orange)';
     case 60:
-      return '#e67e22';
+      return 'var(--accent-orange)';
     case 90:
       return 'var(--accent-red)';
   }
@@ -224,39 +223,20 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onBack }) =>
       change: '',
       isPositive: false,
       icon: CreditCard,
-      color: '#9b59b6',
+      color: 'var(--accent-purple)',
     },
   ];
 
   return (
     <div style={{ padding: 24, background: 'var(--bg-primary)', minHeight: '100vh' }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button
-          onClick={onBack}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            border: '1px solid var(--border-default)',
-            background: 'var(--bg-secondary)',
-            cursor: 'pointer',
-            color: 'var(--text-primary)',
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-            거래처 대시보드
-          </h1>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            매출/매입 현황 및 거래처별 분석
-          </p>
-        </div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+          거래처 대시보드
+        </h1>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+          매출/매입 현황 및 거래처별 분석
+        </p>
       </div>
 
       {/* KPI 카드 4개 */}

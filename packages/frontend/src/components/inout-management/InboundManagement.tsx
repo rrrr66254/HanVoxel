@@ -12,7 +12,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Package,
   Plus,
-  ArrowLeft,
   Check,
   ClipboardCheck,
   Truck,
@@ -25,17 +24,17 @@ import type { InboundOrderData } from './InboundDetailModal';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444', blue: '#3B82F6',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)', blue: 'var(--accent-blue)',
 } as const;
 
 // --- 상태 배지 ---
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   ORDERED: { label: '발주완료', color: C.blue },
-  IN_TRANSIT: { label: '운송중', color: '#8B5CF6' },
+  IN_TRANSIT: { label: '운송중', color: 'var(--accent-purple)' },
   ARRIVED: { label: '도착', color: C.yellow },
-  QC_PENDING: { label: 'QC대기', color: '#F97316' },
+  QC_PENDING: { label: 'QC대기', color: 'var(--accent-orange)' },
   QC_PASSED: { label: 'QC통과', color: C.green },
   STOCKED: { label: '입고완료', color: C.green },
 };
@@ -141,6 +140,7 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       await arriveInboundOrder(orderId);
     } catch { /* mock */ }
     setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'QC_PENDING' as const, actualDate: new Date().toISOString().slice(0, 10) } : o));
+    setSelectedOrder(null);
   }, []);
 
   // QC 통과 핸들러
@@ -150,6 +150,17 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       await passQcInboundOrder(orderId);
     } catch { /* mock */ }
     setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'STOCKED' as const } : o));
+    setSelectedOrder(null);
+  }, []);
+
+  // 도착 확인 취소 핸들러
+  const handleCancelArrive = useCallback(async (orderId: string) => {
+    try {
+      const { cancelArriveInboundOrder } = await import('../../api/inbound-api');
+      await cancelArriveInboundOrder(orderId);
+    } catch { /* mock */ }
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'ORDERED' as const, actualDate: null } : o));
+    setSelectedOrder(null);
   }, []);
 
   // 총 금액 계산
@@ -161,9 +172,6 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <Package size={22} style={{ color: C.blue }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>입고 관리</h2>
         </div>
@@ -244,7 +252,7 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
                       {st.label}
                     </span>
                     {order.reorderRecommendationId && (
-                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: '#8B5CF6' }}>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: 'var(--accent-purple)' }}>
                         자동발주
                       </span>
                     )}
@@ -292,6 +300,19 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
                       <ClipboardCheck size={12} /> QC통과
                     </button>
                   )}
+                  {(order.status === 'ARRIVED' || order.status === 'QC_PENDING') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleCancelArrive(order.id); }}
+                      style={{
+                        padding: '4px 10px', fontSize: 11, borderRadius: 6,
+                        background: 'rgba(239,68,68,0.1)', color: C.red,
+                        border: `1px solid ${C.red}44`, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <AlertTriangle size={12} /> 도착취소
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -309,6 +330,9 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       <InboundDetailModal
         order={selectedOrder ? toDetailData(selectedOrder) : null}
         onClose={() => setSelectedOrder(null)}
+        onArrive={handleArrive}
+        onCancelArrive={handleCancelArrive}
+        onQcPass={handleQcPass}
       />
 
       {/* 생성 모달 */}
@@ -407,9 +431,9 @@ function CreateInboundModal({ onClose, onCreated }: { onClose: () => void; onCre
   );
 }
 
-const labelStyle: React.CSSProperties = { fontSize: 11, color: '#8B949E', marginBottom: 4, display: 'block' };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '7px 10px', fontSize: 13,
-  background: '#0D1117', border: '1px solid #30363D', borderRadius: 6,
-  color: '#C9D1D9', outline: 'none', boxSizing: 'border-box',
+  background: 'var(--bg-primary)', border: '1px solid var(--border-default)', borderRadius: 6,
+  color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
 };

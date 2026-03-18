@@ -12,7 +12,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Truck,
   Plus,
-  ArrowLeft,
   FileText,
   Check,
   Package,
@@ -28,9 +27,9 @@ import type { OutboundOrderData } from './OutboundDetailModal';
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444', orange: '#F97316',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)', orange: 'var(--accent-orange)',
 } as const;
 
 // --- 상태 / 유형 맵 ---
@@ -195,9 +194,6 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <Truck size={22} style={{ color: C.orange }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>출고 관리</h2>
         </div>
@@ -207,7 +203,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 8,
-              background: 'rgba(139,92,246,0.15)', color: '#8B5CF6', border: '1px solid rgba(139,92,246,0.3)',
+              background: 'rgba(139,92,246,0.15)', color: 'var(--accent-purple)', border: '1px solid rgba(139,92,246,0.3)',
               cursor: 'pointer', fontSize: 13, fontWeight: 600,
             }}
           >
@@ -276,7 +272,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
                     <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: `${st.color}22`, color: st.color, fontWeight: 600 }}>
                       {st.label}
                     </span>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: '#8B5CF6' }}>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(139,92,246,0.15)', color: 'var(--accent-purple)' }}>
                       {TYPE_MAP[order.type] ?? order.type}
                     </span>
                     {dday && order.status !== 'DISPATCHED' && (
@@ -391,10 +387,10 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: 14, padding: 28, width: 600, maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-default)', borderRadius: 14, padding: 28, width: 600, maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h3 style={{ color: '#C9D1D9', margin: 0, fontSize: 16 }}>출고 주문 생성</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8B949E', cursor: 'pointer' }}><X size={18} /></button>
+          <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: 16 }}>출고 주문 생성</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         {/* 유형 선택 */}
@@ -403,9 +399,9 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
           {Object.entries(TYPE_MAP).map(([k, v]) => (
             <button key={k} onClick={() => setType(k)} style={{
               padding: '6px 14px', fontSize: 12, borderRadius: 6,
-              border: `1px solid ${type === k ? '#58A6FF' : '#30363D'}`,
+              border: `1px solid ${type === k ? 'var(--accent-blue)' : 'var(--border-default)'}`,
               background: type === k ? 'rgba(88,166,255,0.15)' : 'transparent',
-              color: type === k ? '#58A6FF' : '#8B949E', cursor: 'pointer',
+              color: type === k ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer',
             }}>
               {v}
             </button>
@@ -463,7 +459,7 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
         {/* 품목 */}
         <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <label style={labelStyle}>품목</label>
-          <button onClick={addItem} style={{ fontSize: 11, color: '#58A6FF', background: 'none', border: 'none', cursor: 'pointer' }}>+ 품목 추가</button>
+          <button onClick={addItem} style={{ fontSize: 11, color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer' }}>+ 품목 추가</button>
         </div>
 
         {items.map((item, idx) => (
@@ -473,14 +469,14 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
             <input type="number" value={item.qty || ''} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], qty: Number(e.target.value) }; setItems(n); }} style={inputStyle} placeholder="수량" />
             <input type="number" value={item.unitPrice || ''} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], unitPrice: Number(e.target.value) }; setItems(n); }} style={inputStyle} placeholder="단가" />
             {items.length > 1 && (
-              <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
+              <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
             )}
           </div>
         ))}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: '1px solid #30363D', color: '#8B949E', cursor: 'pointer', fontSize: 13 }}>취소</button>
-          <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 6, background: '#F97316', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>생성</button>
+          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}>취소</button>
+          <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 6, background: 'var(--accent-orange)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>생성</button>
         </div>
       </div>
     </div>
@@ -488,19 +484,19 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
 }
 
 // --- 스타일 헬퍼 ---
-const labelStyle: React.CSSProperties = { fontSize: 11, color: '#8B949E', marginBottom: 4, display: 'block' };
+const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '7px 10px', fontSize: 13,
-  background: '#0D1117', border: '1px solid #30363D', borderRadius: 6,
-  color: '#C9D1D9', outline: 'none', boxSizing: 'border-box',
+  background: 'var(--bg-primary)', border: '1px solid var(--border-default)', borderRadius: 6,
+  color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
 };
 
 function filterBtnStyle(active: boolean): React.CSSProperties {
   return {
     padding: '4px 12px', fontSize: 12, borderRadius: 6,
-    border: `1px solid ${active ? '#58A6FF' : '#30363D'}`,
+    border: `1px solid ${active ? 'var(--accent-blue)' : 'var(--border-default)'}`,
     background: active ? 'rgba(88,166,255,0.15)' : 'transparent',
-    color: active ? '#58A6FF' : '#8B949E', cursor: 'pointer',
+    color: active ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer',
   };
 }
 

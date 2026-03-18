@@ -26,10 +26,10 @@ import type { SalesOrder, SalesOrderItem, MrpResult } from '../../api/sales-orde
 
 // --- 디자인 토큰 ---
 const C = {
-  bg: '#0D1117', card: '#161B22', border: '#30363D',
-  text: '#C9D1D9', textMuted: '#8B949E', accent: '#58A6FF',
-  green: '#10B981', yellow: '#F59E0B', red: '#EF4444', orange: '#F97316',
-  purple: '#8B5CF6',
+  bg: 'var(--bg-primary)', card: 'var(--bg-secondary)', border: 'var(--border-default)',
+  text: 'var(--text-primary)', textMuted: 'var(--text-secondary)', accent: 'var(--accent-blue)',
+  green: 'var(--accent-green)', yellow: 'var(--accent-orange)', red: 'var(--accent-red)', orange: 'var(--accent-orange)',
+  purple: 'var(--accent-purple)',
 } as const;
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -186,7 +186,7 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
-                  <tr style={{ background: '#1C2128' }}>
+                  <tr style={{ background: 'var(--bg-hover)' }}>
                     {['상태', '자재 SKU', '자재명', '필요량', '현재고', '부족량', '발주'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.textMuted, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
                     ))}
@@ -245,9 +245,6 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', padding: 4 }}>
-            <ArrowLeft size={20} />
-          </button>
           <ClipboardList size={22} style={{ color: C.purple }} />
           <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>수주 관리</h2>
         </div>
@@ -424,10 +421,10 @@ function CreateSalesOrderModal({ onClose, onCreated }: { onClose: () => void; on
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '7px 10px', fontSize: 13,
-    background: '#0D1117', border: '1px solid #30363D', borderRadius: 6,
-    color: '#C9D1D9', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--bg-primary)', border: '1px solid var(--border-default)', borderRadius: 6,
+    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
   };
-  const labelStyle: React.CSSProperties = { fontSize: 11, color: '#8B949E', marginBottom: 4, display: 'block' };
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={onClose}>
