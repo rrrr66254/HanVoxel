@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "db:seed:mock": "npx ts-node seeds/mock-index.ts",
+    "db:seed:mock:reset": "npx ts-node seeds/mock-index.ts --reset",
     "db:reset": "prisma migrate reset --force"
   },
   "keywords": [],
