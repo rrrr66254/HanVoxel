@@ -20,6 +20,7 @@ import inboundRoutes from './routes/inbound.routes';
 import outboundRoutes from './routes/outbound.routes';
 import salesOrderRoutes from './routes/sales-order.routes';
 import smartReorderRoutes from './routes/smart-reorder.routes';
+import partnerRoutes from './routes/partner.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -48,6 +49,7 @@ app.use('/api/v1', inboundRoutes);
 app.use('/api/v1', outboundRoutes);
 app.use('/api/v1', salesOrderRoutes);
 app.use('/api/v1', smartReorderRoutes);
+app.use('/api/v1', partnerRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

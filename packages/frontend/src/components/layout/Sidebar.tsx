@@ -23,6 +23,7 @@ import {
   Wrench,
   PackageCheck,
   Bot,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -48,6 +49,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.operations' },
   { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.operations' },
   { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.operations' },
+  { id: 'partners', icon: Users, labelKey: 'sidebar.partners', sectionKey: 'sidebar.operations' },
   { id: 'subscription', icon: CreditCard, labelKey: 'sidebar.subscription', sectionKey: 'sidebar.settings' },
   { id: 'erp', icon: FileText, labelKey: 'sidebar.erp', sectionKey: 'sidebar.intelligence' },
   { id: 'trade', icon: Globe, labelKey: 'sidebar.trade', sectionKey: 'sidebar.intelligence' },

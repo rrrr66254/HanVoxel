@@ -15,6 +15,12 @@ import {
   Package,
   Truck,
   Filter,
+  X,
+  User,
+  Phone,
+  MapPin,
+  Clock,
+  Hash,
 } from 'lucide-react';
 import type { CalendarEntry } from '../../api/inbound-api';
 import { MOCK_SITE_ID } from '../../constants/mock-ids';
@@ -126,6 +132,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
+  const [detailEntry, setDetailEntry] = useState<CalendarEntry | null>(null);
 
   // API 호출 (mock fallback)
   useEffect(() => {
@@ -353,13 +360,21 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
         )}
 
         {selectedEntries.map((entry) => (
-          <div key={entry.id} style={{
-            padding: '12px 14px',
-            marginBottom: 8,
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            background: C.bg,
-          }}>
+          <div
+            key={entry.id}
+            onClick={() => setDetailEntry(entry)}
+            style={{
+              padding: '12px 14px',
+              marginBottom: 8,
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              background: C.bg,
+              cursor: 'pointer',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               {entry.type === 'INBOUND' ? (
                 <Package size={14} style={{ color: C.inbound }} />
@@ -408,6 +423,174 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
           </div>
         ))}
       </div>
+
+      {/* 상세 모달 */}
+      {detailEntry && (
+        <CalendarDetailModal entry={detailEntry} onClose={() => setDetailEntry(null)} />
+      )}
+    </div>
+  );
+}
+
+// --- 달력 카드 상세 모달 ---
+function CalendarDetailModal({ entry, onClose }: { entry: CalendarEntry; onClose: () => void }) {
+  const isInbound = entry.type === 'INBOUND';
+  const accentColor = isInbound ? C.inbound : C.outbound;
+
+  // Mock 추가 정보 (실제 API 연동 시 대체)
+  const driverInfo = { name: '김기사', phone: '010-1234-5678', vehicleNo: '서울12가3456' };
+  const palletInfo = { qty: isInbound ? 12 : 8, spec: 'T11 (1100×1100)', containerSpec: isInbound ? null : '40ft HC' };
+
+  // 상태 타임라인
+  const timeline = isInbound
+    ? [
+        { label: '주문 접수', done: true },
+        { label: '배송 중', done: entry.status !== 'SCHEDULED' },
+        { label: '도착', done: ['ARRIVED', 'COMPLETED'].includes(entry.status) },
+        { label: 'QC 검수', done: entry.status === 'COMPLETED' },
+        { label: '입고 완료', done: entry.status === 'COMPLETED' },
+      ]
+    : [
+        { label: '출고 계획', done: true },
+        { label: '피킹 중', done: entry.status !== 'SCHEDULED' },
+        { label: '포장 완료', done: ['ARRIVED', 'COMPLETED'].includes(entry.status) },
+        { label: '출하', done: entry.status === 'COMPLETED' },
+      ];
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 520, maxHeight: '80vh', overflow: 'auto',
+          background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          padding: 0,
+        }}
+      >
+        {/* 헤더 */}
+        <div style={{
+          padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isInbound ? <Package size={18} style={{ color: accentColor }} /> : <Truck size={18} style={{ color: accentColor }} />}
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>
+              {isInbound ? '입고 상세' : '출고 상세'}
+            </span>
+            <span style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 4,
+              background: `${accentColor}22`, color: accentColor, fontWeight: 600,
+            }}>
+              {entry.status}
+            </span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: '16px 20px' }}>
+          {/* 기본 정보 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <InfoRow icon={<Calendar size={14} />} label="예정일" value={entry.scheduledDate} />
+            <InfoRow icon={<Clock size={14} />} label="타임슬롯" value={entry.timeSlot ?? '-'} />
+            {isInbound && entry.inboundOrder && (
+              <>
+                <InfoRow icon={<User size={14} />} label="공급업체" value={entry.inboundOrder.vendorName ?? '미지정'} />
+                <InfoRow icon={<Hash size={14} />} label="주문 ID" value={entry.inboundOrder.id.slice(0, 8)} />
+              </>
+            )}
+            {!isInbound && entry.outboundOrder && (
+              <>
+                <InfoRow icon={<User size={14} />} label="고객" value={entry.outboundOrder.customerName ?? '미지정'} />
+                <InfoRow icon={<Hash size={14} />} label="명세표" value={entry.outboundOrder.manifestNumber ?? '-'} />
+                <InfoRow icon={<MapPin size={14} />} label="출고유형" value={entry.outboundOrder.type} />
+              </>
+            )}
+          </div>
+
+          {/* 배송 기사 정보 */}
+          <SectionTitle title="배송 기사" />
+          <div style={{
+            padding: '12px 14px', borderRadius: 8, background: C.bg,
+            border: `1px solid ${C.border}`, marginBottom: 16,
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <InfoRow icon={<User size={14} />} label="기사명" value={driverInfo.name} />
+              <InfoRow icon={<Phone size={14} />} label="연락처" value={driverInfo.phone} />
+              <InfoRow icon={<Truck size={14} />} label="차량번호" value={driverInfo.vehicleNo} />
+            </div>
+          </div>
+
+          {/* 팔레트/컨테이너 정보 */}
+          <SectionTitle title="팔레트 / 컨테이너" />
+          <div style={{
+            padding: '12px 14px', borderRadius: 8, background: C.bg,
+            border: `1px solid ${C.border}`, marginBottom: 16,
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+          }}>
+            <InfoRow icon={<Package size={14} />} label="팔레트 수량" value={`${palletInfo.qty}개`} />
+            <InfoRow icon={<Hash size={14} />} label="팔레트 규격" value={palletInfo.spec} />
+            {palletInfo.containerSpec && (
+              <InfoRow icon={<Truck size={14} />} label="컨테이너" value={palletInfo.containerSpec} />
+            )}
+          </div>
+
+          {/* 상태 타임라인 */}
+          <SectionTitle title="진행 상태" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 16, padding: '8px 0' }}>
+            {timeline.map((step, i) => (
+              <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: i < timeline.length - 1 ? 1 : undefined }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: step.done ? accentColor : C.border,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, color: step.done ? '#fff' : C.textMuted, fontWeight: 700,
+                  }}>
+                    {step.done ? '✓' : (i + 1)}
+                  </div>
+                  <span style={{ fontSize: 10, color: step.done ? C.text : C.textMuted, whiteSpace: 'nowrap' }}>
+                    {step.label}
+                  </span>
+                </div>
+                {i < timeline.length - 1 && (
+                  <div style={{
+                    flex: 1, height: 2, marginBottom: 18,
+                    background: step.done ? accentColor : C.border, marginLeft: 4, marginRight: 4,
+                  }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 정보 행 컴포넌트
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ color: C.textMuted, flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 11, color: C.textMuted, minWidth: 50 }}>{label}</span>
+      <span style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{value}</span>
+    </div>
+  );
+}
+
+// 섹션 타이틀
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8, letterSpacing: '0.3px' }}>
+      {title}
     </div>
   );
 }

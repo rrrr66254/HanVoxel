@@ -17,6 +17,7 @@ import { BenchmarkDashboard } from './components/benchmark-dashboard';
 import { InOutCalendar, InboundManagement, OutboundManagement } from './components/inout-management';
 import { SalesOrderDashboard, BomManager, StockCheckDashboard } from './components/sales-order';
 import { SmartReorderDashboard } from './components/smart-reorder';
+import { PartnerDashboard } from './components/partner-management';
 import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -27,7 +28,7 @@ import type { SpatialObject } from './types/spatial';
 import './i18n';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'smart-reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'settings';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'smart-reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partners' | 'settings';
 
 // 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
 // localStorage에서 adminMode 확인, 없으면 기본 true
@@ -105,6 +106,8 @@ function App() {
         return <ConnectorDashboard onBack={goBack} />;
       case 'reorder':
         return <ReorderDashboard onBack={goBack} />;
+      case 'partners':
+        return <PartnerDashboard onBack={goBack} />;
       case 'smart-reorder':
         return <SmartReorderDashboard onBack={goBack} />;
       case 'trade':
