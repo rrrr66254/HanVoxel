@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { IDS as C } from "./mock-company";
 import { SUPPLIER } from "./mock-vendors";
 
-const SLA_TARGET_ID = "st000000-0000-4000-8000-000000000001";
+const SLA_TARGET_ID = "f4000000-0000-4000-8000-000000000001";
 
 export async function seedMockQcSla(prisma: PrismaClient): Promise<void> {
   // =============================================
@@ -54,7 +54,7 @@ export async function seedMockQcSla(prisma: PrismaClient): Promise<void> {
         ${totalOrders}, ${onTime}, ${misCount}, ${totalPicks}, ${accPicks},
         NOW())
       ON CONFLICT (sla_target_id, record_date) DO UPDATE SET
-        delivery_on_time_rate = EXCLUDED.delivery_on_time_rate, updated_at = NOW()
+        delivery_on_time_rate = EXCLUDED.delivery_on_time_rate
     `);
   }
 
@@ -82,15 +82,15 @@ export async function seedMockQcSla(prisma: PrismaClient): Promise<void> {
   // QC 검수 (8건 — 입고 6 + 출고 2)
   // =============================================
   const inspections = [
-    { id: "qc000000-0000-4000-8000-000000000001", sup: SUPPLIER.poscoSteel, type: "INBOUND", status: "COMPLETED", total: 500, pass: 498, defect: 2, rate: 0.4, ref: "IB-001", inspector: "정검수", date: "2026-03-03" },
-    { id: "qc000000-0000-4000-8000-000000000002", sup: SUPPLIER.koreaFriction, type: "INBOUND", status: "COMPLETED", total: 200, pass: 200, defect: 0, rate: 0, ref: "IB-002", inspector: "정검수", date: "2026-03-06" },
-    { id: "qc000000-0000-4000-8000-000000000003", sup: SUPPLIER.dongaBolt, type: "INBOUND", status: "IN_PROGRESS", total: 5500, pass: 3200, defect: 15, rate: 0.47, ref: "IB-003", inspector: "정검수", date: "2026-03-15" },
-    { id: "qc000000-0000-4000-8000-000000000004", sup: SUPPLIER.hanhwaChemical, type: "INBOUND", status: "PENDING", total: 150, pass: 0, defect: 0, rate: 0, ref: "IB-004", inspector: null, date: null },
-    { id: "qc000000-0000-4000-8000-000000000005", sup: SUPPLIER.samjinFilter, type: "INBOUND", status: "PENDING", total: 3000, pass: 0, defect: 0, rate: 0, ref: "IB-005", inspector: null, date: null },
-    { id: "qc000000-0000-4000-8000-000000000006", sup: SUPPLIER.poscoSteel, type: "INBOUND", status: "COMPLETED", total: 300, pass: 297, defect: 3, rate: 1.0, ref: "IB-006-prev", inspector: "정검수", date: "2026-02-20" },
+    { id: "f5000000-0000-4000-8000-000000000001", sup: SUPPLIER.poscoSteel, type: "INBOUND", status: "COMPLETED", total: 500, pass: 498, defect: 2, rate: 0.4, ref: "IB-001", inspector: "정검수", date: "2026-03-03" },
+    { id: "f5000000-0000-4000-8000-000000000002", sup: SUPPLIER.koreaFriction, type: "INBOUND", status: "COMPLETED", total: 200, pass: 200, defect: 0, rate: 0, ref: "IB-002", inspector: "정검수", date: "2026-03-06" },
+    { id: "f5000000-0000-4000-8000-000000000003", sup: SUPPLIER.dongaBolt, type: "INBOUND", status: "IN_PROGRESS", total: 5500, pass: 3200, defect: 15, rate: 0.47, ref: "IB-003", inspector: "정검수", date: "2026-03-15" },
+    { id: "f5000000-0000-4000-8000-000000000004", sup: SUPPLIER.hanhwaChemical, type: "INBOUND", status: "PENDING", total: 150, pass: 0, defect: 0, rate: 0, ref: "IB-004", inspector: null, date: null },
+    { id: "f5000000-0000-4000-8000-000000000005", sup: SUPPLIER.samjinFilter, type: "INBOUND", status: "PENDING", total: 3000, pass: 0, defect: 0, rate: 0, ref: "IB-005", inspector: null, date: null },
+    { id: "f5000000-0000-4000-8000-000000000006", sup: SUPPLIER.poscoSteel, type: "INBOUND", status: "COMPLETED", total: 300, pass: 297, defect: 3, rate: 1.0, ref: "IB-006-prev", inspector: "정검수", date: "2026-02-20" },
     // 출고 검수
-    { id: "qc000000-0000-4000-8000-000000000007", sup: null, type: "OUTBOUND", status: "COMPLETED", total: 200, pass: 200, defect: 0, rate: 0, ref: "OB-001", inspector: "정검수", date: "2026-03-02" },
-    { id: "qc000000-0000-4000-8000-000000000008", sup: null, type: "OUTBOUND", status: "COMPLETED", total: 650, pass: 649, defect: 1, rate: 0.15, ref: "OB-002", inspector: "정검수", date: "2026-03-05" },
+    { id: "f5000000-0000-4000-8000-000000000007", sup: null, type: "OUTBOUND", status: "COMPLETED", total: 200, pass: 200, defect: 0, rate: 0, ref: "OB-001", inspector: "정검수", date: "2026-03-02" },
+    { id: "f5000000-0000-4000-8000-000000000008", sup: null, type: "OUTBOUND", status: "COMPLETED", total: 650, pass: 649, defect: 1, rate: 0.15, ref: "OB-002", inspector: "정검수", date: "2026-03-05" },
   ];
 
   for (const q of inspections) {

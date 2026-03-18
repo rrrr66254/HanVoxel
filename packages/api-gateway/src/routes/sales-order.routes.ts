@@ -7,6 +7,7 @@ const router = Router();
 router.post('/sales-orders', soCtrl.createHandler);
 router.get('/sales-orders', soCtrl.listHandler);
 router.get('/sales-orders/:id', soCtrl.detailHandler);
+router.patch('/sales-orders/:id', soCtrl.updateHandler);
 
 // ── MRP 소요 분석 ───────────────────────────────
 router.post('/sales-orders/:id/run-mrp', soCtrl.runMrpHandler);

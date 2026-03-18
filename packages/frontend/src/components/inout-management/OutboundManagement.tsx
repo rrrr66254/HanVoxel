@@ -19,10 +19,13 @@ import {
   X,
   Clock,
   Upload,
+  Save,
+  Edit3,
 } from 'lucide-react';
 import { BulkOutboundUpload } from './BulkOutboundUpload';
 import type { OutboundOrder } from '../../api/outbound-api';
 import { ManifestPdf } from './ManifestPdf';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -56,7 +59,7 @@ const SLOT_MAP: Record<string, string> = {
 // --- Mock 데이터 ---
 const MOCK_ORDERS: OutboundOrder[] = [
   {
-    id: 'ob-1', siteId: 'demo', type: 'PICKING', status: 'PLANNED',
+    id: 'ob-1', siteId: MOCK_SITE_ID, type: 'PICKING', status: 'PLANNED',
     scheduledDate: '2026-03-18', dispatchedDate: null, customerName: '쿠팡 풀필먼트',
     destination: '경기도 이천시 마장면', manifestNumber: 'OUT-20260318-0001',
     timeSlot: 'AM', notes: null, containerSpec: null, hsCode: null,
@@ -67,7 +70,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-16T09:00:00Z', updatedAt: '2026-03-16T09:00:00Z',
   },
   {
-    id: 'ob-2', siteId: 'demo', type: 'CONTAINER', status: 'PACKED',
+    id: 'ob-2', siteId: MOCK_SITE_ID, type: 'CONTAINER', status: 'PACKED',
     scheduledDate: '2026-03-19', dispatchedDate: null, customerName: 'BMW Munich',
     destination: 'Dingolfing, Germany', manifestNumber: 'OUT-20260319-0001',
     timeSlot: 'PM', notes: '수출 건 — HS 코드 확인 필요', containerSpec: 'DRY_40FT', hsCode: '870899',
@@ -77,7 +80,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-14T10:00:00Z', updatedAt: '2026-03-18T15:00:00Z',
   },
   {
-    id: 'ob-3', siteId: 'demo', type: 'PALLET', status: 'DISPATCHED',
+    id: 'ob-3', siteId: MOCK_SITE_ID, type: 'PALLET', status: 'DISPATCHED',
     scheduledDate: '2026-03-15', dispatchedDate: '2026-03-15', customerName: '롯데물류',
     destination: '서울시 송파구', manifestNumber: 'OUT-20260315-0001',
     timeSlot: 'AM', notes: null, containerSpec: null, hsCode: null,
@@ -87,7 +90,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-12T09:00:00Z', updatedAt: '2026-03-15T10:00:00Z',
   },
   {
-    id: 'ob-4', siteId: 'demo', type: 'DIRECT', status: 'PLANNED',
+    id: 'ob-4', siteId: MOCK_SITE_ID, type: 'DIRECT', status: 'PLANNED',
     scheduledDate: '2026-03-20', dispatchedDate: null, customerName: 'CJ대한통운',
     destination: '대전시 유성구', manifestNumber: 'OUT-20260320-0001',
     timeSlot: 'PM', notes: '직납 출고', containerSpec: null, hsCode: null,
@@ -110,13 +113,14 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [manifestOrderId, setManifestOrderId] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OutboundOrder | null>(null);
+  const [editOrder, setEditOrder] = useState<OutboundOrder | null>(null);
 
   // 데이터 로드
   useEffect(() => {
     (async () => {
       try {
         const { getOutboundOrders } = await import('../../api/outbound-api');
-        const result = await getOutboundOrders('demo', statusFilter || undefined, typeFilter || undefined);
+        const result = await getOutboundOrders(MOCK_SITE_ID, statusFilter || undefined, typeFilter || undefined);
         if (result.orders.length > 0) { setOrders(result.orders); return; }
       } catch { /* mock */ }
       let filtered = MOCK_ORDERS;
@@ -146,6 +150,28 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
 
   const calcTotal = (items: OutboundOrder['items']) =>
     items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+
+  // 출고 주문 수정 저장
+  const handleEditSave = useCallback(async (updated: OutboundOrder) => {
+    try {
+      const { updateOutboundOrder } = await import('../../api/outbound-api');
+      const saved = await updateOutboundOrder(updated.id, {
+        type: updated.type,
+        status: updated.status,
+        scheduledDate: updated.scheduledDate ?? undefined,
+        timeSlot: updated.timeSlot ?? undefined,
+        customerName: updated.customerName ?? undefined,
+        destination: updated.destination ?? undefined,
+        notes: updated.notes ?? undefined,
+        containerSpec: updated.containerSpec ?? undefined,
+        hsCode: updated.hsCode ?? undefined,
+      });
+      setOrders((prev) => prev.map((o) => o.id === saved.id ? saved : o));
+    } catch {
+      setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o));
+    }
+    setEditOrder(null);
+  }, []);
 
   // B2C 대량 출고 업로드 모드
   if (showBulkUpload) {
@@ -239,7 +265,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
           const dday = getDDay(order.scheduledDate);
 
           return (
-            <div key={order.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px' }}>
+            <div key={order.id} onClick={() => setEditOrder(order)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 20px', cursor: 'pointer', transition: 'border-color 0.15s' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -273,7 +299,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
 
                   {/* 명세표 버튼 */}
                   <button
-                    onClick={() => setManifestOrderId(order.id)}
+                    onClick={(e) => { e.stopPropagation(); setManifestOrderId(order.id); }}
                     style={actionBtnStyle('rgba(88,166,255,0.15)', C.accent)}
                     title="명세표"
                   >
@@ -283,7 +309,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
                   {/* 출고 완료 버튼 */}
                   {order.status !== 'DISPATCHED' && (
                     <button
-                      onClick={() => handleDispatch(order.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDispatch(order.id); }}
                       style={actionBtnStyle('rgba(16,185,129,0.15)', C.green)}
                     >
                       <Check size={12} /> 출고완료
@@ -302,10 +328,207 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
         )}
       </div>
 
+      {/* 상세/편집 모달 */}
+      {editOrder && (
+        <EditOutboundModal
+          order={editOrder}
+          onClose={() => setEditOrder(null)}
+          onSave={handleEditSave}
+        />
+      )}
+
       {/* 생성 모달 */}
       {showCreateModal && (
         <CreateOutboundModal onClose={() => setShowCreateModal(false)} onCreated={(order) => { setOrders((prev) => [order, ...prev]); setShowCreateModal(false); }} />
       )}
+    </div>
+  );
+}
+
+// --- 출고 주문 상세/편집 모달 ---
+function EditOutboundModal({ order, onClose, onSave }: {
+  order: OutboundOrder;
+  onClose: () => void;
+  onSave: (updated: OutboundOrder) => void;
+}) {
+  const [type, setType] = useState(order.type);
+  const [status, setStatus] = useState(order.status);
+  const [scheduledDate, setScheduledDate] = useState(order.scheduledDate ? order.scheduledDate.slice(0, 10) : '');
+  const [timeSlot, setTimeSlot] = useState(order.timeSlot ?? 'AM');
+  const [customerName, setCustomerName] = useState(order.customerName ?? '');
+  const [destination, setDestination] = useState(order.destination ?? '');
+  const [notes, setNotes] = useState(order.notes ?? '');
+  const [containerSpec, setContainerSpec] = useState(order.containerSpec ?? '');
+  const [hsCode, setHsCode] = useState(order.hsCode ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const totalAmount = order.items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({
+      ...order,
+      type: type as OutboundOrder['type'],
+      status: status as OutboundOrder['status'],
+      scheduledDate: scheduledDate || null,
+      timeSlot,
+      customerName: customerName || null,
+      destination: destination || null,
+      notes: notes || null,
+      containerSpec: containerSpec || null,
+      hsCode: hsCode || null,
+      updatedAt: new Date().toISOString(),
+    });
+    setSaving(false);
+  };
+
+  const statusOptions = [
+    { value: 'PLANNED', label: '출고예정' },
+    { value: 'PICKING', label: '피킹중' },
+    { value: 'PACKED', label: '포장완료' },
+    { value: 'DISPATCHED', label: '출고완료' },
+  ];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, width: 640, maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Edit3 size={16} style={{ color: C.orange }} />
+            <h3 style={{ color: C.text, margin: 0, fontSize: 16 }}>출고 상세 · {order.manifestNumber}</h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer' }}><X size={18} /></button>
+        </div>
+
+        {/* 유형 선택 */}
+        <label style={labelStyle}>출고 유형</label>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {Object.entries(TYPE_MAP).map(([k, v]) => (
+            <button key={k} onClick={() => setType(k)} style={{
+              padding: '6px 14px', fontSize: 12, borderRadius: 6,
+              border: `1px solid ${type === k ? C.accent : C.border}`,
+              background: type === k ? `${C.accent}22` : 'transparent',
+              color: type === k ? C.accent : C.textMuted, cursor: 'pointer',
+            }}>
+              {v}
+            </button>
+          ))}
+        </div>
+
+        {/* 기본 정보 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>상태</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>출고 예정일</label>
+            <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>타임슬롯</label>
+            <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+              <option value="AM">오전 (09-12)</option>
+              <option value="PM">오후 (13-18)</option>
+              <option value="NIGHT">야간 (18-22)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>고객명</label>
+            <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={inputStyle} placeholder="고객명" />
+          </div>
+          <div>
+            <label style={labelStyle}>배송지</label>
+            <input value={destination} onChange={(e) => setDestination(e.target.value)} style={inputStyle} placeholder="배송지" />
+          </div>
+        </div>
+
+        {/* 컨테이너 전용 */}
+        {type === 'CONTAINER' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelStyle}>컨테이너 규격</label>
+              <select value={containerSpec} onChange={(e) => setContainerSpec(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="">선택</option>
+                <option value="DRY_20FT">20ft Dry</option>
+                <option value="DRY_40FT">40ft Dry</option>
+                <option value="HC_40FT">40ft High Cube</option>
+                <option value="HC_45FT">45ft High Cube</option>
+                <option value="REEFER_20FT">20ft 냉장</option>
+                <option value="REEFER_40FT">40ft 냉장</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>HS 코드</label>
+              <input value={hsCode} onChange={(e) => setHsCode(e.target.value)} style={inputStyle} placeholder="870899" />
+            </div>
+          </div>
+        )}
+
+        {/* 읽기 전용 정보 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>명세표 번호</label>
+            <div style={{ ...inputStyle, background: '#161B22', color: C.textMuted }}>{order.manifestNumber}</div>
+          </div>
+          <div>
+            <label style={labelStyle}>출고일</label>
+            <div style={{ ...inputStyle, background: '#161B22', color: C.textMuted }}>{order.dispatchedDate ?? '미출고'}</div>
+          </div>
+        </div>
+
+        <label style={labelStyle}>비고</label>
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} placeholder="메모" />
+
+        {/* 품목 목록 (읽기 전용) */}
+        <label style={labelStyle}>품목 ({order.items.length}건)</label>
+        <div style={{ background: C.bg, borderRadius: 8, padding: 12, marginBottom: 16 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                {['SKU', '품명', '수량', '단가', '금액'].map((h) => (
+                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: C.textMuted, fontWeight: 500, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {order.items.map((item) => (
+                <tr key={item.id}>
+                  <td style={{ padding: '6px 8px', color: C.accent }}>{item.skuCode}</td>
+                  <td style={{ padding: '6px 8px', color: C.text }}>{item.itemName ?? '-'}</td>
+                  <td style={{ padding: '6px 8px', color: C.text }}>{item.qty}</td>
+                  <td style={{ padding: '6px 8px', color: C.text }}>₩{item.unitPrice.toLocaleString()}</td>
+                  <td style={{ padding: '6px 8px', color: C.text, fontWeight: 600 }}>₩{(item.qty * item.unitPrice).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 합계 + 저장 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+            합계: ₩{totalAmount.toLocaleString()}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, cursor: 'pointer', fontSize: 13 }}>취소</button>
+            <button onClick={handleSave} disabled={saving} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 20px', borderRadius: 6, background: C.orange,
+              border: 'none', color: '#fff', cursor: saving ? 'wait' : 'pointer',
+              fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1,
+            }}>
+              <Save size={14} /> {saving ? '저장 중...' : '변경사항 저장'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -330,7 +553,7 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
     try {
       const { createOutboundOrder } = await import('../../api/outbound-api');
       const order = await createOutboundOrder({
-        siteId: 'demo', type, scheduledDate: scheduledDate || undefined,
+        siteId: MOCK_SITE_ID, type, scheduledDate: scheduledDate || undefined,
         timeSlot, customerName: customerName || undefined, destination: destination || undefined,
         notes: notes || undefined, containerSpec: containerSpec || undefined,
         hsCode: hsCode || undefined, items: items.filter((i) => i.skuCode),
@@ -338,7 +561,7 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
       onCreated(order);
     } catch {
       const mockOrder: OutboundOrder = {
-        id: `ob-new-${Date.now()}`, siteId: 'demo', type: type as OutboundOrder['type'], status: 'PLANNED',
+        id: `ob-new-${Date.now()}`, siteId: MOCK_SITE_ID, type: type as OutboundOrder['type'], status: 'PLANNED',
         scheduledDate: scheduledDate || null, dispatchedDate: null, customerName: customerName || null,
         destination: destination || null, manifestNumber: `OUT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-9999`,
         timeSlot, notes: notes || null, containerSpec: containerSpec || null, hsCode: hsCode || null,

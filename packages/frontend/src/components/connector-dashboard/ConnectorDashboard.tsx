@@ -43,6 +43,7 @@ import {
   deleteFieldMapping,
   syncVoucher,
 } from '../../api/connector-api';
+import { MOCK_COMPANY_ID } from '../../constants/mock-ids';
 
 // ── 디자인 토큰 ──────────────────────────────────────
 const COLORS = {
@@ -66,7 +67,7 @@ interface Props {
 type Tab = 'connectors' | 'logs' | 'mappings';
 
 // 데모용 회사 ID
-const DEMO_COMPANY_ID = 'demo-company-001';
+const DEMO_COMPANY_ID = MOCK_COMPANY_ID;
 
 // ── 애니메이션 카운터 훅 ──────────────────────────────
 function useAnimatedCounter(target: number, duration = 600): number {

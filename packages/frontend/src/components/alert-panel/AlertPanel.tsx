@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AlertData } from '../../api/alert-api';
 import { getAlerts, getUnreadAlertCount, markAlertRead, markAllAlertsRead } from '../../api/alert-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // 오프라인 목 데이터
 const MOCK_ALERTS: AlertData[] = [
   {
     id: 'mock-1',
-    siteId: 'demo-site',
+    siteId: MOCK_SITE_ID,
     metricType: 'inventory_level',
     severity: 'critical',
     title: '재고 수량 이상 탐지',
@@ -20,7 +21,7 @@ const MOCK_ALERTS: AlertData[] = [
   },
   {
     id: 'mock-2',
-    siteId: 'demo-site',
+    siteId: MOCK_SITE_ID,
     metricType: 'picking_error_rate',
     severity: 'warning',
     title: '피킹 오류율 이상 탐지',
@@ -34,7 +35,7 @@ const MOCK_ALERTS: AlertData[] = [
   },
   {
     id: 'mock-3',
-    siteId: 'demo-site',
+    siteId: MOCK_SITE_ID,
     metricType: 'order_volume',
     severity: 'info',
     title: '주문량 변동 감지',
@@ -78,7 +79,7 @@ interface AlertPanelProps {
   onClose: () => void;
 }
 
-export default function AlertPanel({ siteId = 'demo-site', isOpen, onClose }: AlertPanelProps) {
+export default function AlertPanel({ siteId = MOCK_SITE_ID, isOpen, onClose }: AlertPanelProps) {
   const [alerts, setAlerts] = useState<AlertData[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');

@@ -45,6 +45,7 @@ import {
   getReports,
   getBenchmarkHistory,
 } from '../../api/benchmark-api';
+import { MOCK_COMPANY_ID, MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // ── 디자인 토큰 ──
 const COLORS = {
@@ -70,8 +71,8 @@ interface Props {
 
 type Tab = 'overview' | 'details' | 'reports';
 
-const DEMO_COMPANY = 'demo-company-001';
-const DEMO_SITE = 'demo-site-001';
+const DEMO_COMPANY = MOCK_COMPANY_ID;
+const DEMO_SITE = MOCK_SITE_ID;
 
 // KPI 메타 정보
 const KPI_META: Record<string, { label: string; unit: string; higherIsBetter: boolean; icon: typeof Trophy; color: string }> = {

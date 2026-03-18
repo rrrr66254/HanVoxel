@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import type { ReorderRecommendation, ReorderSummary } from '../../api/reorder-api';
 import * as reorderApi from '../../api/reorder-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 
@@ -51,7 +52,7 @@ const COLORS = {
 
 const MOCK_RECOMMENDATIONS: ReorderRecommendation[] = [
   {
-    id: 'r1', siteId: 'demo', sku: 'SKU-2891', itemName: '가솔린 엔진 밸브',
+    id: 'r1', siteId: MOCK_SITE_ID, sku: 'SKU-2891', itemName: '가솔린 엔진 밸브',
     currentQty: 45, safetyStock: 120, stockoutDate: '2026-03-18', daysUntilOut: 3,
     reorderQty: 500, partnerId: 'p1', partnerName: '현대모비스', avgLeadDays: 5,
     orderByDate: '2026-03-13', urgency: 'CRITICAL', status: 'PENDING', voucherId: null,
@@ -59,7 +60,7 @@ const MOCK_RECOMMENDATIONS: ReorderRecommendation[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'r2', siteId: 'demo', sku: 'SKU-1044', itemName: 'LED 헤드라이트 모듈',
+    id: 'r2', siteId: MOCK_SITE_ID, sku: 'SKU-1044', itemName: 'LED 헤드라이트 모듈',
     currentQty: 180, safetyStock: 200, stockoutDate: '2026-03-22', daysUntilOut: 7,
     reorderQty: 300, partnerId: 'p2', partnerName: 'SL', avgLeadDays: 3,
     orderByDate: '2026-03-19', urgency: 'HIGH', status: 'PENDING', voucherId: null,
@@ -67,7 +68,7 @@ const MOCK_RECOMMENDATIONS: ReorderRecommendation[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'r3', siteId: 'demo', sku: 'SKU-3320', itemName: '와이어 하네스 (메인)',
+    id: 'r3', siteId: MOCK_SITE_ID, sku: 'SKU-3320', itemName: '와이어 하네스 (메인)',
     currentQty: 520, safetyStock: 300, stockoutDate: '2026-03-29', daysUntilOut: 14,
     reorderQty: 1000, partnerId: 'p3', partnerName: '경신', avgLeadDays: 7,
     orderByDate: '2026-03-22', urgency: 'MEDIUM', status: 'PENDING', voucherId: null,
@@ -75,7 +76,7 @@ const MOCK_RECOMMENDATIONS: ReorderRecommendation[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'r4', siteId: 'demo', sku: 'SKU-0887', itemName: '브레이크 패드 세트',
+    id: 'r4', siteId: MOCK_SITE_ID, sku: 'SKU-0887', itemName: '브레이크 패드 세트',
     currentQty: 890, safetyStock: 250, stockoutDate: '2026-04-14', daysUntilOut: 30,
     reorderQty: 600, partnerId: 'p1', partnerName: '현대모비스', avgLeadDays: 5,
     orderByDate: '2026-04-09', urgency: 'LOW', status: 'PENDING', voucherId: null,
@@ -83,7 +84,7 @@ const MOCK_RECOMMENDATIONS: ReorderRecommendation[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'r5', siteId: 'demo', sku: 'SKU-5501', itemName: '에어필터 (승용)',
+    id: 'r5', siteId: MOCK_SITE_ID, sku: 'SKU-5501', itemName: '에어필터 (승용)',
     currentQty: 30, safetyStock: 100, stockoutDate: '2026-03-17', daysUntilOut: 2,
     reorderQty: 400, partnerId: 'p4', partnerName: '만도', avgLeadDays: 4,
     orderByDate: '2026-03-13', urgency: 'CRITICAL', status: 'PENDING', voucherId: null,
@@ -260,9 +261,9 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
   useEffect(() => {
     (async () => {
       try {
-        const s = await reorderApi.getReorderSummary('demo');
+        const s = await reorderApi.getReorderSummary(MOCK_SITE_ID);
         setSummary(s);
-        const recs = await reorderApi.getRecommendations('demo');
+        const recs = await reorderApi.getRecommendations(MOCK_SITE_ID);
         setRecommendations(recs);
         setUseMock(false);
       } catch {
@@ -276,8 +277,8 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
     setLoading(true);
     try {
       if (!useMock) {
-        await reorderApi.generateRecommendations('demo');
-        const recs = await reorderApi.getRecommendations('demo');
+        await reorderApi.generateRecommendations(MOCK_SITE_ID);
+        const recs = await reorderApi.getRecommendations(MOCK_SITE_ID);
         setRecommendations(recs);
       }
     } catch {
@@ -295,7 +296,7 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
       return;
     }
     await reorderApi.acceptRecommendation(id);
-    const recs = await reorderApi.getRecommendations('demo');
+    const recs = await reorderApi.getRecommendations(MOCK_SITE_ID);
     setRecommendations(recs);
   }, [useMock]);
 
@@ -308,7 +309,7 @@ export function ReorderDashboard({ onBack }: ReorderDashboardProps) {
       return;
     }
     await reorderApi.dismissRecommendation(id);
-    const recs = await reorderApi.getRecommendations('demo');
+    const recs = await reorderApi.getRecommendations(MOCK_SITE_ID);
     setRecommendations(recs);
   }, [useMock]);
 

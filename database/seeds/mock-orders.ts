@@ -13,21 +13,21 @@ export async function seedMockOrders(prisma: PrismaClient): Promise<void> {
   // 수주 (SalesOrder) — 8건
   // =============================================
   const salesOrders = [
-    { id: "so000000-0000-4000-8000-000000000001", no: "SO-20260301-0001", cust: PARTNER.hyundaiMobis, custName: "현대모비스", status: "SHIPPED", date: "2026-03-01", deadline: "2026-03-15",
+    { id: "a1000000-0000-4000-8000-000000000001", no: "SO-20260301-0001", cust: PARTNER.hyundaiMobis, custName: "현대모비스", status: "SHIPPED", date: "2026-03-01", deadline: "2026-03-15",
       items: JSON.stringify([{ productSku: SKUS.BRAKE_PAD_FR, productName: "브레이크 패드 (전방)", qty: 500, unitPrice: 42000 }]) },
-    { id: "so000000-0000-4000-8000-000000000002", no: "SO-20260305-0001", cust: PARTNER.kiaMotors, custName: "기아자동차 화성공장", status: "CONFIRMED", date: "2026-03-05", deadline: "2026-03-20",
+    { id: "a1000000-0000-4000-8000-000000000002", no: "SO-20260305-0001", cust: PARTNER.kiaMotors, custName: "기아자동차 화성공장", status: "CONFIRMED", date: "2026-03-05", deadline: "2026-03-20",
       items: JSON.stringify([{ productSku: SKUS.SUSPENSION_ARM, productName: "서스펜션 암", qty: 200, unitPrice: 95000 }, { productSku: SKUS.BRAKE_PAD_RR, productName: "브레이크 패드 (후방)", qty: 300, unitPrice: 39000 }]) },
-    { id: "so000000-0000-4000-8000-000000000003", no: "SO-20260308-0001", cust: PARTNER.mandobrakes, custName: "만도(주)", status: "MRP_CHECKED", date: "2026-03-08", deadline: "2026-03-25",
+    { id: "a1000000-0000-4000-8000-000000000003", no: "SO-20260308-0001", cust: PARTNER.mandobrakes, custName: "만도(주)", status: "MRP_CHECKED", date: "2026-03-08", deadline: "2026-03-25",
       items: JSON.stringify([{ productSku: SKUS.BRAKE_PAD_FR, productName: "브레이크 패드 (전방)", qty: 800, unitPrice: 41000 }]) },
-    { id: "so000000-0000-4000-8000-000000000004", no: "SO-20260310-0001", cust: PARTNER.sltAutoparts, custName: "SL오토파츠", status: "RECEIVED", date: "2026-03-10", deadline: "2026-03-28",
+    { id: "a1000000-0000-4000-8000-000000000004", no: "SO-20260310-0001", cust: PARTNER.sltAutoparts, custName: "SL오토파츠", status: "RECEIVED", date: "2026-03-10", deadline: "2026-03-28",
       items: JSON.stringify([{ productSku: SKUS.AIR_FILTER, productName: "에어필터", qty: 2000, unitPrice: 14500 }, { productSku: SKUS.OIL_FILTER, productName: "오일필터", qty: 1500, unitPrice: 10500 }]) },
-    { id: "so000000-0000-4000-8000-000000000005", no: "SO-20260312-0001", cust: PARTNER.hyundaiMobis, custName: "현대모비스", status: "IN_PRODUCTION", date: "2026-03-12", deadline: "2026-04-01",
+    { id: "a1000000-0000-4000-8000-000000000005", no: "SO-20260312-0001", cust: PARTNER.hyundaiMobis, custName: "현대모비스", status: "IN_PRODUCTION", date: "2026-03-12", deadline: "2026-04-01",
       items: JSON.stringify([{ productSku: SKUS.SUSPENSION_ARM, productName: "서스펜션 암", qty: 150, unitPrice: 95000 }]) },
-    { id: "so000000-0000-4000-8000-000000000006", no: "SO-20260314-0001", cust: PARTNER.kiaMotors, custName: "기아자동차 화성공장", status: "RECEIVED", date: "2026-03-14", deadline: "2026-04-05",
+    { id: "a1000000-0000-4000-8000-000000000006", no: "SO-20260314-0001", cust: PARTNER.kiaMotors, custName: "기아자동차 화성공장", status: "RECEIVED", date: "2026-03-14", deadline: "2026-04-05",
       items: JSON.stringify([{ productSku: SKUS.BRAKE_PAD_FR, productName: "브레이크 패드 (전방)", qty: 600, unitPrice: 42000 }, { productSku: SKUS.OIL_FILTER, productName: "오일필터", qty: 800, unitPrice: 11000 }]) },
-    { id: "so000000-0000-4000-8000-000000000007", no: "SO-20260316-0001", cust: PARTNER.mandobrakes, custName: "만도(주)", status: "RECEIVED", date: "2026-03-16", deadline: "2026-04-10",
+    { id: "a1000000-0000-4000-8000-000000000007", no: "SO-20260316-0001", cust: PARTNER.mandobrakes, custName: "만도(주)", status: "RECEIVED", date: "2026-03-16", deadline: "2026-04-10",
       items: JSON.stringify([{ productSku: SKUS.BRAKE_PAD_RR, productName: "브레이크 패드 (후방)", qty: 400, unitPrice: 39000 }]) },
-    { id: "so000000-0000-4000-8000-000000000008", no: "SO-20260318-0001", cust: PARTNER.sltAutoparts, custName: "SL오토파츠", status: "RECEIVED", date: "2026-03-18", deadline: "2026-04-15",
+    { id: "a1000000-0000-4000-8000-000000000008", no: "SO-20260318-0001", cust: PARTNER.sltAutoparts, custName: "SL오토파츠", status: "RECEIVED", date: "2026-03-18", deadline: "2026-04-15",
       items: JSON.stringify([{ productSku: SKUS.AIR_FILTER, productName: "에어필터", qty: 3000, unitPrice: 14000 }]) },
   ];
 
@@ -42,10 +42,10 @@ export async function seedMockOrders(prisma: PrismaClient): Promise<void> {
 
   // MRP 결과 (수주 #3 — 만도 브레이크패드 800개)
   const mrpResults = [
-    { id: "mr000000-0000-4000-8000-000000000001", soId: salesOrders[2].id, sku: SKUS.STEEL_PLATE, name: "강판 (SS400)", required: 400, stock: 800, shortage: 0, status: "CHECKED_OK" },
-    { id: "mr000000-0000-4000-8000-000000000002", soId: salesOrders[2].id, sku: SKUS.FRICTION_MAT, name: "마찰재 (세라믹)", required: 240, stock: 300, shortage: 0, status: "CHECKED_OK" },
-    { id: "mr000000-0000-4000-8000-000000000003", soId: salesOrders[2].id, sku: SKUS.ADHESIVE, name: "접착제 (에폭시)", required: 40, stock: 150, shortage: 0, status: "CHECKED_OK" },
-    { id: "mr000000-0000-4000-8000-000000000004", soId: salesOrders[2].id, sku: SKUS.PAINT_COAT, name: "도장 코팅제", required: 16, stock: 100, shortage: 0, status: "CHECKED_OK" },
+    { id: "b1000000-0000-4000-8000-000000000001", soId: salesOrders[2].id, sku: SKUS.STEEL_PLATE, name: "강판 (SS400)", required: 400, stock: 800, shortage: 0, status: "CHECKED_OK" },
+    { id: "b1000000-0000-4000-8000-000000000002", soId: salesOrders[2].id, sku: SKUS.FRICTION_MAT, name: "마찰재 (세라믹)", required: 240, stock: 300, shortage: 0, status: "CHECKED_OK" },
+    { id: "b1000000-0000-4000-8000-000000000003", soId: salesOrders[2].id, sku: SKUS.ADHESIVE, name: "접착제 (에폭시)", required: 40, stock: 150, shortage: 0, status: "CHECKED_OK" },
+    { id: "b1000000-0000-4000-8000-000000000004", soId: salesOrders[2].id, sku: SKUS.PAINT_COAT, name: "도장 코팅제", required: 16, stock: 100, shortage: 0, status: "CHECKED_OK" },
   ];
   for (const m of mrpResults) {
     await prisma.$executeRawUnsafe(`
@@ -59,17 +59,17 @@ export async function seedMockOrders(prisma: PrismaClient): Promise<void> {
   // 입고 주문 (InboundOrder) — 6건
   // =============================================
   const inbounds = [
-    { id: "ib000000-0000-4000-8000-000000000001", vendor: PARTNER.poscoSteel, vendorName: "포스코스틸리온", status: "STOCKED", exp: "2026-03-03", act: "2026-03-03",
+    { id: "c1000000-0000-4000-8000-000000000001", vendor: PARTNER.poscoSteel, vendorName: "포스코스틸리온", status: "STOCKED", exp: "2026-03-03", act: "2026-03-03",
       items: [{ sku: SKUS.STEEL_PLATE, name: "강판 (SS400)", eQty: 500, aQty: 500, price: 12000 }] },
-    { id: "ib000000-0000-4000-8000-000000000002", vendor: PARTNER.koreaFriction, vendorName: "한국마찰소재(주)", status: "STOCKED", exp: "2026-03-05", act: "2026-03-06",
+    { id: "c1000000-0000-4000-8000-000000000002", vendor: PARTNER.koreaFriction, vendorName: "한국마찰소재(주)", status: "STOCKED", exp: "2026-03-05", act: "2026-03-06",
       items: [{ sku: SKUS.FRICTION_MAT, name: "마찰재 (세라믹)", eQty: 200, aQty: 200, price: 15000 }] },
-    { id: "ib000000-0000-4000-8000-000000000003", vendor: PARTNER.dongaBolt, vendorName: "동아볼트산업", status: "QC_PENDING", exp: "2026-03-15", act: "2026-03-15",
+    { id: "c1000000-0000-4000-8000-000000000003", vendor: PARTNER.dongaBolt, vendorName: "동아볼트산업", status: "QC_PENDING", exp: "2026-03-15", act: "2026-03-15",
       items: [{ sku: SKUS.BOLT_SET, name: "볼트 세트 (M10×50)", eQty: 5000, aQty: 4980, price: 1200 }, { sku: SKUS.GASKET, name: "가스켓 (실리콘)", eQty: 500, aQty: 500, price: 4500 }] },
-    { id: "ib000000-0000-4000-8000-000000000004", vendor: PARTNER.hanhwaChemical, vendorName: "한화솔루션", status: "ARRIVED", exp: "2026-03-17", act: "2026-03-17",
+    { id: "c1000000-0000-4000-8000-000000000004", vendor: PARTNER.hanhwaChemical, vendorName: "한화솔루션", status: "ARRIVED", exp: "2026-03-17", act: "2026-03-17",
       items: [{ sku: SKUS.ADHESIVE, name: "접착제 (에폭시)", eQty: 100, aQty: null, price: 22000 }, { sku: SKUS.PAINT_COAT, name: "도장 코팅제", eQty: 50, aQty: null, price: 45000 }] },
-    { id: "ib000000-0000-4000-8000-000000000005", vendor: PARTNER.samjinFilter, vendorName: "삼진필터(주)", status: "IN_TRANSIT", exp: "2026-03-20", act: null,
+    { id: "c1000000-0000-4000-8000-000000000005", vendor: PARTNER.samjinFilter, vendorName: "삼진필터(주)", status: "IN_TRANSIT", exp: "2026-03-20", act: null,
       items: [{ sku: SKUS.FILTER_PAPER, name: "필터 원지", eQty: 3000, aQty: null, price: 3500 }] },
-    { id: "ib000000-0000-4000-8000-000000000006", vendor: PARTNER.poscoSteel, vendorName: "포스코스틸리온", status: "ORDERED", exp: "2026-03-25", act: null,
+    { id: "c1000000-0000-4000-8000-000000000006", vendor: PARTNER.poscoSteel, vendorName: "포스코스틸리온", status: "ORDERED", exp: "2026-03-25", act: null,
       items: [{ sku: SKUS.STEEL_PLATE, name: "강판 (SS400)", eQty: 800, aQty: null, price: 11800 }, { sku: SKUS.ALUMINUM_BAR, name: "알루미늄 바 (6061)", eQty: 200, aQty: null, price: 35000 }] },
   ];
 
@@ -94,25 +94,25 @@ export async function seedMockOrders(prisma: PrismaClient): Promise<void> {
   // 출고 주문 (OutboundOrder) — 10건
   // =============================================
   const outbounds = [
-    { id: "ob000000-0000-4000-8000-000000000001", status: "DISPATCHED", sched: "2026-03-02", disp: "2026-03-02", cust: "현대모비스", manifest: "OUT-20260302-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000001", status: "DISPATCHED", sched: "2026-03-02", disp: "2026-03-02", cust: "현대모비스", manifest: "OUT-20260302-0001", slot: "AM",
       items: [{ sku: SKUS.BRAKE_PAD_FR, name: "브레이크 패드 (전방)", qty: 200, price: 42000 }] },
-    { id: "ob000000-0000-4000-8000-000000000002", status: "DISPATCHED", sched: "2026-03-05", disp: "2026-03-05", cust: "기아자동차 화성공장", manifest: "OUT-20260305-0001", slot: "PM",
+    { id: "d1000000-0000-4000-8000-000000000002", status: "DISPATCHED", sched: "2026-03-05", disp: "2026-03-05", cust: "기아자동차 화성공장", manifest: "OUT-20260305-0001", slot: "PM",
       items: [{ sku: SKUS.BRAKE_PAD_RR, name: "브레이크 패드 (후방)", qty: 150, price: 39000 }, { sku: SKUS.AIR_FILTER, name: "에어필터", qty: 500, price: 15000 }] },
-    { id: "ob000000-0000-4000-8000-000000000003", status: "DISPATCHED", sched: "2026-03-08", disp: "2026-03-08", cust: "만도(주)", manifest: "OUT-20260308-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000003", status: "DISPATCHED", sched: "2026-03-08", disp: "2026-03-08", cust: "만도(주)", manifest: "OUT-20260308-0001", slot: "AM",
       items: [{ sku: SKUS.BRAKE_PAD_FR, name: "브레이크 패드 (전방)", qty: 300, price: 41000 }] },
-    { id: "ob000000-0000-4000-8000-000000000004", status: "DISPATCHED", sched: "2026-03-10", disp: "2026-03-10", cust: "SL오토파츠", manifest: "OUT-20260310-0001", slot: "PM",
+    { id: "d1000000-0000-4000-8000-000000000004", status: "DISPATCHED", sched: "2026-03-10", disp: "2026-03-10", cust: "SL오토파츠", manifest: "OUT-20260310-0001", slot: "PM",
       items: [{ sku: SKUS.OIL_FILTER, name: "오일필터", qty: 400, price: 11000 }] },
-    { id: "ob000000-0000-4000-8000-000000000005", status: "PACKED", sched: "2026-03-18", disp: null, cust: "현대모비스", manifest: "OUT-20260318-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000005", status: "PACKED", sched: "2026-03-18", disp: null, cust: "현대모비스", manifest: "OUT-20260318-0001", slot: "AM",
       items: [{ sku: SKUS.SUSPENSION_ARM, name: "서스펜션 암", qty: 100, price: 95000 }] },
-    { id: "ob000000-0000-4000-8000-000000000006", status: "PICKING", sched: "2026-03-19", disp: null, cust: "기아자동차 화성공장", manifest: "OUT-20260319-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000006", status: "PICKING", sched: "2026-03-19", disp: null, cust: "기아자동차 화성공장", manifest: "OUT-20260319-0001", slot: "AM",
       items: [{ sku: SKUS.BRAKE_PAD_FR, name: "브레이크 패드 (전방)", qty: 250, price: 42000 }, { sku: SKUS.BRAKE_PAD_RR, name: "브레이크 패드 (후방)", qty: 150, price: 39000 }] },
-    { id: "ob000000-0000-4000-8000-000000000007", status: "PLANNED", sched: "2026-03-20", disp: null, cust: "만도(주)", manifest: "OUT-20260320-0001", slot: "PM",
+    { id: "d1000000-0000-4000-8000-000000000007", status: "PLANNED", sched: "2026-03-20", disp: null, cust: "만도(주)", manifest: "OUT-20260320-0001", slot: "PM",
       items: [{ sku: SKUS.BRAKE_PAD_FR, name: "브레이크 패드 (전방)", qty: 400, price: 41000 }] },
-    { id: "ob000000-0000-4000-8000-000000000008", status: "PLANNED", sched: "2026-03-22", disp: null, cust: "SL오토파츠", manifest: "OUT-20260322-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000008", status: "PLANNED", sched: "2026-03-22", disp: null, cust: "SL오토파츠", manifest: "OUT-20260322-0001", slot: "AM",
       items: [{ sku: SKUS.AIR_FILTER, name: "에어필터", qty: 1000, price: 14500 }, { sku: SKUS.OIL_FILTER, name: "오일필터", qty: 800, price: 10500 }] },
-    { id: "ob000000-0000-4000-8000-000000000009", status: "PLANNED", sched: "2026-03-25", disp: null, cust: "현대모비스", manifest: "OUT-20260325-0001", slot: "PM",
+    { id: "d1000000-0000-4000-8000-000000000009", status: "PLANNED", sched: "2026-03-25", disp: null, cust: "현대모비스", manifest: "OUT-20260325-0001", slot: "PM",
       items: [{ sku: SKUS.SUSPENSION_ARM, name: "서스펜션 암", qty: 50, price: 95000 }] },
-    { id: "ob000000-0000-4000-8000-000000000010", status: "PLANNED", sched: "2026-03-28", disp: null, cust: "기아자동차 화성공장", manifest: "OUT-20260328-0001", slot: "AM",
+    { id: "d1000000-0000-4000-8000-000000000010", status: "PLANNED", sched: "2026-03-28", disp: null, cust: "기아자동차 화성공장", manifest: "OUT-20260328-0001", slot: "AM",
       items: [{ sku: SKUS.AIR_FILTER, name: "에어필터", qty: 2000, price: 14000 }] },
   ];
 
@@ -160,7 +160,7 @@ export async function seedMockOrders(prisma: PrismaClient): Promise<void> {
   const confirmedOutbounds = outbounds.filter(o => o.status === "DISPATCHED");
   let vNo = 1;
   for (const ob of confirmedOutbounds) {
-    const voucherId = `vo000000-0000-4000-8000-${String(vNo).padStart(12, "0")}`;
+    const voucherId = `e1000000-0000-4000-8000-${String(vNo).padStart(12, "0")}`;
     const partnerCode = ob.cust === "현대모비스" ? PARTNER.hyundaiMobis
       : ob.cust === "기아자동차 화성공장" ? PARTNER.kiaMotors
       : ob.cust === "만도(주)" ? PARTNER.mandobrakes

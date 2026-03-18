@@ -46,6 +46,22 @@ export async function listHandler(req: Request, res: Response) {
   }
 }
 
+// ── 출고 주문 수정 ──────────────────────────────
+
+export async function updateHandler(req: Request, res: Response) {
+  try {
+    const id = String(req.params.id ?? '');
+    const { type, status, scheduledDate, timeSlot, customerName, destination, notes, containerSpec, hsCode } = req.body;
+    const order = await outboundService.updateOutboundOrder(id, {
+      type, status, scheduledDate, timeSlot, customerName, destination, notes, containerSpec, hsCode,
+    });
+    res.json({ success: true, data: order });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '출고 주문 수정 실패';
+    res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: msg } });
+  }
+}
+
 // ── 출고 주문 상세 조회 ───────────────────────────
 
 export async function detailHandler(req: Request, res: Response) {

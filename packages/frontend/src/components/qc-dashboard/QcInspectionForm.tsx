@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SupplierData } from '../../api/qc-api';
 import { createInspection } from '../../api/qc-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 const DEFECT_TYPES = [
   { value: 'DAMAGED', label: '파손' },
@@ -60,7 +61,7 @@ export default function QcInspectionForm({ suppliers, onCreated }: QcInspectionF
     }));
     const totalDefect = defects.reduce((s, d) => s + d.qty, 0);
     await createInspection({
-      siteId: 'demo-site',
+      siteId: MOCK_SITE_ID,
       supplierId: form.supplierId || undefined,
       type: form.type,
       totalQty: form.totalQty,

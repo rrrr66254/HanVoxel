@@ -31,6 +31,7 @@ import { HsCodeSearch } from './HsCodeSearch';
 import { CountrySelector } from './CountrySelector';
 import type { TradeRecord, WatchItem, CoverageStats } from '../../api/trade-api';
 import * as tradeApi from '../../api/trade-api';
+import { MOCK_COMPANY_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const COLORS = {
@@ -206,13 +207,13 @@ function generateMockRecords(): TradeRecord[] {
 
 const MOCK_WATCH_LIST: WatchItem[] = [
   {
-    id: 'w1', companyId: 'demo', hsCode: '870323',
+    id: 'w1', companyId: MOCK_COMPANY_ID, hsCode: '870323',
     description: '가솔린 승용차 (1,500~3,000cc)',
     descriptionEn: 'Passenger vehicles, 1500-3000cc',
     isMain: true, createdAt: new Date().toISOString(),
   },
   {
-    id: 'w2', companyId: 'demo', hsCode: '854232',
+    id: 'w2', companyId: MOCK_COMPANY_ID, hsCode: '854232',
     description: '메모리 (집적회로)',
     descriptionEn: 'Electronic integrated circuits: memories',
     isMain: false, createdAt: new Date().toISOString(),
@@ -382,7 +383,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
         const data = await tradeApi.getTradeData({
           hsCode,
           reporterIsos: selectedCountries.filter((c) => c !== 'W00'),
-          companyId: 'demo',
+          companyId: MOCK_COMPANY_ID,
         });
         setRecords(data);
       } catch (e) {
@@ -421,13 +422,13 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
       if (watchList.length >= 5) return;
       try {
         if (!useMock) {
-          await tradeApi.addWatch('demo', hsCode, description, descriptionEn);
+          await tradeApi.addWatch(MOCK_COMPANY_ID, hsCode, description, descriptionEn);
         }
         setWatchList((prev) => [
           ...prev,
           {
             id: `w-${Date.now()}`,
-            companyId: 'demo',
+            companyId: MOCK_COMPANY_ID,
             hsCode,
             description,
             descriptionEn: descriptionEn ?? null,
@@ -447,7 +448,7 @@ export function TradeDashboard({ onBack }: TradeDashboardProps) {
     async (hsCode: string) => {
       try {
         if (!useMock) {
-          await tradeApi.removeWatch('demo', hsCode);
+          await tradeApi.removeWatch(MOCK_COMPANY_ID, hsCode);
         }
         setWatchList((prev) => prev.filter((w) => w.hsCode !== hsCode));
       } catch (e) {

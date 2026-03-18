@@ -23,6 +23,7 @@ import QcInspectionForm from './QcInspectionForm';
 import QcSupplierScorecard from './QcSupplierScorecard';
 import type { QcStatsData, InspectionData, SupplierData } from '../../api/qc-api';
 import { getQcStats, getInspections, getSuppliers } from '../../api/qc-api';
+import { MOCK_COMPANY_ID, MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // ── 다크 테마 색상 상수 ──────────────────────────────────
 const COLORS = {
@@ -66,15 +67,15 @@ const MOCK_STATS: QcStatsData = {
 };
 
 const MOCK_SUPPLIERS: SupplierData[] = [
-  { id: 's1', companyId: 'demo', name: '한국물류자재', code: 'SUP-001', contact: '02-1234-5678', email: null, grade: 'A', qualityScore: 94.2, isActive: true },
-  { id: 's2', companyId: 'demo', name: '글로벌패키징', code: 'SUP-002', contact: null, email: null, grade: 'B', qualityScore: 82.5, isActive: true },
-  { id: 's3', companyId: 'demo', name: '동아식품원료', code: 'SUP-003', contact: null, email: null, grade: 'C', qualityScore: 65.8, isActive: true },
-  { id: 's4', companyId: 'demo', name: '세진전자부품', code: 'SUP-004', contact: null, email: null, grade: 'D', qualityScore: 42.1, isActive: true },
+  { id: 's1', companyId: MOCK_COMPANY_ID, name: '한국물류자재', code: 'SUP-001', contact: '02-1234-5678', email: null, grade: 'A', qualityScore: 94.2, isActive: true },
+  { id: 's2', companyId: MOCK_COMPANY_ID, name: '글로벌패키징', code: 'SUP-002', contact: null, email: null, grade: 'B', qualityScore: 82.5, isActive: true },
+  { id: 's3', companyId: MOCK_COMPANY_ID, name: '동아식품원료', code: 'SUP-003', contact: null, email: null, grade: 'C', qualityScore: 65.8, isActive: true },
+  { id: 's4', companyId: MOCK_COMPANY_ID, name: '세진전자부품', code: 'SUP-004', contact: null, email: null, grade: 'D', qualityScore: 42.1, isActive: true },
 ];
 
 const MOCK_INSPECTIONS: InspectionData[] = [
   {
-    id: 'i1', siteId: 'demo-site', supplierId: 's1', type: 'INBOUND', status: 'COMPLETED',
+    id: 'i1', siteId: MOCK_SITE_ID, supplierId: 's1', type: 'INBOUND', status: 'COMPLETED',
     totalQty: 500, passedQty: 497, defectQty: 3, defectRate: 0.6,
     referenceNo: 'GR-20260312-001', inspectorName: '김검수',
     inspectedAt: new Date(Date.now() - 86400000).toISOString(), note: null,
@@ -85,7 +86,7 @@ const MOCK_INSPECTIONS: InspectionData[] = [
     ],
   },
   {
-    id: 'i2', siteId: 'demo-site', supplierId: 's4', type: 'INBOUND', status: 'COMPLETED',
+    id: 'i2', siteId: MOCK_SITE_ID, supplierId: 's4', type: 'INBOUND', status: 'COMPLETED',
     totalQty: 200, passedQty: 185, defectQty: 15, defectRate: 7.5,
     referenceNo: 'GR-20260311-003', inspectorName: '이품질',
     inspectedAt: new Date(Date.now() - 86400000 * 2).toISOString(), note: '불량 다수 발생',
@@ -96,7 +97,7 @@ const MOCK_INSPECTIONS: InspectionData[] = [
     ],
   },
   {
-    id: 'i3', siteId: 'demo-site', supplierId: null, type: 'OUTBOUND', status: 'COMPLETED',
+    id: 'i3', siteId: MOCK_SITE_ID, supplierId: null, type: 'OUTBOUND', status: 'COMPLETED',
     totalQty: 350, passedQty: 347, defectQty: 3, defectRate: 0.86,
     referenceNo: 'GI-20260311-002', inspectorName: '박출고',
     inspectedAt: new Date(Date.now() - 86400000 * 2).toISOString(), note: null,
@@ -258,9 +259,9 @@ export default function QcDashboard({ onBack }: QcDashboardProps) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [s, { inspections: ins }, sups] = await Promise.all([
-      getQcStats('demo-site'),
-      getInspections('demo-site', { limit: 50 }),
-      getSuppliers('demo-company'),
+      getQcStats(MOCK_SITE_ID),
+      getInspections(MOCK_SITE_ID, { limit: 50 }),
+      getSuppliers(MOCK_COMPANY_ID),
     ]);
     setStats(s ?? MOCK_STATS);
     setInspections(ins.length > 0 ? ins : MOCK_INSPECTIONS);

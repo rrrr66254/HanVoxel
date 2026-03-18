@@ -67,6 +67,25 @@ interface InboundItemInput {
   spatialObjectId?: string;
 }
 
+// --- 공통 에러 처리 ---
+
+async function apiRequest<T>(url: string, options?: RequestInit): Promise<T> {
+  const resp = await fetch(url, options);
+  const json = await resp.json();
+
+  if (!resp.ok) {
+    const errMsg = json?.error?.message ?? json?.message ?? `HTTP ${resp.status}`;
+    console.error(
+      `%c[HanVoxel API] ${options?.method ?? 'GET'} ${url} → ${resp.status}`,
+      'color: #EF4444; font-weight: bold;',
+      '\n  에러:', errMsg,
+    );
+    throw new Error(`API 에러 (${resp.status}): ${errMsg}`);
+  }
+
+  return json;
+}
+
 // --- API 함수 ---
 
 export async function createInboundOrder(data: {
@@ -78,12 +97,11 @@ export async function createInboundOrder(data: {
   notes?: string;
   items: InboundItemInput[];
 }): Promise<InboundOrder> {
-  const resp = await fetch(`${API_BASE}/inbound/orders`, {
+  const json = await apiRequest<{ data: InboundOrder }>(`${API_BASE}/inbound/orders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  const json = await resp.json();
   return json.data;
 }
 
@@ -97,14 +115,14 @@ export async function getInboundOrders(
   if (status) params.set('status', status);
   if (page) params.set('page', String(page));
   if (limit) params.set('limit', String(limit));
-  const resp = await fetch(`${API_BASE}/inbound/orders?${params}`);
-  const json = await resp.json();
+  const json = await apiRequest<{ data: InboundOrder[]; meta?: { total?: number } }>(
+    `${API_BASE}/inbound/orders?${params}`,
+  );
   return { orders: json.data ?? [], total: json.meta?.total ?? 0 };
 }
 
 export async function getInboundOrder(id: string): Promise<InboundOrder> {
-  const resp = await fetch(`${API_BASE}/inbound/orders/${id}`);
-  const json = await resp.json();
+  const json = await apiRequest<{ data: InboundOrder }>(`${API_BASE}/inbound/orders/${id}`);
   return json.data;
 }
 
@@ -112,18 +130,22 @@ export async function arriveInboundOrder(
   id: string,
   actualItems?: Array<{ itemId: string; actualQty: number }>,
 ): Promise<{ order: InboundOrder; inspection: unknown }> {
-  const resp = await fetch(`${API_BASE}/inbound/orders/${id}/arrive`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ actualItems }),
-  });
-  const json = await resp.json();
+  const json = await apiRequest<{ data: { order: InboundOrder; inspection: unknown } }>(
+    `${API_BASE}/inbound/orders/${id}/arrive`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actualItems }),
+    },
+  );
   return json.data;
 }
 
 export async function passQcInboundOrder(id: string): Promise<{ success: boolean; orderId: string }> {
-  const resp = await fetch(`${API_BASE}/inbound/orders/${id}/qc-pass`, { method: 'PATCH' });
-  const json = await resp.json();
+  const json = await apiRequest<{ data: { success: boolean; orderId: string } }>(
+    `${API_BASE}/inbound/orders/${id}/qc-pass`,
+    { method: 'PATCH' },
+  );
   return json.data;
 }
 
@@ -133,27 +155,27 @@ export async function getInboundCalendar(
   month: number,
 ): Promise<CalendarEntry[]> {
   const params = new URLSearchParams({ siteId, year: String(year), month: String(month) });
-  const resp = await fetch(`${API_BASE}/inbound/calendar?${params}`);
-  const json = await resp.json();
+  const json = await apiRequest<{ data: CalendarEntry[] }>(`${API_BASE}/inbound/calendar?${params}`);
   return json.data ?? [];
 }
 
 export async function rescheduleInbound(id: string, newDate: string): Promise<InboundOrder> {
-  const resp = await fetch(`${API_BASE}/inbound/orders/${id}/reschedule`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ newDate }),
-  });
-  const json = await resp.json();
+  const json = await apiRequest<{ data: InboundOrder }>(
+    `${API_BASE}/inbound/orders/${id}/reschedule`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newDate }),
+    },
+  );
   return json.data;
 }
 
 export async function createFromReorder(recommendationId: string): Promise<InboundOrder> {
-  const resp = await fetch(`${API_BASE}/inbound/from-reorder`, {
+  const json = await apiRequest<{ data: InboundOrder }>(`${API_BASE}/inbound/from-reorder`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ recommendationId }),
   });
-  const json = await resp.json();
   return json.data;
 }

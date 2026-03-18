@@ -8,7 +8,7 @@
  *   - QC 통과 처리 → 재고 반영
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Package,
   Plus,
@@ -18,8 +18,13 @@ import {
   Truck,
   AlertTriangle,
   X,
+  WifiOff,
 } from 'lucide-react';
 import type { InboundOrder } from '../../api/inbound-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
+
+// --- localStorage 키 ---
+const STORAGE_KEY = 'hanvoxel:inbound:mockOrders';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -41,7 +46,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 // --- Mock 데이터 ---
 const MOCK_ORDERS: InboundOrder[] = [
   {
-    id: 'ib-1', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-1', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v1', vendorName: '현대모비스', status: 'QC_PENDING',
     expectedDate: '2026-03-15', actualDate: '2026-03-15', notes: '가솔린 엔진 밸브 입고',
     items: [
@@ -50,7 +55,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-10T09:00:00Z', updatedAt: '2026-03-15T14:00:00Z',
   },
   {
-    id: 'ib-2', siteId: 'demo', reorderRecommendationId: 'rec-1',
+    id: 'ib-2', siteId: MOCK_SITE_ID, reorderRecommendationId: 'rec-1',
     vendorId: 'v2', vendorName: '삼성SDI', status: 'ORDERED',
     expectedDate: '2026-03-20', actualDate: null, notes: '배터리 셀 자동발주',
     items: [
@@ -59,7 +64,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-12T10:00:00Z', updatedAt: '2026-03-12T10:00:00Z',
   },
   {
-    id: 'ib-3', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-3', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v3', vendorName: 'LG화학', status: 'ARRIVED',
     expectedDate: '2026-03-17', actualDate: '2026-03-17', notes: null,
     items: [
@@ -69,7 +74,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-14T11:00:00Z', updatedAt: '2026-03-17T08:00:00Z',
   },
   {
-    id: 'ib-4', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-4', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v4', vendorName: '포스코', status: 'STOCKED',
     expectedDate: '2026-03-10', actualDate: '2026-03-10', notes: '철강 코일 정기 입고',
     items: [
@@ -83,49 +88,138 @@ interface InboundManagementProps {
   onBack: () => void;
 }
 
+// localStorage에서 mock 데이터 로드 (변경사항 유지용)
+function loadMockOrders(): InboundOrder[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as InboundOrder[];
+  } catch { /* 파싱 실패 시 기본값 사용 */ }
+  return MOCK_ORDERS;
+}
+
+// localStorage에 mock 데이터 저장
+function saveMockOrders(orders: InboundOrder[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+  } catch { /* 저장 실패 무시 */ }
+}
+
 export function InboundManagement({ onBack }: InboundManagementProps) {
   const [orders, setOrders] = useState<InboundOrder[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<InboundOrder | null>(null);
+  const [apiOffline, setApiOffline] = useState(false);
+  const isUsingMock = useRef(false);
 
   // 데이터 로드
   useEffect(() => {
     (async () => {
       try {
         const { getInboundOrders } = await import('../../api/inbound-api');
-        const result = await getInboundOrders('demo', statusFilter || undefined);
-        if (result.orders.length > 0) { setOrders(result.orders); return; }
-      } catch { /* mock fallback */ }
+        const result = await getInboundOrders(MOCK_SITE_ID, statusFilter || undefined);
+        // API 성공 — 빈 결과여도 API 데이터 사용
+        setOrders(result.orders);
+        setApiOffline(false);
+        isUsingMock.current = false;
+        if (result.orders.length === 0) {
+          console.info(
+            '%c[HanVoxel] API 연결 성공 — 입고 주문 0건 (시드 데이터 실행 필요: npm run db:seed:mock:reset)',
+            'color: #3B82F6;',
+          );
+        } else {
+          console.info(
+            `%c[HanVoxel] API 연결 성공 — 입고 주문 ${result.orders.length}건 로드`,
+            'color: #10B981;',
+          );
+        }
+        return;
+      } catch (err) {
+        // API 연결 실패 — 콘솔에 명확한 경고 출력
+        console.warn(
+          '%c[HanVoxel] API 연결 실패 — 데모 데이터를 사용합니다',
+          'color: #F59E0B; font-weight: bold; font-size: 14px;',
+        );
+        console.warn(
+          '%c  1. api-gateway가 실행 중인지 확인: cd packages/api-gateway && npm run dev',
+          'color: #8B949E;',
+        );
+        console.warn(
+          '%c  2. DB 연결이 정상인지 확인: .env 파일의 DATABASE_URL',
+          'color: #8B949E;',
+        );
+        console.warn(
+          '%c  3. 시드 데이터 실행: npm run db:seed:mock:reset',
+          'color: #8B949E;',
+        );
+        console.error('[HanVoxel] API 에러 상세:', err);
+        setApiOffline(true);
+        isUsingMock.current = true;
+      }
+      // API 실패 → localStorage에 저장된 mock 데이터 사용 (변경사항 유지)
+      const mockData = loadMockOrders();
       const filtered = statusFilter
-        ? MOCK_ORDERS.filter((o) => o.status === statusFilter)
-        : MOCK_ORDERS;
+        ? mockData.filter((o) => o.status === statusFilter)
+        : mockData;
       setOrders(filtered);
     })();
   }, [statusFilter]);
 
+  // mock 사용 시 orders 변경될 때마다 localStorage 동기화
+  const updateOrders = useCallback((updater: (prev: InboundOrder[]) => InboundOrder[]) => {
+    setOrders((prev) => {
+      const next = updater(prev);
+      if (isUsingMock.current) {
+        // 필터 적용 중일 수 있으므로 전체 mock 데이터도 업데이트
+        const allMock = loadMockOrders();
+        const updatedAll = updater(allMock);
+        saveMockOrders(updatedAll);
+      }
+      return next;
+    });
+  }, []);
+
   // 도착 확인 핸들러 (ORDERED/IN_TRANSIT → ARRIVED)
   const handleArrive = useCallback(async (orderId: string) => {
+    let apiSuccess = false;
     try {
       const { arriveInboundOrder } = await import('../../api/inbound-api');
       await arriveInboundOrder(orderId);
-    } catch { /* mock */ }
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'ARRIVED' as const, actualDate: new Date().toISOString().slice(0, 10) } : o));
-  }, []);
+      apiSuccess = true;
+    } catch (err) {
+      console.warn(
+        `%c[HanVoxel] 도착확인 API 실패 (orderId: ${orderId}) — 로컬에만 반영합니다`,
+        'color: #F59E0B; font-weight: bold;',
+      );
+      console.error('[HanVoxel] 도착확인 에러:', err);
+    }
+    if (apiSuccess) console.log(`%c[HanVoxel] 도착확인 성공 (orderId: ${orderId})`, 'color: #10B981;');
+    updateOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'ARRIVED' as const, actualDate: new Date().toISOString().slice(0, 10) } : o));
+  }, [updateOrders]);
 
   // QC 시작 핸들러 (ARRIVED → QC_PENDING)
   const handleStartQc = useCallback(async (orderId: string) => {
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'QC_PENDING' as const } : o));
-  }, []);
+    console.log(`%c[HanVoxel] QC 시작 (orderId: ${orderId})`, 'color: #F97316;');
+    updateOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'QC_PENDING' as const } : o));
+  }, [updateOrders]);
 
   // QC 통과 핸들러 (QC_PENDING → STOCKED)
   const handleQcPass = useCallback(async (orderId: string) => {
+    let apiSuccess = false;
     try {
       const { passQcInboundOrder } = await import('../../api/inbound-api');
       await passQcInboundOrder(orderId);
-    } catch { /* mock */ }
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'STOCKED' as const } : o));
-  }, []);
+      apiSuccess = true;
+    } catch (err) {
+      console.warn(
+        `%c[HanVoxel] QC통과 API 실패 (orderId: ${orderId}) — 로컬에만 반영합니다`,
+        'color: #F59E0B; font-weight: bold;',
+      );
+      console.error('[HanVoxel] QC통과 에러:', err);
+    }
+    if (apiSuccess) console.log(`%c[HanVoxel] QC통과 성공 (orderId: ${orderId})`, 'color: #10B981;');
+    updateOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'STOCKED' as const } : o));
+  }, [updateOrders]);
 
   // 총 금액 계산
   const calcTotal = (items: InboundOrder['items']) =>
@@ -154,6 +248,25 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
           <Plus size={16} /> 입고 주문 생성
         </button>
       </div>
+
+      {/* API 오프라인 경고 배너 */}
+      {apiOffline && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 16px', marginBottom: 16, borderRadius: 8,
+          background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+        }}>
+          <WifiOff size={16} style={{ color: C.yellow, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600 }}>
+              API 서버 연결 실패 — 데모 데이터를 사용 중입니다
+            </div>
+            <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              변경사항은 브라우저에만 저장됩니다. 브라우저 콘솔(F12)에서 상세 에러를 확인하세요.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 상태 필터 */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -368,7 +481,17 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
 
       {/* 생성 모달 */}
       {showCreateModal && (
-        <CreateInboundModal onClose={() => setShowCreateModal(false)} onCreated={(order) => { setOrders((prev) => [order, ...prev]); setShowCreateModal(false); }} />
+        <CreateInboundModal onClose={() => setShowCreateModal(false)} onCreated={(order) => {
+          setOrders((prev) => {
+            const next = [order, ...prev];
+            if (isUsingMock.current) {
+              const allMock = loadMockOrders();
+              saveMockOrders([order, ...allMock]);
+            }
+            return next;
+          });
+          setShowCreateModal(false);
+        }} />
       )}
     </div>
   );
@@ -389,17 +512,22 @@ function CreateInboundModal({ onClose, onCreated }: { onClose: () => void; onCre
     try {
       const { createInboundOrder } = await import('../../api/inbound-api');
       const order = await createInboundOrder({
-        siteId: 'demo',
+        siteId: MOCK_SITE_ID,
         vendorName: vendorName || undefined,
         expectedDate: expectedDate || undefined,
         notes: notes || undefined,
         items: items.filter((i) => i.skuCode),
       });
       onCreated(order);
-    } catch {
+    } catch (err) {
+      console.warn(
+        '%c[HanVoxel] 입고주문 생성 API 실패 — 로컬 데모 데이터로 생성합니다',
+        'color: #F59E0B; font-weight: bold;',
+      );
+      console.error('[HanVoxel] 생성 에러:', err);
       // mock 생성
       const mockOrder: InboundOrder = {
-        id: `ib-new-${Date.now()}`, siteId: 'demo', reorderRecommendationId: null,
+        id: `ib-new-${Date.now()}`, siteId: MOCK_SITE_ID, reorderRecommendationId: null,
         vendorId: null, vendorName: vendorName || null, status: 'ORDERED',
         expectedDate: expectedDate || null, actualDate: null, notes: notes || null,
         items: items.filter((i) => i.skuCode).map((i, idx) => ({

@@ -9,6 +9,7 @@ import SlaSettings from './SlaSettings';
 import SlaReport from './SlaReport';
 import type { SlaTargetData, SlaMetricData, SlaViolationData } from '../../api/sla-api';
 import { getSlaTarget, getSlaMetrics, getSlaViolations } from '../../api/sla-api';
+import { MOCK_COMPANY_ID, MOCK_SITE_ID, MOCK_SLA_TARGET_ID } from '../../constants/mock-ids';
 
 // ── 다크 테마 색상 상수 ─────────────────────────────────
 const COLORS = {
@@ -66,7 +67,7 @@ function generateMockMetrics(): SlaMetricData[] {
     const isViolationDay = i % 7 === 3 || i === 5;
     metrics.push({
       id: `mock-metric-${i}`,
-      slaTargetId: 'mock-target',
+      slaTargetId: MOCK_SLA_TARGET_ID,
       recordDate: dateStr,
       deliveryOnTimeRate: isViolationDay ? 94.2 + Math.random() * 2 : 97.5 + Math.random() * 2,
       misshipmentRate: isViolationDay ? 0.8 + Math.random() * 0.5 : 0.2 + Math.random() * 0.3,
@@ -83,9 +84,9 @@ function generateMockMetrics(): SlaMetricData[] {
 }
 
 const MOCK_TARGET: SlaTargetData = {
-  id: 'mock-target',
-  companyId: 'demo-company',
-  siteId: 'demo-site',
+  id: MOCK_SLA_TARGET_ID,
+  companyId: MOCK_COMPANY_ID,
+  siteId: MOCK_SITE_ID,
   name: '2026 Q1 SLA',
   deliveryOnTimeTarget: 98.0,
   misshipmentRateLimit: 0.5,
@@ -99,17 +100,17 @@ const MOCK_TARGET: SlaTargetData = {
 
 const MOCK_VIOLATIONS: SlaViolationData[] = [
   {
-    id: 'mock-v1', slaTargetId: 'mock-target', metricName: 'delivery_on_time',
+    id: 'mock-v1', slaTargetId: MOCK_SLA_TARGET_ID, metricName: 'delivery_on_time',
     targetValue: 98.0, actualValue: 94.8, violationDate: new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10),
     severity: 'critical', escalated: true, resolvedAt: null, note: null,
   },
   {
-    id: 'mock-v2', slaTargetId: 'mock-target', metricName: 'misshipment_rate',
+    id: 'mock-v2', slaTargetId: MOCK_SLA_TARGET_ID, metricName: 'misshipment_rate',
     targetValue: 0.5, actualValue: 1.2, violationDate: new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10),
     severity: 'warning', escalated: false, resolvedAt: null, note: null,
   },
   {
-    id: 'mock-v3', slaTargetId: 'mock-target', metricName: 'avg_processing_time',
+    id: 'mock-v3', slaTargetId: MOCK_SLA_TARGET_ID, metricName: 'avg_processing_time',
     targetValue: 120, actualValue: 142, violationDate: new Date(Date.now() - 86400000 * 10).toISOString().slice(0, 10),
     severity: 'warning', escalated: false, resolvedAt: new Date(Date.now() - 86400000 * 8).toISOString(), note: '인력 충원 완료',
   },
@@ -618,8 +619,8 @@ export default function SlaDashboard({ onBack }: SlaDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [selectedViolation, setSelectedViolation] = useState<SlaViolationData | null>(null);
 
-  const companyId = 'demo-company';
-  const siteId = 'demo-site';
+  const companyId = MOCK_COMPANY_ID;
+  const siteId = MOCK_SITE_ID;
 
   // localStorage에서 저장된 설정 반영
   const applyLocalSettings = useCallback((targetData: SlaTargetData): SlaTargetData => {

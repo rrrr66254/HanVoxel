@@ -129,6 +129,66 @@ hanvoxel/
 - **타임스탬프**: 모든 테이블에 `created_at`, `updated_at` 필수
 - **소프트 삭제**: 중요 데이터는 `deleted_at` 컬럼으로 처리
 
+### Prisma 마이그레이션 주의사항
+
+- **Shadow Database 필수**: `prisma migrate dev`는 shadow DB를 사용하여 마이그레이션을 검증한다. shadow DB에 `uuid-ossp`, `postgis`, `fuzzystrmatch` 확장이 없으면 `uuid_generate_v4() does not exist` 오류가 발생한다.
+- **환경변수**: `packages/api-gateway/.env`에 `SHADOW_DATABASE_URL`이 설정되어 있어야 한다 (확장이 설치된 별도 DB).
+- **수동 SQL 마이그레이션 금지**: 마이그레이션 파일을 직접 SQL로 작성하지 않는다. 반드시 `prisma migrate dev`로 자동 생성한다. 수동 SQL은 shadow DB에서 확장 누락 문제를 일으킨다.
+- **마이그레이션 파일 수정 금지**: 이미 적용된 마이그레이션 파일을 수정하면 체크섬 불일치가 발생한다.
+
+### 로컬 DB 셋업 절차 (Docker 기반)
+
+> `prisma migrate dev` 실행 전 반드시 아래 절차를 완료해야 한다.
+
+```bash
+# 1. Docker PostgreSQL 시작
+docker-compose up -d postgres
+
+# 2. template1에 확장 설치 (새 DB 생성 시 자동 상속)
+docker exec -it hanvoxel-postgres psql -U hanvoxel -d template1
+# psql 셸 안에서:
+#   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+#   CREATE EXTENSION IF NOT EXISTS postgis;
+#   CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+#   \q
+
+# 3. 메인 DB에도 확장 설치
+docker exec -it hanvoxel-postgres psql -U hanvoxel -d hanvoxel
+# psql 셸 안에서:
+#   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+#   CREATE EXTENSION IF NOT EXISTS postgis;
+#   CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+#   \q
+
+# 4. Shadow DB 생성 및 확장 설치
+docker exec -it hanvoxel-postgres psql -U hanvoxel -d hanvoxel -c "CREATE DATABASE hanvoxel_shadow;"
+docker exec -it hanvoxel-postgres psql -U hanvoxel -d hanvoxel_shadow
+# psql 셸 안에서:
+#   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+#   CREATE EXTENSION IF NOT EXISTS postgis;
+#   CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+#   \q
+
+# 5. .env 설정 (packages/api-gateway/.env에 추가)
+#   SHADOW_DATABASE_URL="postgresql://hanvoxel:hanvoxel_password@localhost:5432/hanvoxel_shadow"
+
+# 6. 마이그레이션 실행
+cd packages/api-gateway
+npx prisma migrate reset   # 초기 셋업 시 (데이터 초기화)
+npx prisma migrate dev     # 이후 스키마 변경 시
+```
+
+### DB 접속 정보 (Docker)
+
+| 항목 | 값 |
+|------|------|
+| Host | localhost |
+| Port | 5432 |
+| User | hanvoxel |
+| Password | hanvoxel_password |
+| Database | hanvoxel |
+| Shadow DB | hanvoxel_shadow |
+
 ### 전체 테이블 목록
 
 ```
