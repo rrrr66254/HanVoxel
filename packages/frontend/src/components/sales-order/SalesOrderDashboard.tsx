@@ -21,6 +21,8 @@ import {
   X,
   Loader2,
   ShoppingCart,
+  Save,
+  Edit3,
 } from 'lucide-react';
 import type { SalesOrder, SalesOrderItem, MrpResult } from '../../api/sales-order-api';
 import { MOCK_SITE_ID } from '../../constants/mock-ids';
@@ -99,6 +101,7 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+  const [editOrder, setEditOrder] = useState<SalesOrder | null>(null);
   const [mrpResults, setMrpResults] = useState<MrpResult[]>([]);
   const [mrpLoading, setMrpLoading] = useState(false);
   const [mrpViewMode, setMrpViewMode] = useState<'analysis' | 'results'>('analysis');
@@ -190,6 +193,28 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
       else next.add(id);
       return next;
     });
+  }, []);
+
+  // 수주 수정 저장
+  const handleEditSave = useCallback(async (updated: SalesOrder) => {
+    try {
+      const { updateSalesOrder } = await import('../../api/sales-order-api');
+      const saved = await updateSalesOrder(updated.id, {
+        customerName: updated.customerName ?? undefined,
+        deliveryDeadline: updated.deliveryDeadline ?? undefined,
+        status: updated.status,
+        notes: updated.notes ?? undefined,
+        items: updated.items as SalesOrderItem[],
+      });
+      setOrders((prev) => prev.map((o) => o.id === saved.id ? saved : o));
+      console.log(`%c[HanVoxel] 수주 수정 성공 (${saved.orderNo})`, 'color: #10B981;');
+    } catch (err) {
+      console.warn(`%c[HanVoxel] 수주 수정 API 실패 — 로컬에만 반영`, 'color: #F59E0B; font-weight: bold;');
+      console.error('[HanVoxel] 수정 에러:', err);
+      // API 실패 시에도 로컬 반영
+      setOrders((prev) => prev.map((o) => o.id === updated.id ? updated : o));
+    }
+    setEditOrder(null);
   }, []);
 
   // MRP 패널 (분석 / 결과 분리)
@@ -503,10 +528,11 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
           const totalAmount = (order.items as SalesOrderItem[]).reduce((s, i) => s + i.qty * (i.unitPrice ?? 0), 0);
 
           return (
-            <div key={order.id} style={{
+            <div key={order.id} onClick={() => setEditOrder(order)} style={{
               background: C.card, borderRadius: 10, padding: '16px 20px',
               border: `1px solid ${isUrgent ? C.red : C.border}`,
               boxShadow: isUrgent ? `0 0 0 1px ${C.red}44` : 'none',
+              cursor: 'pointer', transition: 'border-color 0.15s',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
@@ -545,7 +571,7 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
 
                   {/* MRP 실행/조회 버튼 */}
                   {order.status === 'RECEIVED' && (
-                    <button onClick={() => handleRunMrp(order)} style={{
+                    <button onClick={(e) => { e.stopPropagation(); handleRunMrp(order); }} style={{
                       padding: '4px 10px', fontSize: 11, borderRadius: 6,
                       background: `${C.purple}15`, color: C.purple,
                       border: `1px solid ${C.purple}44`, cursor: 'pointer',
@@ -555,7 +581,7 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
                     </button>
                   )}
                   {(order.status === 'MRP_CHECKED' || order.mrpResults) && (
-                    <button onClick={() => handleViewMrp(order)} style={{
+                    <button onClick={(e) => { e.stopPropagation(); handleViewMrp(order); }} style={{
                       padding: '4px 10px', fontSize: 11, borderRadius: 6,
                       background: `${C.accent}15`, color: C.accent,
                       border: `1px solid ${C.accent}44`, cursor: 'pointer',
@@ -577,6 +603,15 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
         )}
       </div>
 
+      {/* 수주 상세/편집 모달 */}
+      {editOrder && (
+        <EditSalesOrderModal
+          order={editOrder}
+          onClose={() => setEditOrder(null)}
+          onSave={handleEditSave}
+        />
+      )}
+
       {/* 수주 등록 모달 */}
       {showCreate && (
         <CreateSalesOrderModal
@@ -584,6 +619,156 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
           onCreated={(order) => { setOrders((prev) => [order, ...prev]); setShowCreate(false); }}
         />
       )}
+    </div>
+  );
+}
+
+// --- 수주 상세/편집 모달 ---
+function EditSalesOrderModal({ order, onClose, onSave }: {
+  order: SalesOrder;
+  onClose: () => void;
+  onSave: (updated: SalesOrder) => void;
+}) {
+  const [customerName, setCustomerName] = useState(order.customerName ?? '');
+  const [deliveryDeadline, setDeliveryDeadline] = useState(
+    order.deliveryDeadline ? order.deliveryDeadline.slice(0, 10) : '',
+  );
+  const [status, setStatus] = useState(order.status);
+  const [notes, setNotes] = useState(order.notes ?? '');
+  const [items, setItems] = useState<Array<{ productSku: string; productName: string; qty: number; unitPrice: number }>>(
+    (order.items as SalesOrderItem[]).map((i) => ({
+      productSku: i.productSku,
+      productName: i.productName ?? '',
+      qty: i.qty,
+      unitPrice: i.unitPrice ?? 0,
+    })),
+  );
+  const [saving, setSaving] = useState(false);
+
+  const addItem = () => setItems([...items, { productSku: '', productName: '', qty: 0, unitPrice: 0 }]);
+  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
+
+  const totalAmount = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({
+      ...order,
+      customerName: customerName || null,
+      deliveryDeadline: deliveryDeadline || null,
+      status,
+      notes: notes || null,
+      items: items.filter((i) => i.productSku),
+      updatedAt: new Date().toISOString(),
+    });
+    setSaving(false);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '7px 10px', fontSize: 13,
+    background: '#0D1117', border: '1px solid #30363D', borderRadius: 6,
+    color: '#C9D1D9', outline: 'none', boxSizing: 'border-box',
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: '#8B949E', marginBottom: 4, display: 'block' };
+
+  const statusOptions = [
+    { value: 'RECEIVED', label: '접수' },
+    { value: 'MRP_CHECKED', label: 'MRP완료' },
+    { value: 'CONFIRMED', label: '확정' },
+    { value: 'IN_PRODUCTION', label: '생산중' },
+    { value: 'SHIPPED', label: '출하완료' },
+  ];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={onClose}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 28, width: 640, maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Edit3 size={16} style={{ color: C.purple }} />
+            <h3 style={{ color: C.text, margin: 0, fontSize: 16 }}>수주 상세 · {order.orderNo}</h3>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer' }}><X size={18} /></button>
+        </div>
+
+        {/* 기본 정보 */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>고객사명</label>
+            <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={inputStyle} placeholder="고객사명" />
+          </div>
+          <div>
+            <label style={labelStyle}>납기일</label>
+            <input type="date" value={deliveryDeadline} onChange={(e) => setDeliveryDeadline(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>상태</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* 수주일/수주번호 (읽기 전용) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div>
+            <label style={labelStyle}>수주번호</label>
+            <div style={{ ...inputStyle, background: '#161B22', color: C.textMuted }}>{order.orderNo}</div>
+          </div>
+          <div>
+            <label style={labelStyle}>수주일</label>
+            <div style={{ ...inputStyle, background: '#161B22', color: C.textMuted }}>{order.orderDate}</div>
+          </div>
+        </div>
+
+        <label style={labelStyle}>비고</label>
+        <input value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, marginBottom: 16 }} placeholder="메모" />
+
+        {/* 품목 테이블 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <label style={labelStyle}>완성품 목록</label>
+          <button onClick={addItem} style={{ fontSize: 11, color: C.accent, background: 'none', border: 'none', cursor: 'pointer' }}>+ 품목 추가</button>
+        </div>
+
+        <div style={{ background: C.bg, borderRadius: 8, padding: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 100px 24px', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 10, color: C.textMuted }}>SKU</span>
+            <span style={{ fontSize: 10, color: C.textMuted }}>품명</span>
+            <span style={{ fontSize: 10, color: C.textMuted }}>수량</span>
+            <span style={{ fontSize: 10, color: C.textMuted }}>단가</span>
+            <span />
+          </div>
+          {items.map((item, idx) => (
+            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 100px 24px', gap: 8, marginBottom: 6 }}>
+              <input value={item.productSku} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], productSku: e.target.value }; setItems(n); }} style={inputStyle} placeholder="SKU" />
+              <input value={item.productName} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], productName: e.target.value }; setItems(n); }} style={inputStyle} placeholder="품명" />
+              <input type="number" value={item.qty || ''} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], qty: Number(e.target.value) }; setItems(n); }} style={inputStyle} placeholder="수량" />
+              <input type="number" value={item.unitPrice || ''} onChange={(e) => { const n = [...items]; n[idx] = { ...n[idx], unitPrice: Number(e.target.value) }; setItems(n); }} style={inputStyle} placeholder="단가" />
+              {items.length > 1 && (
+                <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 0 }}><X size={14} /></button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 합계 + 저장 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+            합계: ₩{totalAmount.toLocaleString()}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 6, background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, cursor: 'pointer', fontSize: 13 }}>취소</button>
+            <button onClick={handleSave} disabled={saving} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 20px', borderRadius: 6, background: C.purple,
+              border: 'none', color: '#fff', cursor: saving ? 'wait' : 'pointer',
+              fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1,
+            }}>
+              <Save size={14} /> {saving ? '저장 중...' : '변경사항 저장'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

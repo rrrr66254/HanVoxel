@@ -39,6 +39,18 @@ export async function listHandler(req: Request, res: Response) {
   }
 }
 
+export async function updateHandler(req: Request, res: Response) {
+  try {
+    const id = String(req.params.id ?? '');
+    const { customerName, deliveryDeadline, status, notes, items } = req.body;
+    const order = await soService.updateSalesOrder(id, { customerName, deliveryDeadline, status, notes, items });
+    res.json({ success: true, data: order });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '수주 수정 실패';
+    res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: msg } });
+  }
+}
+
 export async function detailHandler(req: Request, res: Response) {
   try {
     const order = await soService.getSalesOrder(String(req.params.id));

@@ -98,6 +98,34 @@ export async function getSalesOrders(
   return { orders, total, page, limit };
 }
 
+// ── 수주 수정 ───────────────────────────────────
+
+export async function updateSalesOrder(
+  id: string,
+  input: {
+    customerName?: string;
+    deliveryDeadline?: string;
+    status?: string;
+    notes?: string;
+    items?: SalesOrderItemInput[];
+  },
+) {
+  const data: Record<string, unknown> = {};
+  if (input.customerName !== undefined) data.customerName = input.customerName;
+  if (input.deliveryDeadline !== undefined) data.deliveryDeadline = input.deliveryDeadline ? new Date(input.deliveryDeadline) : null;
+  if (input.status !== undefined) data.status = input.status;
+  if (input.notes !== undefined) data.notes = input.notes || null;
+  if (input.items !== undefined) data.items = input.items as unknown as Record<string, unknown>[];
+
+  return prisma.salesOrder.update({
+    where: { id },
+    data,
+    include: {
+      mrpResults: { select: { id: true, status: true } },
+    },
+  });
+}
+
 // ── 수주 상세 조회 ──────────────────────────────
 
 export async function getSalesOrder(id: string) {

@@ -114,6 +114,26 @@ export async function getSalesOrders(
   return { orders: json.data ?? [], total: json.meta?.total ?? 0 };
 }
 
+export async function updateSalesOrder(
+  id: string,
+  data: {
+    customerName?: string;
+    deliveryDeadline?: string;
+    status?: string;
+    notes?: string;
+    items?: SalesOrderItem[];
+  },
+): Promise<SalesOrder> {
+  const resp = await fetch(`${API_BASE}/sales-orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await resp.json();
+  if (!resp.ok) throw new Error(json.error?.message ?? `HTTP ${resp.status}`);
+  return json.data;
+}
+
 export async function getSalesOrder(id: string): Promise<SalesOrder> {
   const resp = await fetch(`${API_BASE}/sales-orders/${id}`);
   const json = await resp.json();
