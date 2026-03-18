@@ -129,6 +129,13 @@ hanvoxel/
 - **타임스탬프**: 모든 테이블에 `created_at`, `updated_at` 필수
 - **소프트 삭제**: 중요 데이터는 `deleted_at` 컬럼으로 처리
 
+### Prisma 마이그레이션 주의사항
+
+- **Shadow Database 필수**: `prisma migrate dev`는 shadow DB를 사용하여 마이그레이션을 검증한다. shadow DB에 `uuid-ossp`, `postgis`, `fuzzystrmatch` 확장이 없으면 `uuid_generate_v4() does not exist` 오류가 발생한다.
+- **환경변수**: `packages/api-gateway/.env`에 `SHADOW_DATABASE_URL`이 설정되어 있어야 한다 (확장이 설치된 별도 DB).
+- **수동 SQL 마이그레이션 금지**: 마이그레이션 파일을 직접 SQL로 작성하지 않는다. 반드시 `prisma migrate dev`로 자동 생성한다. 수동 SQL은 shadow DB에서 확장 누락 문제를 일으킨다.
+- **마이그레이션 파일 수정 금지**: 이미 적용된 마이그레이션 파일을 수정하면 체크섬 불일치가 발생한다.
+
 ### 전체 테이블 목록
 
 ```
