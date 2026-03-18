@@ -54,7 +54,7 @@ export async function seedMockQcSla(prisma: PrismaClient): Promise<void> {
         ${totalOrders}, ${onTime}, ${misCount}, ${totalPicks}, ${accPicks},
         NOW())
       ON CONFLICT (sla_target_id, record_date) DO UPDATE SET
-        delivery_on_time_rate = EXCLUDED.delivery_on_time_rate, updated_at = NOW()
+        delivery_on_time_rate = EXCLUDED.delivery_on_time_rate
     `);
   }
 
