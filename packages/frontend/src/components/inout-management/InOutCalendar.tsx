@@ -17,6 +17,7 @@ import {
   Filter,
 } from 'lucide-react';
 import type { CalendarEntry } from '../../api/inbound-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -62,7 +63,7 @@ function generateMockCalendar(year: number, month: number): CalendarEntry[] {
       const st = statuses[Math.floor(rng() * statuses.length)];
       entries.push({
         id: `in-${d}-${i}`,
-        siteId: 'demo',
+        siteId: MOCK_SITE_ID,
         type: 'INBOUND',
         scheduledDate: dateStr,
         timeSlot: slots[Math.floor(rng() * slots.length)],
@@ -80,7 +81,7 @@ function generateMockCalendar(year: number, month: number): CalendarEntry[] {
       const st = statuses[Math.floor(rng() * statuses.length)];
       entries.push({
         id: `out-${d}-${i}`,
-        siteId: 'demo',
+        siteId: MOCK_SITE_ID,
         type: 'OUTBOUND',
         scheduledDate: dateStr,
         timeSlot: slots[Math.floor(rng() * slots.length)],
@@ -131,7 +132,7 @@ export function InOutCalendar({ onBack }: InOutCalendarProps) {
     (async () => {
       try {
         const { getCalendarAll } = await import('../../api/outbound-api');
-        const data = await getCalendarAll('demo', year, month, filter === 'ALL' ? undefined : filter);
+        const data = await getCalendarAll(MOCK_SITE_ID, year, month, filter === 'ALL' ? undefined : filter);
         if (data.length > 0) { setEntries(data); return; }
       } catch { /* API 미연결 */ }
       setEntries(generateMockCalendar(year, month));

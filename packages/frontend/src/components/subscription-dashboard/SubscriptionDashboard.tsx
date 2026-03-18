@@ -36,6 +36,7 @@ import {
   cancelSubscription,
   createCheckout,
 } from '../../api/billing-api';
+import { MOCK_COMPANY_ID } from '../../constants/mock-ids';
 
 // ── 테마 색상 상수 ────────────────────────────────────────
 const COLORS = {
@@ -49,7 +50,7 @@ const COLORS = {
 
 // ── Mock 데이터 ────────────────────────────────────────
 const MOCK_SUBSCRIPTION: SubscriptionDetail = {
-  companyId: 'demo-company',
+  companyId: MOCK_COMPANY_ID,
   companyName: '(주)한복셀 물류',
   planType: 'ENTERPRISE',
   planName: 'Enterprise',
@@ -170,7 +171,7 @@ const PLAN_COMPARISON = [
   },
 ];
 
-const COMPANY_ID = 'demo-company';
+const COMPANY_ID = MOCK_COMPANY_ID;
 
 // ── 상태 라벨/컬러 매핑 ────────────────────────────────
 const statusLabel: Record<string, string> = {

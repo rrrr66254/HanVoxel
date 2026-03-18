@@ -41,6 +41,7 @@ import {
   pickLine,
   getPickingStats,
 } from '../../api/picking-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // ── 테마 색상 상수 ──────────────────────────────────────
 const COLORS = {
@@ -115,7 +116,7 @@ type MobileView = 'list' | 'detail' | 'scan';
 type ListMode = 'card' | 'table';
 
 const DEMO_WORKER = { id: 'w-1', name: '김작업' };
-const SITE_ID = 'site-demo';
+const SITE_ID = MOCK_SITE_ID;
 const LIST_MODE_KEY = 'hanvoxel_picking_list_mode';
 
 // ── 상태 라벨/색상 매핑 ─────────────────────────────────

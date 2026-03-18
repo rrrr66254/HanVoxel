@@ -18,6 +18,7 @@ import {
   PackageCheck,
 } from 'lucide-react';
 import type { StockCheckRequest } from '../../api/sales-order-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -75,7 +76,7 @@ export function StockCheckDashboard({ onBack }: StockCheckDashboardProps) {
     (async () => {
       try {
         const { getStockChecks } = await import('../../api/sales-order-api');
-        const res = await getStockChecks('demo', statusFilter || undefined);
+        const res = await getStockChecks(MOCK_SITE_ID, statusFilter || undefined);
         if (res.checks.length > 0) { setChecks(res.checks); return; }
       } catch { /* mock */ }
       let filtered = MOCK_CHECKS;

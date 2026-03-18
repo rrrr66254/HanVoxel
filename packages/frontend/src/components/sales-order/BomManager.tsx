@@ -16,6 +16,7 @@ import {
   Search,
 } from 'lucide-react';
 import type { BomItem } from '../../api/sales-order-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -27,12 +28,12 @@ const C = {
 
 // --- Mock 데이터 ---
 const MOCK_BOM: BomItem[] = [
-  { id: 'b1', siteId: 'demo', productSku: 'SKU-2891', materialSku: 'MAT-ST-001', qtyPerUnit: 2, unit: 'kg', leadTimeDays: 7, notes: '철판' },
-  { id: 'b2', siteId: 'demo', productSku: 'SKU-2891', materialSku: 'MAT-BT-001', qtyPerUnit: 8, unit: '개', leadTimeDays: 3, notes: '볼트' },
-  { id: 'b3', siteId: 'demo', productSku: 'SKU-2891', materialSku: 'MAT-PT-001', qtyPerUnit: 0.1, unit: 'L', leadTimeDays: 5, notes: '도료' },
-  { id: 'b4', siteId: 'demo', productSku: 'SKU-4501', materialSku: 'MAT-LI-001', qtyPerUnit: 0.5, unit: 'kg', leadTimeDays: 14, notes: '리튬 원료' },
-  { id: 'b5', siteId: 'demo', productSku: 'SKU-4501', materialSku: 'MAT-NI-001', qtyPerUnit: 1, unit: 'kg', leadTimeDays: 10, notes: '니켈 분말' },
-  { id: 'b6', siteId: 'demo', productSku: 'SKU-4501', materialSku: 'MAT-CO-001', qtyPerUnit: 0.2, unit: 'kg', leadTimeDays: 12, notes: '코발트 분말' },
+  { id: 'b1', siteId: MOCK_SITE_ID, productSku: 'SKU-2891', materialSku: 'MAT-ST-001', qtyPerUnit: 2, unit: 'kg', leadTimeDays: 7, notes: '철판' },
+  { id: 'b2', siteId: MOCK_SITE_ID, productSku: 'SKU-2891', materialSku: 'MAT-BT-001', qtyPerUnit: 8, unit: '개', leadTimeDays: 3, notes: '볼트' },
+  { id: 'b3', siteId: MOCK_SITE_ID, productSku: 'SKU-2891', materialSku: 'MAT-PT-001', qtyPerUnit: 0.1, unit: 'L', leadTimeDays: 5, notes: '도료' },
+  { id: 'b4', siteId: MOCK_SITE_ID, productSku: 'SKU-4501', materialSku: 'MAT-LI-001', qtyPerUnit: 0.5, unit: 'kg', leadTimeDays: 14, notes: '리튬 원료' },
+  { id: 'b5', siteId: MOCK_SITE_ID, productSku: 'SKU-4501', materialSku: 'MAT-NI-001', qtyPerUnit: 1, unit: 'kg', leadTimeDays: 10, notes: '니켈 분말' },
+  { id: 'b6', siteId: MOCK_SITE_ID, productSku: 'SKU-4501', materialSku: 'MAT-CO-001', qtyPerUnit: 0.2, unit: 'kg', leadTimeDays: 12, notes: '코발트 분말' },
 ];
 
 interface BomManagerProps {
@@ -48,7 +49,7 @@ export function BomManager({ onBack }: BomManagerProps) {
     try {
       const { getBom } = await import('../../api/sales-order-api');
       if (searchSku) {
-        const items = await getBom('demo', searchSku);
+        const items = await getBom(MOCK_SITE_ID, searchSku);
         if (items.length > 0) { setBom(items); return; }
       }
     } catch { /* mock */ }
@@ -171,7 +172,7 @@ function AddBomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     if (!productSku || !materialSku || !qtyPerUnit) return;
     try {
       const { createBomItem } = await import('../../api/sales-order-api');
-      await createBomItem({ siteId: 'demo', productSku, materialSku, qtyPerUnit, unit, leadTimeDays, notes: notes || undefined });
+      await createBomItem({ siteId: MOCK_SITE_ID, productSku, materialSku, qtyPerUnit, unit, leadTimeDays, notes: notes || undefined });
     } catch { /* mock */ }
     onCreated();
   };

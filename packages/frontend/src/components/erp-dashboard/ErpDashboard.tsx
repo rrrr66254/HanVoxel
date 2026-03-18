@@ -21,6 +21,7 @@ import {
   getVouchers, createVoucher, confirmVoucher, getVoucherStats, getVoucherPdfUrl,
   getSkuMargins, updateSellingPrice,
 } from '../../api/erp-api';
+import { MOCK_COMPANY_ID, MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // ── 테마 색상 ──────────────────────────────────────────
 const COLORS = {
@@ -63,8 +64,8 @@ const MOCK_MARGINS: SkuMarginData[] = [
   { sku: 'SKU-C300', itemName: '화학원료 C', currentQty: 80, fifoCost: 120000, avgCost: 118000, sellingPrice: 183000, fifoMarginPct: 34.43, avgMarginPct: 35.52, fifoProfit: 63000, avgProfit: 65000 },
 ];
 
-const SITE_ID = 'site-demo';
-const COMPANY_ID = 'company-demo';
+const SITE_ID = MOCK_SITE_ID;
+const COMPANY_ID = MOCK_COMPANY_ID;
 
 type TabKey = 'overview' | 'partners' | 'vouchers' | 'margins';
 

@@ -34,6 +34,7 @@ import type {
   BulkUploadLog,
 } from '../../api/bulk-outbound-api';
 import { getTemplateUrl } from '../../api/bulk-outbound-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -274,8 +275,8 @@ export function BulkOutboundUpload({ onBack }: BulkOutboundUploadProps) {
       try {
         const { bulkUpload, bulkCreate } = await import('../../api/bulk-outbound-api');
         if (file) {
-          const serverResult = await bulkUpload(file, 'demo', platform, columnMapping);
-          const createRes = await bulkCreate('demo', serverResult.uploadLogId, serverResult.rows);
+          const serverResult = await bulkUpload(file, MOCK_SITE_ID, platform, columnMapping);
+          const createRes = await bulkCreate(MOCK_SITE_ID, serverResult.uploadLogId, serverResult.rows);
           setCreateResult({ createdCount: createRes.createdCount, errorCount: createRes.errorCount });
           setStep('result');
           return;
@@ -298,14 +299,14 @@ export function BulkOutboundUpload({ onBack }: BulkOutboundUploadProps) {
   const loadHistory = useCallback(async () => {
     try {
       const { getBulkUploadLogs } = await import('../../api/bulk-outbound-api');
-      const res = await getBulkUploadLogs('demo');
+      const res = await getBulkUploadLogs(MOCK_SITE_ID);
       setUploadLogs(res.logs);
     } catch {
       // 목업
       setUploadLogs([
-        { id: '1', siteId: 'demo', fileName: '쿠팡_출고_20260315.csv', fileSize: 24500, totalRows: 120, successCount: 115, errorCount: 5, warningCount: 8, status: 'COMPLETED', platformType: 'COUPANG', uploadedBy: '관리자', createdAt: '2026-03-15T09:00:00Z' },
-        { id: '2', siteId: 'demo', fileName: '스마트스토어_0316.xlsx', fileSize: 48000, totalRows: 85, successCount: 85, errorCount: 0, warningCount: 3, status: 'COMPLETED', platformType: 'SMARTSTORE', uploadedBy: '관리자', createdAt: '2026-03-16T14:00:00Z' },
-        { id: '3', siteId: 'demo', fileName: '자체몰_주문_0317.csv', fileSize: 12000, totalRows: 42, successCount: 0, errorCount: 42, warningCount: 0, status: 'FAILED', platformType: 'CUSTOM', uploadedBy: '관리자', createdAt: '2026-03-17T10:00:00Z' },
+        { id: '1', siteId: MOCK_SITE_ID, fileName: '쿠팡_출고_20260315.csv', fileSize: 24500, totalRows: 120, successCount: 115, errorCount: 5, warningCount: 8, status: 'COMPLETED', platformType: 'COUPANG', uploadedBy: '관리자', createdAt: '2026-03-15T09:00:00Z' },
+        { id: '2', siteId: MOCK_SITE_ID, fileName: '스마트스토어_0316.xlsx', fileSize: 48000, totalRows: 85, successCount: 85, errorCount: 0, warningCount: 3, status: 'COMPLETED', platformType: 'SMARTSTORE', uploadedBy: '관리자', createdAt: '2026-03-16T14:00:00Z' },
+        { id: '3', siteId: MOCK_SITE_ID, fileName: '자체몰_주문_0317.csv', fileSize: 12000, totalRows: 42, successCount: 0, errorCount: 42, warningCount: 0, status: 'FAILED', platformType: 'CUSTOM', uploadedBy: '관리자', createdAt: '2026-03-17T10:00:00Z' },
       ]);
     }
   }, []);

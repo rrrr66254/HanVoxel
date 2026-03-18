@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Download, Calculator, TrendingUp, Clock, Target, RotateCcw, Info, BarChart3, Database, Activity } from 'lucide-react';
 import * as roiApi from '../../api/roi-api';
 import type { RoiDashboardData } from '../../api/roi-api';
+import { MOCK_COMPANY_ID, MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // ─── 색상 상수 ───
 const COLORS = {
@@ -540,8 +541,8 @@ export function RoiCalculator({ onBack: _onBack }: RoiCalculatorProps) {
   const [trackingError, setTrackingError] = useState<string | null>(null);
 
   // TODO: 실제 운영에서는 로그인된 사용자의 companyId/siteId를 사용
-  const DEMO_COMPANY_ID = 'demo-company';
-  const DEMO_SITE_ID = 'demo-site';
+  const DEMO_COMPANY_ID = MOCK_COMPANY_ID;
+  const DEMO_SITE_ID = MOCK_SITE_ID;
 
   // 추적 탭 활성화 시 대시보드 데이터 로드
   useEffect(() => {

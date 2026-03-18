@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import type { InboundOrder } from '../../api/inbound-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -41,7 +42,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 // --- Mock 데이터 ---
 const MOCK_ORDERS: InboundOrder[] = [
   {
-    id: 'ib-1', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-1', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v1', vendorName: '현대모비스', status: 'QC_PENDING',
     expectedDate: '2026-03-15', actualDate: '2026-03-15', notes: '가솔린 엔진 밸브 입고',
     items: [
@@ -50,7 +51,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-10T09:00:00Z', updatedAt: '2026-03-15T14:00:00Z',
   },
   {
-    id: 'ib-2', siteId: 'demo', reorderRecommendationId: 'rec-1',
+    id: 'ib-2', siteId: MOCK_SITE_ID, reorderRecommendationId: 'rec-1',
     vendorId: 'v2', vendorName: '삼성SDI', status: 'ORDERED',
     expectedDate: '2026-03-20', actualDate: null, notes: '배터리 셀 자동발주',
     items: [
@@ -59,7 +60,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-12T10:00:00Z', updatedAt: '2026-03-12T10:00:00Z',
   },
   {
-    id: 'ib-3', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-3', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v3', vendorName: 'LG화학', status: 'ARRIVED',
     expectedDate: '2026-03-17', actualDate: '2026-03-17', notes: null,
     items: [
@@ -69,7 +70,7 @@ const MOCK_ORDERS: InboundOrder[] = [
     createdAt: '2026-03-14T11:00:00Z', updatedAt: '2026-03-17T08:00:00Z',
   },
   {
-    id: 'ib-4', siteId: 'demo', reorderRecommendationId: null,
+    id: 'ib-4', siteId: MOCK_SITE_ID, reorderRecommendationId: null,
     vendorId: 'v4', vendorName: '포스코', status: 'STOCKED',
     expectedDate: '2026-03-10', actualDate: '2026-03-10', notes: '철강 코일 정기 입고',
     items: [
@@ -94,7 +95,7 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
     (async () => {
       try {
         const { getInboundOrders } = await import('../../api/inbound-api');
-        const result = await getInboundOrders('demo', statusFilter || undefined);
+        const result = await getInboundOrders(MOCK_SITE_ID, statusFilter || undefined);
         if (result.orders.length > 0) { setOrders(result.orders); return; }
       } catch { /* mock fallback */ }
       const filtered = statusFilter
@@ -389,7 +390,7 @@ function CreateInboundModal({ onClose, onCreated }: { onClose: () => void; onCre
     try {
       const { createInboundOrder } = await import('../../api/inbound-api');
       const order = await createInboundOrder({
-        siteId: 'demo',
+        siteId: MOCK_SITE_ID,
         vendorName: vendorName || undefined,
         expectedDate: expectedDate || undefined,
         notes: notes || undefined,
@@ -399,7 +400,7 @@ function CreateInboundModal({ onClose, onCreated }: { onClose: () => void; onCre
     } catch {
       // mock 생성
       const mockOrder: InboundOrder = {
-        id: `ib-new-${Date.now()}`, siteId: 'demo', reorderRecommendationId: null,
+        id: `ib-new-${Date.now()}`, siteId: MOCK_SITE_ID, reorderRecommendationId: null,
         vendorId: null, vendorName: vendorName || null, status: 'ORDERED',
         expectedDate: expectedDate || null, actualDate: null, notes: notes || null,
         items: items.filter((i) => i.skuCode).map((i, idx) => ({

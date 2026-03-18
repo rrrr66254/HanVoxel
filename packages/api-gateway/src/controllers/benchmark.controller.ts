@@ -11,9 +11,9 @@ import {
   collectSiteMetrics,
 } from '../services/benchmark.service';
 
-// 데모용 기본 ID
-const DEMO_COMPANY = 'demo-company-001';
-const DEMO_SITE = 'demo-site-001';
+// 데모용 기본 ID — 시드 데이터 UUID
+const DEMO_COMPANY = 'a0000000-0000-4000-8000-000000000001';
+const DEMO_SITE = 'b0000000-0000-4000-8000-000000000001';
 
 /** 내 벤치마크 조회 */
 export async function getMyBenchmarkHandler(req: Request, res: Response) {

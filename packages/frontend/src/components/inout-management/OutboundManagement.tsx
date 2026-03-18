@@ -23,6 +23,7 @@ import {
 import { BulkOutboundUpload } from './BulkOutboundUpload';
 import type { OutboundOrder } from '../../api/outbound-api';
 import { ManifestPdf } from './ManifestPdf';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -56,7 +57,7 @@ const SLOT_MAP: Record<string, string> = {
 // --- Mock 데이터 ---
 const MOCK_ORDERS: OutboundOrder[] = [
   {
-    id: 'ob-1', siteId: 'demo', type: 'PICKING', status: 'PLANNED',
+    id: 'ob-1', siteId: MOCK_SITE_ID, type: 'PICKING', status: 'PLANNED',
     scheduledDate: '2026-03-18', dispatchedDate: null, customerName: '쿠팡 풀필먼트',
     destination: '경기도 이천시 마장면', manifestNumber: 'OUT-20260318-0001',
     timeSlot: 'AM', notes: null, containerSpec: null, hsCode: null,
@@ -67,7 +68,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-16T09:00:00Z', updatedAt: '2026-03-16T09:00:00Z',
   },
   {
-    id: 'ob-2', siteId: 'demo', type: 'CONTAINER', status: 'PACKED',
+    id: 'ob-2', siteId: MOCK_SITE_ID, type: 'CONTAINER', status: 'PACKED',
     scheduledDate: '2026-03-19', dispatchedDate: null, customerName: 'BMW Munich',
     destination: 'Dingolfing, Germany', manifestNumber: 'OUT-20260319-0001',
     timeSlot: 'PM', notes: '수출 건 — HS 코드 확인 필요', containerSpec: 'DRY_40FT', hsCode: '870899',
@@ -77,7 +78,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-14T10:00:00Z', updatedAt: '2026-03-18T15:00:00Z',
   },
   {
-    id: 'ob-3', siteId: 'demo', type: 'PALLET', status: 'DISPATCHED',
+    id: 'ob-3', siteId: MOCK_SITE_ID, type: 'PALLET', status: 'DISPATCHED',
     scheduledDate: '2026-03-15', dispatchedDate: '2026-03-15', customerName: '롯데물류',
     destination: '서울시 송파구', manifestNumber: 'OUT-20260315-0001',
     timeSlot: 'AM', notes: null, containerSpec: null, hsCode: null,
@@ -87,7 +88,7 @@ const MOCK_ORDERS: OutboundOrder[] = [
     createdAt: '2026-03-12T09:00:00Z', updatedAt: '2026-03-15T10:00:00Z',
   },
   {
-    id: 'ob-4', siteId: 'demo', type: 'DIRECT', status: 'PLANNED',
+    id: 'ob-4', siteId: MOCK_SITE_ID, type: 'DIRECT', status: 'PLANNED',
     scheduledDate: '2026-03-20', dispatchedDate: null, customerName: 'CJ대한통운',
     destination: '대전시 유성구', manifestNumber: 'OUT-20260320-0001',
     timeSlot: 'PM', notes: '직납 출고', containerSpec: null, hsCode: null,
@@ -116,7 +117,7 @@ export function OutboundManagement({ onBack }: OutboundManagementProps) {
     (async () => {
       try {
         const { getOutboundOrders } = await import('../../api/outbound-api');
-        const result = await getOutboundOrders('demo', statusFilter || undefined, typeFilter || undefined);
+        const result = await getOutboundOrders(MOCK_SITE_ID, statusFilter || undefined, typeFilter || undefined);
         if (result.orders.length > 0) { setOrders(result.orders); return; }
       } catch { /* mock */ }
       let filtered = MOCK_ORDERS;
@@ -330,7 +331,7 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
     try {
       const { createOutboundOrder } = await import('../../api/outbound-api');
       const order = await createOutboundOrder({
-        siteId: 'demo', type, scheduledDate: scheduledDate || undefined,
+        siteId: MOCK_SITE_ID, type, scheduledDate: scheduledDate || undefined,
         timeSlot, customerName: customerName || undefined, destination: destination || undefined,
         notes: notes || undefined, containerSpec: containerSpec || undefined,
         hsCode: hsCode || undefined, items: items.filter((i) => i.skuCode),
@@ -338,7 +339,7 @@ function CreateOutboundModal({ onClose, onCreated }: { onClose: () => void; onCr
       onCreated(order);
     } catch {
       const mockOrder: OutboundOrder = {
-        id: `ob-new-${Date.now()}`, siteId: 'demo', type: type as OutboundOrder['type'], status: 'PLANNED',
+        id: `ob-new-${Date.now()}`, siteId: MOCK_SITE_ID, type: type as OutboundOrder['type'], status: 'PLANNED',
         scheduledDate: scheduledDate || null, dispatchedDate: null, customerName: customerName || null,
         destination: destination || null, manifestNumber: `OUT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-9999`,
         timeSlot, notes: notes || null, containerSpec: containerSpec || null, hsCode: hsCode || null,

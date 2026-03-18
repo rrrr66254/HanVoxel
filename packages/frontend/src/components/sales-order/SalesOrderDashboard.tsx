@@ -23,6 +23,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import type { SalesOrder, SalesOrderItem, MrpResult } from '../../api/sales-order-api';
+import { MOCK_SITE_ID } from '../../constants/mock-ids';
 
 // --- 디자인 토큰 ---
 const C = {
@@ -43,7 +44,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 // --- Mock 데이터 ---
 const MOCK_ORDERS: SalesOrder[] = [
   {
-    id: 'so-1', siteId: 'demo', orderNo: 'SO-20260317-0001',
+    id: 'so-1', siteId: MOCK_SITE_ID, orderNo: 'SO-20260317-0001',
     customerId: null, customerName: '현대모비스',
     status: 'RECEIVED', orderDate: '2026-03-17',
     deliveryDeadline: '2026-03-25',
@@ -54,7 +55,7 @@ const MOCK_ORDERS: SalesOrder[] = [
     notes: '긴급 발주', createdAt: '2026-03-17T09:00:00Z', updatedAt: '2026-03-17T09:00:00Z',
   },
   {
-    id: 'so-2', siteId: 'demo', orderNo: 'SO-20260315-0001',
+    id: 'so-2', siteId: MOCK_SITE_ID, orderNo: 'SO-20260315-0001',
     customerId: null, customerName: 'BMW Munich',
     status: 'MRP_CHECKED', orderDate: '2026-03-15',
     deliveryDeadline: '2026-03-28',
@@ -65,7 +66,7 @@ const MOCK_ORDERS: SalesOrder[] = [
     mrpResults: [{ id: 'mrp-1', status: 'PENDING' }, { id: 'mrp-2', status: 'CHECKED_OK' }],
   },
   {
-    id: 'so-3', siteId: 'demo', orderNo: 'SO-20260310-0001',
+    id: 'so-3', siteId: MOCK_SITE_ID, orderNo: 'SO-20260310-0001',
     customerId: null, customerName: '롯데케미칼',
     status: 'SHIPPED', orderDate: '2026-03-10',
     deliveryDeadline: '2026-03-14',
@@ -108,7 +109,7 @@ export function SalesOrderDashboard({ onBack }: SalesOrderDashboardProps) {
     (async () => {
       try {
         const { getSalesOrders } = await import('../../api/sales-order-api');
-        const res = await getSalesOrders('demo', statusFilter || undefined);
+        const res = await getSalesOrders(MOCK_SITE_ID, statusFilter || undefined);
         if (res.orders.length > 0) { setOrders(res.orders); return; }
       } catch { /* mock */ }
       let filtered = MOCK_ORDERS;
@@ -604,7 +605,7 @@ function CreateSalesOrderModal({ onClose, onCreated }: { onClose: () => void; on
     try {
       const { createSalesOrder } = await import('../../api/sales-order-api');
       const order = await createSalesOrder({
-        siteId: 'demo',
+        siteId: MOCK_SITE_ID,
         customerName: customerName || undefined,
         deliveryDeadline: deliveryDeadline || undefined,
         items: items.filter((i) => i.productSku),
@@ -613,7 +614,7 @@ function CreateSalesOrderModal({ onClose, onCreated }: { onClose: () => void; on
       onCreated(order);
     } catch {
       const mock: SalesOrder = {
-        id: `so-${Date.now()}`, siteId: 'demo',
+        id: `so-${Date.now()}`, siteId: MOCK_SITE_ID,
         orderNo: `SO-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-9999`,
         customerId: null, customerName: customerName || null,
         status: 'RECEIVED', orderDate: new Date().toISOString().slice(0, 10),
