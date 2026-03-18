@@ -18,6 +18,11 @@ import { InOutCalendar, InboundManagement, OutboundManagement } from './componen
 import { SalesOrderDashboard, BomManager, StockCheckDashboard } from './components/sales-order';
 import { SmartReorderDashboard } from './components/smart-reorder';
 import { PartnerDashboard } from './components/partner-management';
+import { CostManagementDashboard } from './components/cost-management';
+import { ReturnManagementDashboard } from './components/return-management';
+import { WorkerManagementDashboard } from './components/worker-management';
+import { LotTracingDashboard } from './components/lot-tracing';
+import { DocumentManagementDashboard } from './components/document-management';
 import { SettingsPage } from './components/settings';
 import { Sidebar, Header } from './components/layout';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -28,7 +33,7 @@ import type { SpatialObject } from './types/spatial';
 import './i18n';
 import './index.css';
 
-type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'smart-reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partners' | 'settings';
+type AppMode = 'wizard' | 'viewer' | 'roi' | 'sla' | 'qc' | 'picking' | 'subscription' | 'erp' | 'trade' | 'reorder' | 'smart-reorder' | 'connector' | 'benchmark' | 'inout-calendar' | 'inbound' | 'outbound' | 'sales-order' | 'bom' | 'stock-check' | 'partners' | 'settings' | 'workers' | 'returns' | 'lot-tracing' | 'cost-management' | 'profitability' | 'documents';
 
 // 관리자 모드 — 기본값 ENTERPRISE (하드코딩)
 // localStorage에서 adminMode 확인, 없으면 기본 true
@@ -88,6 +93,17 @@ function App() {
     switch (mode) {
       case 'settings':
         return <SettingsPage onBack={goBack} />;
+      case 'workers':
+        return <WorkerManagementDashboard onBack={goBack} />;
+      case 'returns':
+        return <ReturnManagementDashboard onBack={goBack} />;
+      case 'lot-tracing':
+        return <LotTracingDashboard onBack={goBack} />;
+      case 'cost-management':
+      case 'profitability':
+        return <CostManagementDashboard onBack={goBack} />;
+      case 'documents':
+        return <DocumentManagementDashboard onBack={goBack} />;
       case 'outbound':
         return <OutboundManagement onBack={goBack} />;
       case 'sales-order':

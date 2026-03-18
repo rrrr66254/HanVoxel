@@ -24,6 +24,12 @@ import {
   PackageCheck,
   Bot,
   Users,
+  HardHat,
+  RotateCcw,
+  Search,
+  DollarSign,
+  PieChart,
+  FolderOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,34 +43,52 @@ interface MenuItem {
 
 // 메뉴 목록 (i18n 키 사용)
 const MENU_ITEMS: MenuItem[] = [
+  // 공간 관리
   { id: 'viewer', icon: Box, labelKey: 'sidebar.viewer', sectionKey: 'sidebar.spatialManagement' },
   { id: 'wizard', icon: Warehouse, labelKey: 'sidebar.wizard', sectionKey: 'sidebar.spatialManagement' },
   { id: 'roi', icon: TrendingUp, labelKey: 'sidebar.roi', sectionKey: 'sidebar.spatialManagement' },
+  // 운영
+  { id: 'partners', icon: Users, labelKey: 'sidebar.partners', sectionKey: 'sidebar.operations' },
   { id: 'inout-calendar', icon: Calendar, labelKey: 'sidebar.inoutCalendar', sectionKey: 'sidebar.operations' },
   { id: 'inbound', icon: Package, labelKey: 'sidebar.inbound', sectionKey: 'sidebar.operations' },
   { id: 'outbound', icon: Truck, labelKey: 'sidebar.outbound', sectionKey: 'sidebar.operations' },
   { id: 'sales-order', icon: ClipboardList, labelKey: 'sidebar.salesOrder', sectionKey: 'sidebar.operations' },
-  { id: 'bom', icon: Wrench, labelKey: 'sidebar.bom', sectionKey: 'sidebar.operations' },
-  { id: 'stock-check', icon: PackageCheck, labelKey: 'sidebar.stockCheck', sectionKey: 'sidebar.operations' },
-  { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.operations' },
-  { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.operations' },
-  { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.operations' },
-  { id: 'partners', icon: Users, labelKey: 'sidebar.partners', sectionKey: 'sidebar.operations' },
-  { id: 'subscription', icon: CreditCard, labelKey: 'sidebar.subscription', sectionKey: 'sidebar.settings' },
+  // 생산
+  { id: 'workers', icon: HardHat, labelKey: 'sidebar.workers', sectionKey: 'sidebar.production' },
+  { id: 'bom', icon: Wrench, labelKey: 'sidebar.bom', sectionKey: 'sidebar.production' },
+  { id: 'stock-check', icon: PackageCheck, labelKey: 'sidebar.stockCheck', sectionKey: 'sidebar.production' },
+  // 품질
+  { id: 'qc', icon: ClipboardCheck, labelKey: 'sidebar.qc', sectionKey: 'sidebar.quality' },
+  { id: 'returns', icon: RotateCcw, labelKey: 'sidebar.returns', sectionKey: 'sidebar.quality' },
+  { id: 'lot-tracing', icon: Search, labelKey: 'sidebar.lotTracing', sectionKey: 'sidebar.quality' },
+  // 재무
+  { id: 'cost-management', icon: DollarSign, labelKey: 'sidebar.costManagement', sectionKey: 'sidebar.finance' },
+  { id: 'profitability', icon: PieChart, labelKey: 'sidebar.profitability', sectionKey: 'sidebar.finance' },
+  // 문서
+  { id: 'documents', icon: FolderOpen, labelKey: 'sidebar.documents', sectionKey: 'sidebar.document' },
+  // 인텔리전스
   { id: 'erp', icon: FileText, labelKey: 'sidebar.erp', sectionKey: 'sidebar.intelligence' },
   { id: 'trade', icon: Globe, labelKey: 'sidebar.trade', sectionKey: 'sidebar.intelligence' },
   { id: 'smart-reorder', icon: Bot, labelKey: 'sidebar.smartReorder', sectionKey: 'sidebar.intelligence' },
   { id: 'reorder', icon: ShoppingCart, labelKey: 'sidebar.reorder', sectionKey: 'sidebar.intelligence' },
   { id: 'connector', icon: Link2, labelKey: 'sidebar.connector', sectionKey: 'sidebar.intelligence' },
   { id: 'benchmark', icon: Shield, labelKey: 'sidebar.benchmark', sectionKey: 'sidebar.intelligence' },
+  // 설정
+  { id: 'sla', icon: BarChart3, labelKey: 'sidebar.sla', sectionKey: 'sidebar.settingsGroup' },
+  { id: 'picking', icon: Smartphone, labelKey: 'sidebar.picking', sectionKey: 'sidebar.settingsGroup' },
+  { id: 'subscription', icon: CreditCard, labelKey: 'sidebar.subscription', sectionKey: 'sidebar.settingsGroup' },
 ];
 
 // 섹션 순서 (i18n 키)
 const SECTION_KEYS = [
   'sidebar.spatialManagement',
   'sidebar.operations',
+  'sidebar.production',
+  'sidebar.quality',
+  'sidebar.finance',
+  'sidebar.document',
   'sidebar.intelligence',
-  'sidebar.settings',
+  'sidebar.settingsGroup',
 ];
 
 interface SidebarProps {

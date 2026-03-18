@@ -2,8 +2,13 @@
   "sidebar": {
     "spatialManagement": "Spatial",
     "operations": "Operations",
+    "production": "Production",
+    "quality": "Quality",
+    "finance": "Finance",
+    "document": "Documents",
     "intelligence": "Intelligence",
     "settings": "Settings",
+    "settingsGroup": "Settings",
     "viewer": "3D Warehouse Viewer",
     "wizard": "Create Warehouse",
     "roi": "ROI Calculator",
@@ -24,6 +29,12 @@
     "connector": "ERP Connector",
     "benchmark": "Industry Benchmark",
     "partners": "Partners",
+    "workers": "Workers",
+    "returns": "Returns",
+    "lotTracing": "Lot Tracing",
+    "costManagement": "Cost Management",
+    "profitability": "Profitability",
+    "documents": "Documents",
     "currentPlan": "Current Plan"
   },
   "header": {

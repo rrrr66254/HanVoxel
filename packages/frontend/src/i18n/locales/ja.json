@@ -2,8 +2,13 @@
   "sidebar": {
     "spatialManagement": "空間管理",
     "operations": "運営",
+    "production": "生産",
+    "quality": "品質",
+    "finance": "財務",
+    "document": "文書",
     "intelligence": "インテリジェンス",
     "settings": "設定",
+    "settingsGroup": "設定",
     "viewer": "3D 倉庫ビューア",
     "wizard": "新規倉庫作成",
     "roi": "ROI 計算機",
@@ -24,6 +29,12 @@
     "connector": "ERP コネクタ",
     "benchmark": "業界ベンチマーク",
     "partners": "取引先管理",
+    "workers": "作業者管理",
+    "returns": "返品管理",
+    "lotTracing": "ロット追跡",
+    "costManagement": "原価管理",
+    "profitability": "収益性分析",
+    "documents": "文書管理",
     "currentPlan": "現在のプラン"
   },
   "header": {

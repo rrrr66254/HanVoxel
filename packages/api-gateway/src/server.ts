@@ -21,6 +21,11 @@ import outboundRoutes from './routes/outbound.routes';
 import salesOrderRoutes from './routes/sales-order.routes';
 import smartReorderRoutes from './routes/smart-reorder.routes';
 import partnerRoutes from './routes/partner.routes';
+import costRoutes from './routes/cost.routes';
+import returnRoutes from './routes/return.routes';
+import workerRoutes from './routes/worker.routes';
+import lotRoutes from './routes/lot.routes';
+import documentRoutes from './routes/document.routes';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -50,6 +55,11 @@ app.use('/api/v1', outboundRoutes);
 app.use('/api/v1', salesOrderRoutes);
 app.use('/api/v1', smartReorderRoutes);
 app.use('/api/v1', partnerRoutes);
+app.use('/api/v1', costRoutes);
+app.use('/api/v1', returnRoutes);
+app.use('/api/v1', workerRoutes);
+app.use('/api/v1', lotRoutes);
+app.use('/api/v1', documentRoutes);
 
 // 헬스 체크
 app.get('/health', (_req, res) => {

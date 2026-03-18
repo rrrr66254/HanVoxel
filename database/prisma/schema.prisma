@@ -822,6 +822,8 @@ model Partner {
   attachments PartnerAttachment[]
   transactionSummary PartnerTransactionSummary?
   drivers     DeliveryDriver[]
+  returnOrders ReturnOrder[]
+  vendorClaims VendorClaim[] @relation("VendorClaims")
 
   @@unique([companyId, code])
   @@index([companyId, type])
@@ -1851,6 +1853,7 @@ model SalesOrder {
 
   mrpResults       MrpResult[]
   stockChecks      StockCheckRequest[]
+  profitability    SalesOrderProfitability?
 
   @@index([siteId, status])
   @@index([siteId, deliveryDeadline])
@@ -2083,4 +2086,577 @@ model SmartReorderSchedule {
   @@index([recommendedOrderDate])
   @@index([stockoutRiskDate])
   @@map("smart_reorder_schedule")
+}
+
+// ============================================================
+// 원가 관리 (Cost Management)
+// ============================================================
+
+/// 원가 항목 마스터 (자재비, 인건비, 제조간접비, 기타)
+model CostItem {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  /// 원가 항목명
+  name      String   @db.VarChar(200)
+  /// 원가 유형: MATERIAL | LABOR | OVERHEAD | OTHER
+  type      String   @db.VarChar(20)
+  /// 단위 (개, kg, 시간 등)
+  unit      String   @default("개") @db.VarChar(20)
+  /// 단위당 원가 (원)
+  unitCost  Float    @default(0) @map("unit_cost")
+  /// 활성 여부
+  isActive  Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  productCosts ProductCost[]
+
+  @@index([siteId, type])
+  @@map("cost_items")
+}
+
+/// 제품별 원가 구성 (BOM 기반 표준 원가)
+model ProductCost {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId         String   @map("site_id") @db.Uuid
+  /// 완성품 SKU
+  productSku     String   @map("product_sku") @db.VarChar(100)
+  /// 원가 항목 ID
+  costItemId     String   @map("cost_item_id") @db.Uuid
+  /// 완성품 1개당 소요량
+  qtyPerUnit     Float    @map("qty_per_unit")
+  /// 자동 계산값 (qty × unit_cost)
+  calculatedCost Float    @default(0) @map("calculated_cost")
+
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  costItem       CostItem @relation(fields: [costItemId], references: [id])
+
+  @@unique([siteId, productSku, costItemId])
+  @@index([productSku])
+  @@map("product_costs")
+}
+
+/// 생산 지시서별 실제 원가
+model ProductionCostActual {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId              String   @map("site_id") @db.Uuid
+  /// 생산 지시서 ID (SalesOrder 참조)
+  productionOrderId   String   @map("production_order_id") @db.Uuid
+  /// 완성품 SKU
+  productSku          String   @map("product_sku") @db.VarChar(100)
+  /// 생산 수량
+  producedQty         Int      @default(0) @map("produced_qty")
+  /// 실제 자재비
+  materialCost        Float    @default(0) @map("material_cost")
+  /// 인건비
+  laborCost           Float    @default(0) @map("labor_cost")
+  /// 제조간접비
+  overheadCost        Float    @default(0) @map("overhead_cost")
+  /// 합계
+  totalCost           Float    @default(0) @map("total_cost")
+  /// 단위 원가
+  costPerUnit         Float    @default(0) @map("cost_per_unit")
+
+  calculatedAt        DateTime @default(now()) @map("calculated_at") @db.Timestamptz
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([siteId, productSku])
+  @@index([productionOrderId])
+  @@map("production_cost_actuals")
+}
+
+/// 수주별 수익성
+model SalesOrderProfitability {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId         String   @map("site_id") @db.Uuid
+  /// 수주 ID
+  salesOrderId   String   @map("sales_order_id") @db.Uuid
+  /// 매출액
+  totalRevenue   Float    @default(0) @map("total_revenue")
+  /// 원가 합계
+  totalCost      Float    @default(0) @map("total_cost")
+  /// 매출총이익
+  grossProfit    Float    @default(0) @map("gross_profit")
+  /// 이익률 (%)
+  grossMargin    Float    @default(0) @map("gross_margin")
+
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salesOrder     SalesOrder @relation(fields: [salesOrderId], references: [id])
+
+  @@unique([salesOrderId])
+  @@index([siteId, grossMargin])
+  @@map("sales_order_profitability")
+}
+
+// ============================================================
+// 불량품/반품 관리 (Returns & Defect)
+// ============================================================
+
+/// 반품 접수
+model ReturnOrder {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId           String    @map("site_id") @db.Uuid
+  /// 반품 번호 (자동: RET-YYYYMMDD-XXXX)
+  returnNo         String    @unique @map("return_no") @db.VarChar(30)
+  /// 유형: CUSTOMER_RETURN | VENDOR_CLAIM
+  type             String    @db.VarChar(20)
+  /// 거래처 ID (Partner 참조)
+  partnerId        String    @map("partner_id") @db.Uuid
+  /// 원 수주/발주 번호
+  originalOrderId  String?   @map("original_order_id") @db.Uuid
+  /// 상태: RECEIVED → INSPECTING → APPROVED → PROCESSING → COMPLETED | REJECTED
+  status           String    @default("RECEIVED") @db.VarChar(20)
+  /// 반품 사유: DEFECT | WRONG_ITEM | DAMAGE | OVER_DELIVERY | OTHER
+  reasonType       String    @map("reason_type") @db.VarChar(20)
+  /// 사유 상세
+  reasonDetail     String?   @map("reason_detail") @db.Text
+  /// 총 수량
+  totalQty         Int       @default(0) @map("total_qty")
+  /// 승인 수량
+  approvedQty      Int       @default(0) @map("approved_qty")
+
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  partner          Partner   @relation(fields: [partnerId], references: [id])
+  items            ReturnItem[]
+  disposals        ReturnDisposal[]
+  vendorClaims     VendorClaim[]
+
+  @@index([siteId, status])
+  @@index([partnerId])
+  @@map("return_orders")
+}
+
+/// 반품 품목
+model ReturnItem {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  returnOrderId    String   @map("return_order_id") @db.Uuid
+  /// 상품 SKU
+  productSku       String   @map("product_sku") @db.VarChar(100)
+  /// 수량
+  qty              Int      @default(0)
+  /// 승인 수량
+  approvedQty      Int      @default(0) @map("approved_qty")
+  /// 단가
+  unitPrice        Int      @default(0) @map("unit_price")
+  /// 불량 사진 URL (JSON 배열)
+  defectPhotos     Json     @default("[]") @map("defect_photos") @db.JsonB
+  /// 불량 설명
+  defectDescription String? @map("defect_description") @db.Text
+
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  returnOrder      ReturnOrder @relation(fields: [returnOrderId], references: [id], onDelete: Cascade)
+  disposals        ReturnDisposal[]
+
+  @@index([returnOrderId])
+  @@map("return_items")
+}
+
+/// 반품 처리
+model ReturnDisposal {
+  id                       String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  returnOrderId            String    @map("return_order_id") @db.Uuid
+  returnItemId             String    @map("return_item_id") @db.Uuid
+  /// 처리 방법: REWORK | SCRAP | RETURN_TO_VENDOR | RESELL | HOLD
+  disposalType             String    @map("disposal_type") @db.VarChar(20)
+  /// 수량
+  qty                      Int       @default(0)
+  /// 재작업 생산 지시서 ID
+  reworkProductionOrderId  String?   @map("rework_production_order_id") @db.Uuid
+  /// 처리 비용
+  cost                     Float     @default(0)
+  /// 처리자
+  processedBy              String?   @map("processed_by") @db.VarChar(100)
+  /// 처리일
+  processedAt              DateTime? @map("processed_at") @db.Timestamptz
+  /// 비고
+  notes                    String?   @db.Text
+
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  returnOrder              ReturnOrder @relation(fields: [returnOrderId], references: [id], onDelete: Cascade)
+  returnItem               ReturnItem  @relation(fields: [returnItemId], references: [id], onDelete: Cascade)
+
+  @@index([returnOrderId])
+  @@map("return_disposals")
+}
+
+/// 공급업체 클레임
+model VendorClaim {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  returnOrderId    String    @map("return_order_id") @db.Uuid
+  /// 공급업체 ID (Partner 참조)
+  vendorId         String    @map("vendor_id") @db.Uuid
+  /// 클레임 번호 (자동: CLM-YYYYMMDD-XXXX)
+  claimNo          String    @unique @map("claim_no") @db.VarChar(30)
+  /// 클레임 금액
+  claimAmount      Float     @default(0) @map("claim_amount")
+  /// 상태: DRAFT → SENT → ACCEPTED → PARTIALLY_ACCEPTED | REJECTED
+  status           String    @default("DRAFT") @db.VarChar(20)
+  /// 공급업체 응답
+  vendorResponse   String?   @map("vendor_response") @db.Text
+  /// 합의 금액
+  settlementAmount Float?    @map("settlement_amount")
+  /// 합의일
+  settledAt        DateTime? @map("settled_at") @db.Timestamptz
+
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  returnOrder      ReturnOrder @relation(fields: [returnOrderId], references: [id])
+  vendor           Partner     @relation("VendorClaims", fields: [vendorId], references: [id])
+
+  @@index([returnOrderId])
+  @@index([vendorId])
+  @@map("vendor_claims")
+}
+
+// ============================================================
+// 작업자 관리 (Worker Management)
+// ============================================================
+
+/// 작업자
+model Worker {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId      String    @map("site_id") @db.Uuid
+  /// 사번 (자동: EMP-001)
+  employeeNo  String    @unique @map("employee_no") @db.VarChar(20)
+  name        String    @db.VarChar(100)
+  phone       String?   @db.VarChar(30)
+  email       String?   @db.VarChar(255)
+  /// 부서 (생산1팀, 품질팀 등)
+  department  String?   @db.VarChar(50)
+  /// 직책 (반장, 작업자, 검사원)
+  position    String?   @db.VarChar(50)
+  /// 보유 기술 (JSON 배열)
+  skills      Json      @default("[]") @db.JsonB
+  /// 시급 (원, 원가 계산 연동)
+  hourlyWage  Float     @default(0) @map("hourly_wage")
+  /// 근무 유형: DAY | NIGHT | ROTATING
+  shiftType   String    @default("DAY") @map("shift_type") @db.VarChar(20)
+  /// 입사일
+  joinedAt    DateTime? @map("joined_at") @db.Date
+  /// 활성 여부
+  isActive    Boolean   @default(true) @map("is_active")
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  skillCerts  WorkerSkillCert[]
+  schedules   WorkerSchedule[]
+  performances WorkerPerformance[]
+
+  @@index([siteId, department])
+  @@index([siteId, isActive])
+  @@map("workers")
+}
+
+/// 기술/자격 마스터
+model WorkerSkill {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 기술/자격 이름
+  name            String   @db.VarChar(100)
+  /// 카테고리 (MACHINE_OP, WELDING, SAFETY, QUALITY 등)
+  category        String?  @db.VarChar(50)
+  /// 만료일 관리 필요 여부
+  expiresRequired Boolean  @default(false) @map("expires_required")
+  /// 설명
+  description     String?  @db.Text
+
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  certs           WorkerSkillCert[]
+
+  @@map("worker_skills")
+}
+
+/// 작업자별 자격 취득
+model WorkerSkillCert {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workerId    String    @map("worker_id") @db.Uuid
+  skillId     String    @map("skill_id") @db.Uuid
+  /// 취득일
+  acquiredAt  DateTime  @map("acquired_at") @db.Date
+  /// 만료일
+  expiresAt   DateTime? @map("expires_at") @db.Date
+  /// 자격증 번호
+  certNo      String?   @map("cert_no") @db.VarChar(50)
+  /// 자격증 파일 URL
+  certFileUrl String?   @map("cert_file_url") @db.Text
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  worker      Worker      @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  skill       WorkerSkill @relation(fields: [skillId], references: [id])
+
+  @@unique([workerId, skillId])
+  @@index([workerId])
+  @@index([expiresAt])
+  @@map("worker_skill_certs")
+}
+
+/// 교대 근무 스케줄
+model WorkerSchedule {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workerId     String   @map("worker_id") @db.Uuid
+  /// 근무일
+  workDate     DateTime @map("work_date") @db.Date
+  /// 근무 교대: AM | PM | NIGHT | OFF
+  shift        String   @db.VarChar(10)
+  /// 배정 작업장 ID (SpatialObject 참조)
+  workCenterId String?  @map("work_center_id") @db.Uuid
+
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  worker       Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([workerId, workDate])
+  @@index([workerId, workDate])
+  @@index([workDate])
+  @@map("worker_schedules")
+}
+
+/// 작업자별 일별 실적
+model WorkerPerformance {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  workerId            String   @map("worker_id") @db.Uuid
+  /// 근무일
+  workDate            DateTime @map("work_date") @db.Date
+  /// 생산 지시서 ID
+  productionOrderId   String?  @map("production_order_id") @db.Uuid
+  /// 생산 수량
+  producedQty         Int      @default(0) @map("produced_qty")
+  /// 불량 수량
+  defectQty           Int      @default(0) @map("defect_qty")
+  /// 작업 시간 (시간)
+  workHours           Float    @default(0) @map("work_hours")
+  /// 효율률 (%)
+  efficiencyRate      Float    @default(0) @map("efficiency_rate")
+
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  worker              Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId, workDate])
+  @@map("worker_performances")
+}
+
+// ============================================================
+// 로트/시리얼 추적 (Lot Traceability)
+// ============================================================
+
+/// 로트 마스터
+model Lot {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId        String    @map("site_id") @db.Uuid
+  /// 로트 번호 (자동: LOT-YYYYMMDD-XXXX)
+  lotNo         String    @unique @map("lot_no") @db.VarChar(30)
+  /// SKU 코드
+  skuCode       String    @map("sku_code") @db.VarChar(100)
+  /// 로트 유형: RAW | WIP | FINISHED
+  lotType       String    @map("lot_type") @db.VarChar(20)
+  /// 초기 수량
+  qty           Int       @default(0)
+  /// 잔여 수량
+  remainingQty  Int       @default(0) @map("remaining_qty")
+  /// 상태: ACTIVE | CONSUMED | QUARANTINE | SCRAPPED
+  status        String    @default("ACTIVE") @db.VarChar(20)
+  /// 소스 유형: PURCHASE | PRODUCTION | RETURN
+  sourceType    String    @map("source_type") @db.VarChar(20)
+  /// 소스 ID (입고주문 또는 생산지시서 ID)
+  sourceId      String?   @map("source_id") @db.Uuid
+  /// 공급업체 로트번호
+  vendorLotNo   String?   @map("vendor_lot_no") @db.VarChar(50)
+  /// 생산일 또는 입고일
+  producedAt    DateTime? @map("produced_at") @db.Timestamptz
+  /// 유효기간
+  expiryAt      DateTime? @map("expiry_at") @db.Date
+
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  movements     LotMovement[]
+  parentLinks   LotGenealogy[] @relation("ChildLot")
+  childLinks    LotGenealogy[] @relation("ParentLot")
+  outboundMappings OutboundLotMapping[]
+
+  @@index([siteId, skuCode])
+  @@index([siteId, status])
+  @@index([expiryAt])
+  @@map("lots")
+}
+
+/// 로트 이동 이력
+model LotMovement {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lotId          String   @map("lot_id") @db.Uuid
+  /// 이동 유형: RECEIPT | ISSUE | CONSUME | TRANSFER | ADJUST | SCRAP
+  movementType   String   @map("movement_type") @db.VarChar(20)
+  /// 출발 위치
+  fromLocation   String?  @map("from_location") @db.VarChar(100)
+  /// 도착 위치
+  toLocation     String?  @map("to_location") @db.VarChar(100)
+  /// 수량
+  qty            Int      @default(0)
+  /// 참조 유형: inbound_order | production_order | outbound_order | return_order
+  referenceType  String?  @map("reference_type") @db.VarChar(30)
+  /// 참조 ID
+  referenceId    String?  @map("reference_id") @db.Uuid
+  /// 이동자
+  movedBy        String?  @map("moved_by") @db.VarChar(100)
+  /// 이동 시각
+  movedAt        DateTime @default(now()) @map("moved_at") @db.Timestamptz
+  /// 비고
+  notes          String?  @db.Text
+
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  lot            Lot      @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@index([lotId])
+  @@index([referenceType, referenceId])
+  @@map("lot_movements")
+}
+
+/// 로트 계보 (원자재 → 완성품 추적)
+model LotGenealogy {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// 원자재 로트 ID
+  parentLotId         String   @map("parent_lot_id") @db.Uuid
+  /// 완성품 로트 ID
+  childLotId          String   @map("child_lot_id") @db.Uuid
+  /// 생산 지시서 ID
+  productionOrderId   String?  @map("production_order_id") @db.Uuid
+  /// 소비 수량
+  consumedQty         Int      @default(0) @map("consumed_qty")
+
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  parentLot           Lot      @relation("ParentLot", fields: [parentLotId], references: [id])
+  childLot            Lot      @relation("ChildLot", fields: [childLotId], references: [id])
+
+  @@index([parentLotId])
+  @@index([childLotId])
+  @@index([productionOrderId])
+  @@map("lot_genealogy")
+}
+
+/// 출고-로트 매핑
+model OutboundLotMapping {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  outboundOrderId  String   @map("outbound_order_id") @db.Uuid
+  outboundItemId   String   @map("outbound_item_id") @db.Uuid
+  lotId            String   @map("lot_id") @db.Uuid
+  qty              Int      @default(0)
+
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  lot              Lot      @relation(fields: [lotId], references: [id])
+
+  @@index([outboundOrderId])
+  @@index([lotId])
+  @@map("outbound_lot_mappings")
+}
+
+// ============================================================
+// 문서 관리 (Document Management)
+// ============================================================
+
+/// 문서 마스터
+model Document {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  siteId       String    @map("site_id") @db.Uuid
+  /// 문서 번호 (자동: DOC-YYYYMMDD-XXXX)
+  docNo        String    @unique @map("doc_no") @db.VarChar(30)
+  /// 제목
+  title        String    @db.VarChar(300)
+  /// 문서 유형: CONTRACT | CERTIFICATE | DRAWING | INSPECTION | INVOICE | QUOTE | PURCHASE_ORDER | DELIVERY_NOTE | MANUAL | OTHER
+  docType      String    @map("doc_type") @db.VarChar(20)
+  /// 연결 대상 유형: partner | production_order | inbound_order | outbound_order | sales_order | lot
+  relatedType  String?   @map("related_type") @db.VarChar(30)
+  /// 연결 대상 ID
+  relatedId    String?   @map("related_id") @db.Uuid
+  /// 파일 URL
+  fileUrl      String?   @map("file_url") @db.Text
+  /// 파일명
+  fileName     String?   @map("file_name") @db.VarChar(255)
+  /// 파일 크기 (bytes)
+  fileSize     Int?      @map("file_size")
+  /// 파일 MIME 타입
+  fileType     String?   @map("file_type") @db.VarChar(50)
+  /// 버전 (1.0, 1.1 등)
+  version      String    @default("1.0") @db.VarChar(10)
+  /// 상태: DRAFT | ACTIVE | EXPIRED | ARCHIVED
+  status       String    @default("ACTIVE") @db.VarChar(20)
+  /// 발행일
+  issuedAt     DateTime? @map("issued_at") @db.Date
+  /// 만료일
+  expiresAt    DateTime? @map("expires_at") @db.Date
+  /// 발행자
+  issuedBy     String?   @map("issued_by") @db.VarChar(100)
+  /// 태그 (JSON 배열)
+  tags         Json      @default("[]") @db.JsonB
+  /// 메모
+  memo         String?   @db.Text
+
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  versions     DocumentVersion[]
+  shares       DocumentShare[]
+
+  @@index([siteId, docType])
+  @@index([relatedType, relatedId])
+  @@index([expiresAt])
+  @@index([status])
+  @@map("documents")
+}
+
+/// 문서 버전 이력
+model DocumentVersion {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  documentId  String   @map("document_id") @db.Uuid
+  /// 버전
+  version     String   @db.VarChar(10)
+  /// 파일 URL
+  fileUrl     String   @map("file_url") @db.Text
+  /// 변경자
+  changedBy   String?  @map("changed_by") @db.VarChar(100)
+  /// 변경일
+  changedAt   DateTime @default(now()) @map("changed_at") @db.Timestamptz
+  /// 변경 메모
+  changeNote  String?  @map("change_note") @db.Text
+
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+/// 문서 공유
+model DocumentShare {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  documentId      String    @map("document_id") @db.Uuid
+  /// 공유 대상 유형: partner | user
+  sharedWithType  String    @map("shared_with_type") @db.VarChar(20)
+  /// 공유 대상 ID
+  sharedWithId    String    @map("shared_with_id") @db.Uuid
+  /// 권한: VIEW | DOWNLOAD
+  permission      String    @default("VIEW") @db.VarChar(10)
+  /// 공유일
+  sharedAt        DateTime  @default(now()) @map("shared_at") @db.Timestamptz
+  /// 만료일
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz
+
+  document        Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("document_shares")
 }
