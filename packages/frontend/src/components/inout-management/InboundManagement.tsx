@@ -104,16 +104,21 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
     })();
   }, [statusFilter]);
 
-  // 도착 확인 핸들러
+  // 도착 확인 핸들러 (ORDERED/IN_TRANSIT → ARRIVED)
   const handleArrive = useCallback(async (orderId: string) => {
     try {
       const { arriveInboundOrder } = await import('../../api/inbound-api');
       await arriveInboundOrder(orderId);
     } catch { /* mock */ }
-    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'QC_PENDING' as const, actualDate: new Date().toISOString().slice(0, 10) } : o));
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'ARRIVED' as const, actualDate: new Date().toISOString().slice(0, 10) } : o));
   }, []);
 
-  // QC 통과 핸들러
+  // QC 시작 핸들러 (ARRIVED → QC_PENDING)
+  const handleStartQc = useCallback(async (orderId: string) => {
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'QC_PENDING' as const } : o));
+  }, []);
+
+  // QC 통과 핸들러 (QC_PENDING → STOCKED)
   const handleQcPass = useCallback(async (orderId: string) => {
     try {
       const { passQcInboundOrder } = await import('../../api/inbound-api');
@@ -179,10 +184,10 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
       {/* 요약 카드 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: '전체', count: MOCK_ORDERS.length, color: C.accent },
-          { label: '입고 대기', count: MOCK_ORDERS.filter((o) => ['ORDERED', 'IN_TRANSIT'].includes(o.status)).length, color: C.blue },
-          { label: 'QC 진행', count: MOCK_ORDERS.filter((o) => ['ARRIVED', 'QC_PENDING'].includes(o.status)).length, color: C.yellow },
-          { label: '입고 완료', count: MOCK_ORDERS.filter((o) => o.status === 'STOCKED').length, color: C.green },
+          { label: '전체', count: orders.length, color: C.accent },
+          { label: '입고 대기', count: orders.filter((o) => ['ORDERED', 'IN_TRANSIT'].includes(o.status)).length, color: C.blue },
+          { label: 'QC 진행', count: orders.filter((o) => ['ARRIVED', 'QC_PENDING'].includes(o.status)).length, color: C.yellow },
+          { label: '입고 완료', count: orders.filter((o) => o.status === 'STOCKED').length, color: C.green },
         ].map((s) => (
           <div key={s.label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 18px' }}>
             <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>{s.label}</div>
@@ -249,6 +254,19 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
                       <Truck size={12} /> 도착확인
                     </button>
                   )}
+                  {order.status === 'ARRIVED' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleStartQc(order.id); }}
+                      style={{
+                        padding: '4px 10px', fontSize: 11, borderRadius: 6,
+                        background: 'rgba(249,115,22,0.15)', color: '#F97316',
+                        border: '1px solid rgba(249,115,22,0.27)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <ClipboardCheck size={12} /> QC시작
+                    </button>
+                  )}
                   {order.status === 'QC_PENDING' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleQcPass(order.id); }}
@@ -259,7 +277,7 @@ export function InboundManagement({ onBack }: InboundManagementProps) {
                         display: 'flex', alignItems: 'center', gap: 4,
                       }}
                     >
-                      <ClipboardCheck size={12} /> QC통과
+                      <Check size={12} /> QC통과
                     </button>
                   )}
                 </div>

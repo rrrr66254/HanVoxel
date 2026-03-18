@@ -33,8 +33,18 @@ const C = {
   arrived: '#F59E0B',
 } as const;
 
+// --- 시드 기반 난수 생성기 (동일 월에 동일 데이터 보장) ---
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
 // --- Mock 데이터 ---
 function generateMockCalendar(year: number, month: number): CalendarEntry[] {
+  const rng = seededRandom(year * 100 + month);
   const entries: CalendarEntry[] = [];
   const daysInMonth = new Date(year, month, 0).getDate();
   const statuses = ['SCHEDULED', 'ARRIVED', 'COMPLETED'];
@@ -44,45 +54,45 @@ function generateMockCalendar(year: number, month: number): CalendarEntry[] {
   const slots = ['AM', 'PM', 'NIGHT'];
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const inCount = Math.random() > 0.5 ? Math.floor(Math.random() * 3) + 1 : 0;
-    const outCount = Math.random() > 0.4 ? Math.floor(Math.random() * 4) + 1 : 0;
+    const inCount = rng() > 0.5 ? Math.floor(rng() * 3) + 1 : 0;
+    const outCount = rng() > 0.4 ? Math.floor(rng() * 4) + 1 : 0;
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
     for (let i = 0; i < inCount; i++) {
-      const st = statuses[Math.floor(Math.random() * statuses.length)];
+      const st = statuses[Math.floor(rng() * statuses.length)];
       entries.push({
         id: `in-${d}-${i}`,
         siteId: 'demo',
         type: 'INBOUND',
         scheduledDate: dateStr,
-        timeSlot: slots[Math.floor(Math.random() * slots.length)],
+        timeSlot: slots[Math.floor(rng() * slots.length)],
         status: st,
         colorCode: st === 'COMPLETED' ? C.completed : st === 'ARRIVED' ? C.arrived : C.inbound,
         inboundOrder: {
           id: `ibo-${d}-${i}`,
-          vendorName: vendors[Math.floor(Math.random() * vendors.length)],
+          vendorName: vendors[Math.floor(rng() * vendors.length)],
           status: st === 'COMPLETED' ? 'STOCKED' : st === 'ARRIVED' ? 'QC_PENDING' : 'ORDERED',
           expectedDate: dateStr,
         },
       });
     }
     for (let i = 0; i < outCount; i++) {
-      const st = statuses[Math.floor(Math.random() * statuses.length)];
+      const st = statuses[Math.floor(rng() * statuses.length)];
       entries.push({
         id: `out-${d}-${i}`,
         siteId: 'demo',
         type: 'OUTBOUND',
         scheduledDate: dateStr,
-        timeSlot: slots[Math.floor(Math.random() * slots.length)],
+        timeSlot: slots[Math.floor(rng() * slots.length)],
         status: st,
         colorCode: st === 'COMPLETED' ? C.completed : C.outbound,
         outboundOrder: {
           id: `obo-${d}-${i}`,
-          type: types[Math.floor(Math.random() * types.length)],
-          customerName: customers[Math.floor(Math.random() * customers.length)],
+          type: types[Math.floor(rng() * types.length)],
+          customerName: customers[Math.floor(rng() * customers.length)],
           status: st === 'COMPLETED' ? 'DISPATCHED' : 'PLANNED',
           manifestNumber: `OUT-${dateStr.replace(/-/g, '')}-${String(i + 1).padStart(4, '0')}`,
-          timeSlot: slots[Math.floor(Math.random() * slots.length)],
+          timeSlot: slots[Math.floor(rng() * slots.length)],
         },
       });
     }
