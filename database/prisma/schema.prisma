@@ -8,8 +8,9 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  extensions = [uuidOssp(map: "uuid-ossp")]
+  provider          = "postgresql"
+  extensions        = [uuidOssp(map: "uuid-ossp")]
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 // ============================================================
